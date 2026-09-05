@@ -1,0 +1,6 @@
+{
+  "name": "Chronos | Luxury Watch Marketplace",
+  "description": "Premier timepiece marketplace connecting verified collectors and watchmakers. Manage personal collections, list luxury watches, curate wishlists, and rate trusted sellers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

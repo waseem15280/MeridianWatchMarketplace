@@ -1,0 +1,6 @@
+@MyWatchMarketplace.marketplace.Api_HostAddress = http://localhost:5210
+
+GET {{MyWatchMarketplace.marketplace.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
