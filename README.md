@@ -1,4 +1,4 @@
-# Implementation Plan: Connect Frontend with Backend Microservices via API Gateway
+# Current ongoing dev: Connecting Frontend with Backend Microservices via API Gateway
 
 This plan details how we will connect the React frontend to the 5 isolated microservices through the YARP API Gateway, expose comprehensive REST endpoints in each microservice, establish inter-microservice communication with clear service boundaries, and provide a resilient developer experience with real-time connection status.
 
