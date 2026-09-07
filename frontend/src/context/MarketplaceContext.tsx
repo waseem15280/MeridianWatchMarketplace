@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import {
   UserAccount,
+  UserLogin,
   WatchListing,
   CollectionWatch,
   SellerReview,
@@ -12,6 +13,7 @@ import {
 } from '../types';
 import {
   INITIAL_ACCOUNTS,
+  INITIAL_LOGINS,
   INITIAL_LISTINGS,
   INITIAL_COLLECTION,
   INITIAL_REVIEWS,
@@ -23,6 +25,7 @@ import {
   buyerWishlistApi,
   sellerHubApi,
   customerOrdersApi,
+  userManagementApi,
   checkGatewayHealth
 } from '../services/api';
 
@@ -39,12 +42,20 @@ interface MarketplaceContextType {
   isSyncing: boolean;
   refreshData: () => Promise<void>;
 
-  // User & Accounts
+  // Authentication & Login (Separated from accounts)
+  currentLogin: UserLogin;
+  availableLogins: Array<UserLogin & { accounts?: UserAccount[] }>;
+  loginUser: (usernameOrEmail: string, password: string) => Promise<boolean>;
+  switchLogin: (loginId: string) => Promise<void>;
+
+  // User & Accounts (1 Login -> N Accounts, 1 role per Account)
   currentUser: UserAccount;
+  userAccounts: UserAccount[];
   accounts: UserAccount[];
   switchUser: (userId: string) => void;
   setUserRole: (role: UserRole) => void;
   updateUserProfile: (updates: Partial<UserAccount>) => void;
+  createUserAccount: (role: UserRole, name: string, bio?: string) => Promise<UserAccount>;
   
   // Navigation
   activeTab: ActiveTab;
@@ -160,6 +171,15 @@ const MarketplaceContext = createContext<MarketplaceContextType | undefined>(und
 
 export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Load initial local states with localStorage fallback
+  const [availableLogins, setAvailableLogins] = useState<Array<UserLogin & { accounts?: UserAccount[] }>>(() => {
+    const saved = localStorage.getItem('chronos_available_logins');
+    return saved ? JSON.parse(saved) : INITIAL_LOGINS;
+  });
+
+  const [currentLoginId, setCurrentLoginId] = useState<string>(() => {
+    return localStorage.getItem('chronos_current_login_id') || 'login-alexander';
+  });
+
   const [accounts, setAccounts] = useState<UserAccount[]>(() => {
     const saved = localStorage.getItem('chronos_accounts');
     return saved ? JSON.parse(saved) : INITIAL_ACCOUNTS;
@@ -241,6 +261,14 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Sync to LocalStorage
   useEffect(() => {
+    localStorage.setItem('chronos_available_logins', JSON.stringify(availableLogins));
+  }, [availableLogins]);
+
+  useEffect(() => {
+    localStorage.setItem('chronos_current_login_id', currentLoginId);
+  }, [currentLoginId]);
+
+  useEffect(() => {
     localStorage.setItem('chronos_accounts', JSON.stringify(accounts));
   }, [accounts]);
 
@@ -294,7 +322,9 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         profilesRes,
         reviewsRes,
         ordersRes,
-        offersRes
+        offersRes,
+        loginsRes,
+        userAccountsRes
       ] = await Promise.allSettled([
         marketplaceApi.getListings(),
         collectorVaultApi.getWatches(),
@@ -302,7 +332,9 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         sellerHubApi.getProfiles(),
         sellerHubApi.getReviews(),
         customerOrdersApi.getOrders(),
-        customerOrdersApi.getBuyerOffers()
+        customerOrdersApi.getBuyerOffers(),
+        userManagementApi.getLogins(),
+        userManagementApi.getAccounts()
       ]);
 
       if (listingsRes.status === 'fulfilled' && Array.isArray(listingsRes.value) && listingsRes.value.length > 0) {
@@ -314,7 +346,12 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       if (wishlistRes.status === 'fulfilled' && Array.isArray(wishlistRes.value)) {
         setWishlist(wishlistRes.value.map((item) => item.listingId));
       }
-      if (profilesRes.status === 'fulfilled' && Array.isArray(profilesRes.value) && profilesRes.value.length > 0) {
+      if (loginsRes.status === 'fulfilled' && Array.isArray(loginsRes.value) && loginsRes.value.length > 0) {
+        setAvailableLogins(loginsRes.value);
+      }
+      if (userAccountsRes.status === 'fulfilled' && Array.isArray(userAccountsRes.value) && userAccountsRes.value.length > 0) {
+        setAccounts(userAccountsRes.value);
+      } else if (profilesRes.status === 'fulfilled' && Array.isArray(profilesRes.value) && profilesRes.value.length > 0) {
         setAccounts(profilesRes.value);
       }
       if (reviewsRes.status === 'fulfilled' && Array.isArray(reviewsRes.value) && reviewsRes.value.length > 0) {
@@ -338,43 +375,152 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     refreshData();
   }, []);
 
-  // Current user helper
+  // Current Login helper (Separated from accounts)
+  const currentLogin = useMemo(() => {
+    return availableLogins.find((l) => l.id === currentLoginId) || availableLogins[0] || INITIAL_LOGINS[0];
+  }, [availableLogins, currentLoginId]);
+
+  // Accounts belonging to the current Login
+  const userAccounts = useMemo(() => {
+    const matched = accounts.filter((a) => a.userLoginId === currentLogin.id);
+    return matched.length > 0 ? matched : accounts.filter((a) => a.id === currentUserId);
+  }, [accounts, currentLogin.id, currentUserId]);
+
+  // Current active user account persona helper
   const currentUser = useMemo(() => {
     const user = accounts.find((acc) => acc.id === currentUserId);
-    return (
-      user ||
-      accounts[0] || {
-        id: 'user-default',
-        name: 'Alexander Vance',
-        email: 'alexander@horology.com',
-        role: 'seller',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-        location: 'New York, USA',
-        memberSince: '2022',
-        verifiedDealer: true,
-        bio: 'Horology enthusiast & seller.',
-        rating: 4.9,
-        reviewCount: 19,
-        totalSalesCount: 37,
-        responseRate: '99%',
-        avgShipTime: 'Within 24 hours'
-      }
-    );
-  }, [accounts, currentUserId]);
+    if (user) return user;
+    if (userAccounts.length > 0) return userAccounts[0];
+    return accounts[0] || INITIAL_ACCOUNTS[0];
+  }, [accounts, currentUserId, userAccounts]);
 
   const switchUser = (userId: string) => {
     const target = accounts.find((a) => a.id === userId);
     if (target) {
       setCurrentUserId(userId);
-      showToast('Switched Account', `Logged in as ${target.name} (${target.role.toUpperCase()})`, 'info');
+      showToast('Switched Persona', `Active account: ${target.name} (${target.role.toUpperCase()})`, 'info');
     }
+  };
+
+  const switchLogin = async (loginId: string) => {
+    const target = availableLogins.find((l) => l.id === loginId);
+    if (!target) return;
+    setCurrentLoginId(loginId);
+    localStorage.setItem('chronos_current_login_id', loginId);
+
+    if (isGatewayConnected) {
+      try {
+        const backendAccounts = await userManagementApi.getLoginAccounts(loginId);
+        if (backendAccounts && backendAccounts.length > 0) {
+          setAccounts((prev) => {
+            const others = prev.filter((a) => a.userLoginId !== loginId);
+            return [...others, ...backendAccounts];
+          });
+          const defaultAcc = backendAccounts.find((a) => a.isDefault) || backendAccounts[0];
+          setCurrentUserId(defaultAcc.id);
+          showToast('Login Switched', `Logged in as @${target.username} (${backendAccounts.length} persona accounts)`, 'info');
+          return;
+        }
+      } catch (err) {
+        console.warn('Failed to fetch accounts for login:', err);
+      }
+    }
+
+    const localAccounts = accounts.filter((a) => a.userLoginId === loginId);
+    if (localAccounts.length > 0) {
+      const defaultAcc = localAccounts.find((a) => a.isDefault) || localAccounts[0];
+      setCurrentUserId(defaultAcc.id);
+    }
+    showToast('Login Switched', `Logged in as @${target.username}`, 'info');
+  };
+
+  const loginUser = async (usernameOrEmail: string, password: string): Promise<boolean> => {
+    if (isGatewayConnected) {
+      try {
+        const res = await userManagementApi.login(usernameOrEmail, password);
+        if (res && res.login) {
+          setCurrentLoginId(res.login.id);
+          localStorage.setItem('chronos_current_login_id', res.login.id);
+          setAccounts((prev) => {
+            const others = prev.filter((a) => a.userLoginId !== res.login.id);
+            return [...others, ...res.accounts];
+          });
+          setCurrentUserId(res.activeAccountId || res.accounts[0]?.id || currentUserId);
+          showToast('Authentication Successful', `Welcome back, @${res.login.username}!`, 'success');
+          return true;
+        }
+      } catch (err) {
+        console.warn('Backend login failed:', err);
+      }
+    }
+
+    // Local / Offline fallback check
+    const matched = availableLogins.find(
+      (l) => l.username.toLowerCase() === usernameOrEmail.toLowerCase() || l.email.toLowerCase() === usernameOrEmail.toLowerCase()
+    );
+    if (matched) {
+      await switchLogin(matched.id);
+      return true;
+    }
+
+    showToast('Authentication Error', 'Invalid credentials or user not found', 'error');
+    return false;
+  };
+
+  const createUserAccount = async (role: UserRole, name: string, bio?: string): Promise<UserAccount> => {
+    const newAccount: UserAccount = {
+      id: 'account-' + Date.now().toString(36),
+      userLoginId: currentLogin.id,
+      name: name.trim(),
+      email: currentLogin.email,
+      role: role,
+      avatar: currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+      location: currentUser.location || 'Global',
+      memberSince: new Date().getFullYear().toString(),
+      verifiedDealer: role === 'seller',
+      bio: bio || `${role.toUpperCase()} profile persona for ${name}`,
+      rating: 5.0,
+      reviewCount: 0,
+      totalSalesCount: 0,
+      responseRate: '100%',
+      avgShipTime: role === 'seller' ? 'Within 24 hours' : 'N/A',
+      isDefault: false
+    };
+
+    if (isGatewayConnected) {
+      try {
+        const created = await userManagementApi.createAccount({
+          userLoginId: currentLogin.id,
+          name: newAccount.name,
+          email: newAccount.email,
+          role: newAccount.role,
+          avatar: newAccount.avatar,
+          location: newAccount.location,
+          bio: newAccount.bio,
+          isDefault: false
+        });
+        if (created && created.id) {
+          setAccounts((prev) => [...prev, created]);
+          setCurrentUserId(created.id);
+          showToast('New Persona Created', `Switched to ${created.name} (${created.role.toUpperCase()})`, 'success');
+          return created;
+        }
+      } catch (err) {
+        console.warn('Backend create account failed:', err);
+      }
+    }
+
+    setAccounts((prev) => [...prev, newAccount]);
+    setCurrentUserId(newAccount.id);
+    showToast('New Persona Created', `Switched to ${newAccount.name} (${newAccount.role.toUpperCase()})`, 'success');
+    return newAccount;
   };
 
   const setUserRole = (newRole: UserRole) => {
     setAccounts((prev) =>
       prev.map((acc) => (acc.id === currentUser.id ? { ...acc, role: newRole } : acc))
     );
-    showToast('Role Mode Updated', `Switched to ${newRole === 'seller' ? 'Seller Hub' : 'Collector/Buyer'} mode`, 'info');
+    showToast('Role Mode Updated', `Switched to ${newRole.toUpperCase()} mode`, 'info');
   };
 
   const updateUserProfile = (updates: Partial<UserAccount>) => {
@@ -386,6 +532,9 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (isGatewayConnected) {
       sellerHubApi.updateProfile(currentUser.id, updates).catch((err) => {
         console.warn('Failed to update profile on SellerHub microservice', err);
+      });
+      userManagementApi.updateAccount(currentUser.id, updates).catch((err) => {
+        console.warn('Failed to update profile on UserManagement microservice', err);
       });
     }
   };
@@ -1000,11 +1149,17 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         isGatewayConnected,
         isSyncing,
         refreshData,
+        currentLogin,
+        availableLogins,
+        loginUser,
+        switchLogin,
         currentUser,
+        userAccounts,
         accounts,
         switchUser,
         setUserRole,
         updateUserProfile,
+        createUserAccount,
         activeTab,
         setActiveTab,
         listings,

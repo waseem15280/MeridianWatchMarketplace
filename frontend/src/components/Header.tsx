@@ -14,7 +14,15 @@ import {
   ShieldCheck,
   Star,
   Sparkles,
-  Layers
+  Layers,
+  UserPlus,
+  LogIn,
+  LogOut,
+  X,
+  KeyRound,
+  CheckCircle,
+  Users,
+  ShieldAlert
 } from 'lucide-react';
 import { ActiveTab, UserRole } from '../types';
 
@@ -24,9 +32,15 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
   const {
+    currentLogin,
+    userAccounts,
+    availableLogins,
     currentUser,
     accounts,
     switchUser,
+    switchLogin,
+    createUserAccount,
+    loginUser,
     activeTab,
     setActiveTab,
     wishlist,
@@ -41,6 +55,65 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
 
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [searchInput, setSearchInput] = useState(filters.searchQuery);
+
+  // Persona Creation Modal State
+  const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
+  const [newAccountRole, setNewAccountRole] = useState<UserRole>('buyer');
+  const [newAccountName, setNewAccountName] = useState('');
+  const [newAccountBio, setNewAccountBio] = useState('');
+  const [isSubmittingAccount, setIsSubmittingAccount] = useState(false);
+
+  // Login Modal State
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
+
+  const getRoleBadge = (role: UserRole) => {
+    switch (role) {
+      case 'seller':
+        return <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-[#C5A880]/20 text-[#85642F] border border-[#C5A880]/40">Seller</span>;
+      case 'buyer':
+        return <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">Buyer</span>;
+      case 'collector':
+        return <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">Collector</span>;
+      case 'admin':
+        return <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">Admin</span>;
+    }
+  };
+
+  const handleCreateAccountSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAccountName.trim()) return;
+    setIsSubmittingAccount(true);
+    try {
+      await createUserAccount(newAccountRole, newAccountName, newAccountBio);
+      setIsAddAccountModalOpen(false);
+      setNewAccountName('');
+      setNewAccountBio('');
+    } finally {
+      setIsSubmittingAccount(false);
+    }
+  };
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    setIsSubmittingLogin(true);
+    try {
+      const ok = await loginUser(loginUsername, loginPassword);
+      if (ok) {
+        setIsLoginModalOpen(false);
+        setLoginUsername('');
+        setLoginPassword('');
+      } else {
+        setLoginError('Invalid username or password.');
+      }
+    } finally {
+      setIsSubmittingLogin(false);
+    }
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +171,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
               </span>
             </button>
             <div className="hidden sm:flex items-center gap-1.5 text-[#8E867E]">
-              <span>5 Microservices</span>
+              <span>6 Microservices (UserAccountDb)</span>
             </div>
           </div>
         </div>
@@ -240,14 +313,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   className="w-7 h-7 rounded-lg object-cover border border-[#D8D0C5]"
                 />
                 <div className="hidden sm:block text-left text-xs">
-                  <div className="font-semibold text-[#1C1917] leading-tight flex items-center gap-1">
-                    <span className="truncate max-w-[100px]">{currentUser.name.split(' ')[0]}</span>
-                    {currentUser.verifiedDealer && (
-                      <ShieldCheck className="w-3 h-3 text-[#967139] shrink-0" />
-                    )}
+                  <div className="font-semibold text-[#1C1917] leading-tight flex items-center gap-1.5">
+                    <span className="truncate max-w-[120px]">{currentUser.name}</span>
+                    {getRoleBadge(currentUser.role)}
                   </div>
-                  <div className="text-[10px] text-[#78716C] font-mono capitalize">
-                    {currentUser.role} • ★ {currentUser.rating}
+                  <div className="text-[10px] text-[#78716C] font-mono flex items-center gap-1">
+                    <span>@{currentLogin.username}</span>
+                    <span>•</span>
+                    <span>★ {currentUser.rating}</span>
                   </div>
                 </div>
                 <ChevronDown className="w-3.5 h-3.5 text-[#78716C]" />
@@ -257,8 +330,32 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
               {isAccountMenuOpen && (
                 <div
                   id="account-dropdown-menu"
-                  className="absolute right-0 mt-2 w-72 bg-[#FAF8F5] border border-[#D8D0C5] rounded-2xl shadow-xl p-3 z-50 animate-in fade-in slide-in-from-top-2"
+                  className="absolute right-0 mt-2 w-80 bg-[#FAF8F5] border border-[#D8D0C5] rounded-2xl shadow-xl p-3.5 z-50 animate-in fade-in slide-in-from-top-2"
                 >
+                  {/* Current Login Identity */}
+                  <div className="p-2.5 bg-[#EDE8E0] rounded-xl border border-[#D8D0C5] mb-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <KeyRound className="w-3.5 h-3.5 text-[#85642F] shrink-0" />
+                        <span className="text-xs font-bold text-[#1C1917] font-mono truncate">
+                          @{currentLogin.username}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setIsAccountMenuOpen(false);
+                          setIsLoginModalOpen(true);
+                        }}
+                        className="text-[10px] text-[#85642F] hover:underline font-semibold flex items-center gap-1 bg-[#FFFFFF] px-2 py-0.5 rounded-lg border border-[#D8D0C5]"
+                      >
+                        <LogIn className="w-3 h-3" />
+                        <span>Log In</span>
+                      </button>
+                    </div>
+                    <div className="text-[10px] text-[#78716C] truncate mt-0.5">{currentLogin.email}</div>
+                  </div>
+
+                  {/* Active Persona Profile Card */}
                   <div className="px-2 py-2 border-b border-[#E5DFD5]">
                     <div className="flex items-center gap-2.5">
                       <img
@@ -271,33 +368,33 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                         <h4 className="text-xs font-bold text-[#1C1917] truncate flex items-center gap-1">
                           {currentUser.name}
                           {currentUser.verifiedDealer && (
-                            <span className="text-[10px] bg-[#C5A880]/25 text-[#78592A] px-1 py-0.5 rounded font-normal">
+                            <span className="text-[9px] bg-[#C5A880]/25 text-[#78592A] px-1 py-0.5 rounded font-normal">
                               Verified
                             </span>
                           )}
                         </h4>
-                        <p className="text-[11px] text-[#78716C] truncate">{currentUser.email}</p>
+                        <div className="mt-0.5">{getRoleBadge(currentUser.role)}</div>
                         <div className="flex items-center gap-2 mt-1 text-[11px] text-[#57534E]">
                           <span className="flex items-center gap-1 text-[#967139] font-medium">
                             <Star className="w-3 h-3 fill-[#C5A880] text-[#967139]" />
                             {currentUser.rating} ({currentUser.reviewCount})
                           </span>
                           <span className="text-[#C5A880]">•</span>
-                          <span className="text-[#78716C]">{currentUser.totalSalesCount} sales</span>
+                          <span className="text-[#78716C]">{currentUser.location.split(',')[0]}</span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Switch Account Persona */}
-                  <div className="mt-2 pt-1">
-                    <div className="text-[10px] font-semibold tracking-wider text-[#78716C] uppercase px-2 mb-1.5 flex items-center justify-between">
-                      <span>Switch Account Profile</span>
-                      <span className="text-[9px] text-[#967139] font-medium">Select Role</span>
+                  {/* Multiple Role Accounts Under Current Login */}
+                  <div className="mt-2.5 pt-1">
+                    <div className="text-[10px] font-semibold tracking-wider text-[#78716C] uppercase px-1 mb-1.5 flex items-center justify-between">
+                      <span>Accounts for @{currentLogin.username}</span>
+                      <span className="text-[9px] text-[#967139] font-medium">1 Role Each</span>
                     </div>
 
-                    <div className="space-y-1">
-                      {accounts.map((acc) => {
+                    <div className="space-y-1 max-h-48 overflow-y-auto pr-0.5">
+                      {userAccounts.map((acc) => {
                         const isSelected = acc.id === currentUser.id;
                         return (
                           <button
@@ -322,23 +419,71 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                               />
                               <div className="truncate">
                                 <div className="font-medium text-[#1C1917] truncate">{acc.name}</div>
-                                <div className="text-[10px] text-[#78716C] capitalize">
-                                  {acc.role} • {acc.location.split(',')[0]}
+                                <div className="text-[10px] text-[#78716C]">
+                                  {acc.location.split(',')[0]}
                                 </div>
                               </div>
                             </div>
 
-                            {isSelected && (
-                              <span className="text-[10px] font-bold text-[#85642F] bg-[#C5A880]/30 px-1.5 py-0.5 rounded">
-                                Active
-                              </span>
-                            )}
+                            <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                              {getRoleBadge(acc.role)}
+                              {isSelected && (
+                                <span className="text-[9px] font-bold text-[#85642F] bg-[#C5A880]/30 px-1 py-0.5 rounded">
+                                  Active
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Add Persona Button */}
+                    <button
+                      id="add-role-persona-btn"
+                      onClick={() => {
+                        setIsAccountMenuOpen(false);
+                        setIsAddAccountModalOpen(true);
+                      }}
+                      className="w-full mt-2 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl border border-dashed border-[#C5A880] text-xs font-semibold text-[#85642F] hover:bg-[#C5A880]/10 transition-colors"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>+ Add New Role Persona</span>
+                    </button>
+                  </div>
+
+                  {/* Switch Login Account */}
+                  <div className="mt-2.5 pt-2 border-t border-[#E5DFD5]">
+                    <div className="text-[9px] font-semibold uppercase tracking-wider text-[#78716C] px-1 mb-1.5 flex items-center justify-between">
+                      <span>Switch User Login</span>
+                      <span className="text-[9px] text-[#85642F] font-mono">UserAccountDb</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
+                      {availableLogins.slice(0, 6).map((l) => {
+                        const isCurrent = l.id === currentLogin.id;
+                        return (
+                          <button
+                            key={l.id}
+                            id={`switch-login-${l.username}`}
+                            onClick={() => {
+                              switchLogin(l.id);
+                              setIsAccountMenuOpen(false);
+                            }}
+                            className={`py-1 px-1.5 rounded-lg text-[10px] font-mono truncate text-center transition-all ${
+                              isCurrent
+                                ? 'bg-[#1C1917] text-[#FAF8F5] font-bold shadow-xs'
+                                : 'bg-[#EDE8E0] hover:bg-[#E2DCD2] text-[#57534E]'
+                            }`}
+                            title={`Switch login to @${l.username}`}
+                          >
+                            @{l.username}
                           </button>
                         );
                       })}
                     </div>
                   </div>
 
+                  {/* Quick Hub Navigation */}
                   <div className="mt-3 pt-2 border-t border-[#E5DFD5] grid grid-cols-2 gap-1.5">
                     <button
                       id="account-menu-vault-btn"
@@ -402,6 +547,251 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
           })}
         </div>
       </div>
+
+      {/* Add Role Persona Modal */}
+      {isAddAccountModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6">
+            <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-4 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#C5A880]/20 flex items-center justify-center">
+                  <UserPlus className="w-5 h-5 text-[#85642F]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#1C1917]">Create Account Persona</h3>
+                  <p className="text-xs text-[#78716C]">
+                    Under login <strong className="font-mono text-[#85642F]">@{currentLogin.username}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAddAccountModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-[#EDE8E0] flex items-center justify-center text-[#78716C] hover:text-[#1C1917] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAccountSubmit} className="space-y-4">
+              <div className="bg-[#EAE4DC]/60 p-3 rounded-xl border border-[#D8D0C5]/60 text-xs text-[#57534E]">
+                💡 <span className="font-semibold text-[#1C1917]">Microservices Rule:</span> Each user account is strictly mapped to <strong>one single role</strong>. You can create multiple account personas under the same login session.
+              </div>
+
+              {/* Role Picker */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-2">
+                  Select Role (1 Role per Account)
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      { role: 'buyer' as UserRole, label: 'Buyer', desc: 'Browse catalog, buy watches, wishlists', color: 'blue' },
+                      { role: 'seller' as UserRole, label: 'Seller', desc: 'List timepieces, seller hub, manage offers', color: 'amber' },
+                      { role: 'collector' as UserRole, label: 'Collector', desc: 'Private vault, market valuation tracking', color: 'purple' },
+                      { role: 'admin' as UserRole, label: 'Admin', desc: 'Escrow oversight, compliance & admin', color: 'rose' }
+                    ] as const
+                  ).map((item) => {
+                    const isSelected = newAccountRole === item.role;
+                    return (
+                      <button
+                        type="button"
+                        key={item.role}
+                        onClick={() => setNewAccountRole(item.role)}
+                        className={`p-3 rounded-xl border text-left transition-all ${
+                          isSelected
+                            ? 'bg-[#FFFFFF] border-[#85642F] ring-2 ring-[#C5A880]/40 shadow-sm'
+                            : 'bg-[#EDE8E0]/60 border-[#D8D0C5] hover:bg-[#EDE8E0]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-bold text-xs capitalize text-[#1C1917]">{item.label}</span>
+                          {isSelected && <CheckCircle className="w-3.5 h-3.5 text-[#85642F]" />}
+                        </div>
+                        <p className="text-[10px] text-[#78716C] leading-snug">{item.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Persona Display Name */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1.5">
+                  Persona Profile Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newAccountName}
+                  onChange={(e) => setNewAccountName(e.target.value)}
+                  placeholder={`e.g. ${currentLogin.username.charAt(0).toUpperCase() + currentLogin.username.slice(1)} (${newAccountRole.charAt(0).toUpperCase() + newAccountRole.slice(1)} Persona)`}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-sm text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
+                />
+              </div>
+
+              {/* Persona Bio */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1.5">
+                  Bio / Specialization (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={newAccountBio}
+                  onChange={(e) => setNewAccountBio(e.target.value)}
+                  placeholder={`Brief description of this ${newAccountRole} persona...`}
+                  className="w-full px-3.5 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#E5DFD5]">
+                <button
+                  type="button"
+                  onClick={() => setIsAddAccountModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-[#D8D0C5] text-xs font-medium text-[#57534E] hover:bg-[#EDE8E0] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingAccount || !newAccountName.trim()}
+                  className="px-5 py-2 rounded-xl bg-[#1C1917] text-[#FAF8F5] text-xs font-bold hover:bg-[#3D3A36] disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                >
+                  {isSubmittingAccount ? (
+                    <span>Creating...</span>
+                  ) : (
+                    <>
+                      <UserPlus className="w-3.5 h-3.5 text-[#C5A880]" />
+                      <span>Create Account Persona</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Log In Modal */}
+      {isLoginModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6">
+            <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-4 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#C5A880]/20 flex items-center justify-center">
+                  <KeyRound className="w-5 h-5 text-[#85642F]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#1C1917]">User Authentication</h3>
+                  <p className="text-xs text-[#78716C]">Log in to retrieve accounts from UserAccountDb</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsLoginModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-[#EDE8E0] flex items-center justify-center text-[#78716C] hover:text-[#1C1917] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Quick Demo Pickers */}
+            <div className="mb-4">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-[#78716C] mb-1.5">
+                Quick Demo Accounts (1-Click Switch)
+              </span>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { username: 'alexander', roleLabel: 'Seller • Collector • Buyer' },
+                  { username: 'julian', roleLabel: 'Buyer • Collector' },
+                  { username: 'admin', roleLabel: 'Platform Admin' },
+                  { username: 'geneva_dealer', roleLabel: 'Verified Dealer' }
+                ].map((demo) => (
+                  <button
+                    key={demo.username}
+                    type="button"
+                    onClick={() => {
+                      const match = availableLogins.find((l) => l.username === demo.username);
+                      if (match) {
+                        switchLogin(match.id);
+                        setIsLoginModalOpen(false);
+                      }
+                    }}
+                    className="p-2 rounded-xl bg-[#EDE8E0] hover:bg-[#E2DCD2] text-left transition-colors border border-[#D8D0C5]"
+                  >
+                    <div className="text-xs font-mono font-bold text-[#1C1917]">@{demo.username}</div>
+                    <div className="text-[9px] text-[#78716C]">{demo.roleLabel}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative flex py-2 items-center">
+              <div className="flex-grow border-t border-[#E5DFD5]"></div>
+              <span className="flex-shrink mx-2 text-[10px] uppercase font-bold text-[#78716C]">or with credentials</span>
+              <div className="flex-grow border-t border-[#E5DFD5]"></div>
+            </div>
+
+            <form onSubmit={handleLoginSubmit} className="space-y-3.5 mt-2">
+              {loginError && (
+                <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
+                  {loginError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1">
+                  Username or Email
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={loginUsername}
+                  onChange={(e) => setLoginUsername(e.target.value)}
+                  placeholder="e.g. alexander or alexander.vance@horology.com"
+                  className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1">
+                  Password (default: password123 / admin123)
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#E5DFD5]">
+                <button
+                  type="button"
+                  onClick={() => setIsLoginModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-[#D8D0C5] text-xs font-medium text-[#57534E] hover:bg-[#EDE8E0] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingLogin || !loginUsername}
+                  className="px-5 py-2 rounded-xl bg-[#1C1917] text-[#FAF8F5] text-xs font-bold hover:bg-[#3D3A36] disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                >
+                  {isSubmittingLogin ? (
+                    <span>Authenticating...</span>
+                  ) : (
+                    <>
+                      <LogIn className="w-3.5 h-3.5 text-[#C5A880]" />
+                      <span>Log In</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

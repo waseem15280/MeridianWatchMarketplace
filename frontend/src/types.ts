@@ -1,4 +1,13 @@
-export type UserRole = 'buyer' | 'seller' | 'collector';
+export type UserRole = 'buyer' | 'seller' | 'collector' | 'admin';
+
+export interface UserLogin {
+  id: string;
+  username: string;
+  email: string;
+  created?: string;
+  lastLoginAt?: string;
+  accounts?: UserAccount[];
+}
 
 export type WatchCondition = 'Unworn' | 'Mint' | 'Very Good' | 'Good' | 'Fair';
 
@@ -39,6 +48,7 @@ export interface SellerReview {
 
 export interface UserAccount {
   id: string;
+  userLoginId?: string;
   name: string;
   email: string;
   role: UserRole;
@@ -53,6 +63,7 @@ export interface UserAccount {
   responseRate: string; // e.g. "99%"
   avgShipTime: string; // e.g. "Within 24 hours"
   phone?: string;
+  isDefault?: boolean;
 }
 
 export interface WatchListing {
