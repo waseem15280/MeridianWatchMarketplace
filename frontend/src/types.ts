@@ -1,3 +1,4 @@
+export type UserRole = 'buyer' | 'seller' | 'collector';
 export type UserRole = 'buyer' | 'seller' | 'collector' | 'admin';
 
 export interface UserLogin {

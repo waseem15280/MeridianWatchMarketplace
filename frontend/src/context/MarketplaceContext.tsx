@@ -42,6 +42,7 @@ interface MarketplaceContextType {
   isSyncing: boolean;
   refreshData: () => Promise<void>;
 
+  // User & Accounts
   // Authentication & Login (Separated from accounts)
   currentLogin: UserLogin;
   availableLogins: Array<UserLogin & { accounts?: UserAccount[] }>;
@@ -322,6 +323,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         profilesRes,
         reviewsRes,
         ordersRes,
+        offersRes
         offersRes,
         loginsRes,
         userAccountsRes
@@ -332,6 +334,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         sellerHubApi.getProfiles(),
         sellerHubApi.getReviews(),
         customerOrdersApi.getOrders(),
+        customerOrdersApi.getBuyerOffers()
         customerOrdersApi.getBuyerOffers(),
         userManagementApi.getLogins(),
         userManagementApi.getAccounts()
@@ -346,6 +349,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       if (wishlistRes.status === 'fulfilled' && Array.isArray(wishlistRes.value)) {
         setWishlist(wishlistRes.value.map((item) => item.listingId));
       }
+      if (profilesRes.status === 'fulfilled' && Array.isArray(profilesRes.value) && profilesRes.value.length > 0) {
       if (loginsRes.status === 'fulfilled' && Array.isArray(loginsRes.value) && loginsRes.value.length > 0) {
         setAvailableLogins(loginsRes.value);
       }
@@ -375,6 +379,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     refreshData();
   }, []);
 
+  // Current user helper
   // Current Login helper (Separated from accounts)
   const currentLogin = useMemo(() => {
     return availableLogins.find((l) => l.id === currentLoginId) || availableLogins[0] || INITIAL_LOGINS[0];
@@ -389,6 +394,26 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Current active user account persona helper
   const currentUser = useMemo(() => {
     const user = accounts.find((acc) => acc.id === currentUserId);
+    return (
+      user ||
+      accounts[0] || {
+        id: 'user-default',
+        name: 'Alexander Vance',
+        email: 'alexander@horology.com',
+        role: 'seller',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+        location: 'New York, USA',
+        memberSince: '2022',
+        verifiedDealer: true,
+        bio: 'Horology enthusiast & seller.',
+        rating: 4.9,
+        reviewCount: 19,
+        totalSalesCount: 37,
+        responseRate: '99%',
+        avgShipTime: 'Within 24 hours'
+      }
+    );
+  }, [accounts, currentUserId]);
     if (user) return user;
     if (userAccounts.length > 0) return userAccounts[0];
     return accounts[0] || INITIAL_ACCOUNTS[0];
@@ -398,6 +423,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const target = accounts.find((a) => a.id === userId);
     if (target) {
       setCurrentUserId(userId);
+      showToast('Switched Account', `Logged in as ${target.name} (${target.role.toUpperCase()})`, 'info');
       showToast('Switched Persona', `Active account: ${target.name} (${target.role.toUpperCase()})`, 'info');
     }
   };
@@ -520,6 +546,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setAccounts((prev) =>
       prev.map((acc) => (acc.id === currentUser.id ? { ...acc, role: newRole } : acc))
     );
+    showToast('Role Mode Updated', `Switched to ${newRole === 'seller' ? 'Seller Hub' : 'Collector/Buyer'} mode`, 'info');
     showToast('Role Mode Updated', `Switched to ${newRole.toUpperCase()} mode`, 'info');
   };
 

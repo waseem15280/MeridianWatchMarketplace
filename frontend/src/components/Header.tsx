@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Star,
   Sparkles,
+  Layers
   Layers,
   UserPlus,
   LogIn,
@@ -171,6 +172,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
               </span>
             </button>
             <div className="hidden sm:flex items-center gap-1.5 text-[#8E867E]">
+              <span>5 Microservices</span>
               <span>6 Microservices (UserAccountDb)</span>
             </div>
           </div>
@@ -313,10 +315,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   className="w-7 h-7 rounded-lg object-cover border border-[#D8D0C5]"
                 />
                 <div className="hidden sm:block text-left text-xs">
+                  <div className="font-semibold text-[#1C1917] leading-tight flex items-center gap-1">
+                    <span className="truncate max-w-[100px]">{currentUser.name.split(' ')[0]}</span>
+                    {currentUser.verifiedDealer && (
+                      <ShieldCheck className="w-3 h-3 text-[#967139] shrink-0" />
+                    )}
                   <div className="font-semibold text-[#1C1917] leading-tight flex items-center gap-1.5">
                     <span className="truncate max-w-[120px]">{currentUser.name}</span>
                     {getRoleBadge(currentUser.role)}
                   </div>
+                  <div className="text-[10px] text-[#78716C] font-mono capitalize">
+                    {currentUser.role} • ★ {currentUser.rating}
                   <div className="text-[10px] text-[#78716C] font-mono flex items-center gap-1">
                     <span>@{currentLogin.username}</span>
                     <span>•</span>
@@ -330,6 +339,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
               {isAccountMenuOpen && (
                 <div
                   id="account-dropdown-menu"
+                  className="absolute right-0 mt-2 w-72 bg-[#FAF8F5] border border-[#D8D0C5] rounded-2xl shadow-xl p-3 z-50 animate-in fade-in slide-in-from-top-2"
                   className="absolute right-0 mt-2 w-80 bg-[#FAF8F5] border border-[#D8D0C5] rounded-2xl shadow-xl p-3.5 z-50 animate-in fade-in slide-in-from-top-2"
                 >
                   {/* Current Login Identity */}
@@ -368,11 +378,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                         <h4 className="text-xs font-bold text-[#1C1917] truncate flex items-center gap-1">
                           {currentUser.name}
                           {currentUser.verifiedDealer && (
+                            <span className="text-[10px] bg-[#C5A880]/25 text-[#78592A] px-1 py-0.5 rounded font-normal">
                             <span className="text-[9px] bg-[#C5A880]/25 text-[#78592A] px-1 py-0.5 rounded font-normal">
                               Verified
                             </span>
                           )}
                         </h4>
+                        <p className="text-[11px] text-[#78716C] truncate">{currentUser.email}</p>
                         <div className="mt-0.5">{getRoleBadge(currentUser.role)}</div>
                         <div className="flex items-center gap-2 mt-1 text-[11px] text-[#57534E]">
                           <span className="flex items-center gap-1 text-[#967139] font-medium">
@@ -380,12 +392,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                             {currentUser.rating} ({currentUser.reviewCount})
                           </span>
                           <span className="text-[#C5A880]">•</span>
+                          <span className="text-[#78716C]">{currentUser.totalSalesCount} sales</span>
                           <span className="text-[#78716C]">{currentUser.location.split(',')[0]}</span>
                         </div>
                       </div>
                     </div>
                   </div>
 
+                  {/* Switch Account Persona */}
+                  <div className="mt-2 pt-1">
+                    <div className="text-[10px] font-semibold tracking-wider text-[#78716C] uppercase px-2 mb-1.5 flex items-center justify-between">
+                      <span>Switch Account Profile</span>
+                      <span className="text-[9px] text-[#967139] font-medium">Select Role</span>
                   {/* Multiple Role Accounts Under Current Login */}
                   <div className="mt-2.5 pt-1">
                     <div className="text-[10px] font-semibold tracking-wider text-[#78716C] uppercase px-1 mb-1.5 flex items-center justify-between">
@@ -393,6 +411,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                       <span className="text-[9px] text-[#967139] font-medium">1 Role Each</span>
                     </div>
 
+                    <div className="space-y-1">
+                      {accounts.map((acc) => {
                     <div className="space-y-1 max-h-48 overflow-y-auto pr-0.5">
                       {userAccounts.map((acc) => {
                         const isSelected = acc.id === currentUser.id;
@@ -419,12 +439,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                               />
                               <div className="truncate">
                                 <div className="font-medium text-[#1C1917] truncate">{acc.name}</div>
+                                <div className="text-[10px] text-[#78716C] capitalize">
+                                  {acc.role} • {acc.location.split(',')[0]}
                                 <div className="text-[10px] text-[#78716C]">
                                   {acc.location.split(',')[0]}
                                 </div>
                               </div>
                             </div>
 
+                            {isSelected && (
+                              <span className="text-[10px] font-bold text-[#85642F] bg-[#C5A880]/30 px-1.5 py-0.5 rounded">
+                                Active
+                              </span>
+                            )}
                             <div className="flex items-center gap-1.5 shrink-0 ml-2">
                               {getRoleBadge(acc.role)}
                               {isSelected && (
