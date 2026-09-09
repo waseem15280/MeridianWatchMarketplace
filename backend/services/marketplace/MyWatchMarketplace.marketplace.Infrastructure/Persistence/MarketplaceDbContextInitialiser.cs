@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 
 namespace MyWatchMarketplace.marketplace.Infrastructure.Persistence;
 
@@ -22,8 +23,15 @@ public class MarketplaceDbContextInitialiser
         {
             if (_context.Database.IsNpgsql())
             {
-                await _context.Database.MigrateAsync();
-                await _context.Database.EnsureCreatedAsync();
+                var pending = await _context.Database.GetPendingMigrationsAsync();
+                if (pending != null && pending.Any())
+                {
+                    await _context.Database.MigrateAsync();
+                }
+                else
+                {
+                    await _context.Database.EnsureCreatedAsync();
+                }
             }
 
             await SeedAsync();
