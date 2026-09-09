@@ -14,7 +14,6 @@ import {
   ShieldCheck,
   Star,
   Sparkles,
-  Layers
   Layers,
   UserPlus,
   LogIn,
@@ -320,12 +319,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                     {currentUser.verifiedDealer && (
                       <ShieldCheck className="w-3 h-3 text-[#967139] shrink-0" />
                     )}
+                  </div>
                   <div className="font-semibold text-[#1C1917] leading-tight flex items-center gap-1.5">
                     <span className="truncate max-w-[120px]">{currentUser.name}</span>
                     {getRoleBadge(currentUser.role)}
                   </div>
                   <div className="text-[10px] text-[#78716C] font-mono capitalize">
                     {currentUser.role} • ★ {currentUser.rating}
+                  </div>
                   <div className="text-[10px] text-[#78716C] font-mono flex items-center gap-1">
                     <span>@{currentLogin.username}</span>
                     <span>•</span>
@@ -339,7 +340,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
               {isAccountMenuOpen && (
                 <div
                   id="account-dropdown-menu"
-                  className="absolute right-0 mt-2 w-72 bg-[#FAF8F5] border border-[#D8D0C5] rounded-2xl shadow-xl p-3 z-50 animate-in fade-in slide-in-from-top-2"
                   className="absolute right-0 mt-2 w-80 bg-[#FAF8F5] border border-[#D8D0C5] rounded-2xl shadow-xl p-3.5 z-50 animate-in fade-in slide-in-from-top-2"
                 >
                   {/* Current Login Identity */}
@@ -352,6 +352,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                         </span>
                       </div>
                       <button
+                        type="button"
                         onClick={() => {
                           setIsAccountMenuOpen(false);
                           setIsLoginModalOpen(true);
@@ -378,7 +379,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                         <h4 className="text-xs font-bold text-[#1C1917] truncate flex items-center gap-1">
                           {currentUser.name}
                           {currentUser.verifiedDealer && (
-                            <span className="text-[10px] bg-[#C5A880]/25 text-[#78592A] px-1 py-0.5 rounded font-normal">
                             <span className="text-[9px] bg-[#C5A880]/25 text-[#78592A] px-1 py-0.5 rounded font-normal">
                               Verified
                             </span>
@@ -400,19 +400,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   </div>
 
                   {/* Switch Account Persona */}
-                  <div className="mt-2 pt-1">
-                    <div className="text-[10px] font-semibold tracking-wider text-[#78716C] uppercase px-2 mb-1.5 flex items-center justify-between">
-                      <span>Switch Account Profile</span>
-                      <span className="text-[9px] text-[#967139] font-medium">Select Role</span>
-                  {/* Multiple Role Accounts Under Current Login */}
                   <div className="mt-2.5 pt-1">
                     <div className="text-[10px] font-semibold tracking-wider text-[#78716C] uppercase px-1 mb-1.5 flex items-center justify-between">
                       <span>Accounts for @{currentLogin.username}</span>
                       <span className="text-[9px] text-[#967139] font-medium">1 Role Each</span>
                     </div>
 
-                    <div className="space-y-1">
-                      {accounts.map((acc) => {
                     <div className="space-y-1 max-h-48 overflow-y-auto pr-0.5">
                       {userAccounts.map((acc) => {
                         const isSelected = acc.id === currentUser.id;
@@ -420,6 +413,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                           <button
                             key={acc.id}
                             id={`switch-user-${acc.id}`}
+                            type="button"
                             onClick={() => {
                               switchUser(acc.id);
                               setIsAccountMenuOpen(false);
@@ -441,17 +435,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                                 <div className="font-medium text-[#1C1917] truncate">{acc.name}</div>
                                 <div className="text-[10px] text-[#78716C] capitalize">
                                   {acc.role} • {acc.location.split(',')[0]}
-                                <div className="text-[10px] text-[#78716C]">
-                                  {acc.location.split(',')[0]}
                                 </div>
                               </div>
                             </div>
 
-                            {isSelected && (
-                              <span className="text-[10px] font-bold text-[#85642F] bg-[#C5A880]/30 px-1.5 py-0.5 rounded">
-                                Active
-                              </span>
-                            )}
                             <div className="flex items-center gap-1.5 shrink-0 ml-2">
                               {getRoleBadge(acc.role)}
                               {isSelected && (
@@ -467,6 +454,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
 
                     {/* Add Persona Button */}
                     <button
+                      type="button"
                       id="add-role-persona-btn"
                       onClick={() => {
                         setIsAccountMenuOpen(false);
@@ -492,6 +480,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                           <button
                             key={l.id}
                             id={`switch-login-${l.username}`}
+                            type="button"
                             onClick={() => {
                               switchLogin(l.id);
                               setIsAccountMenuOpen(false);
@@ -513,6 +502,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   {/* Quick Hub Navigation */}
                   <div className="mt-3 pt-2 border-t border-[#E5DFD5] grid grid-cols-2 gap-1.5">
                     <button
+                      type="button"
                       id="account-menu-vault-btn"
                       onClick={() => {
                         setActiveTab('collection');
@@ -524,6 +514,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                       <span>Watch Vault</span>
                     </button>
                     <button
+                      type="button"
                       id="account-menu-seller-hub-btn"
                       onClick={() => {
                         setActiveTab('seller-hub');

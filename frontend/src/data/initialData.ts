@@ -171,50 +171,22 @@ export const INITIAL_ACCOUNTS: UserAccount[] = [
     responseRate: '100%',
     avgShipTime: 'Next day (DHL Global Express)',
     phone: '+81 3 5555 0143',
-  },
     isDefault: true
   }
 ];
 
 export const INITIAL_LOGINS: UserLogin[] = [
   {
-    id: 'user-current-seller',
-    name: 'Alexander Vance',
     id: 'login-alexander',
     username: 'alexander',
     email: 'alexander.vance@horology.com',
-    role: 'seller',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-    location: 'New York, USA',
-    memberSince: '2022',
-    verifiedDealer: true,
-    bio: 'Lifelong collector and independent horologist based in Manhattan. Passionate about vintage chronographs and modern independent watchmaking.',
-    rating: 4.92,
-    reviewCount: 19,
-    totalSalesCount: 37,
-    responseRate: '99%',
-    avgShipTime: 'Within 24 hours (FedEx Priority Overnight)',
-    phone: '+1 212 555 0199',
     created: '2022-01-15T00:00:00Z',
     accounts: INITIAL_ACCOUNTS.filter(a => a.userLoginId === 'login-alexander')
   },
   {
-    id: 'user-current-buyer',
-    name: 'Julian Sterling',
     id: 'login-julian',
     username: 'julian',
     email: 'j.sterling@collector.io',
-    role: 'buyer',
-    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=300&q=80',
-    location: 'Zurich, Switzerland',
-    memberSince: '2023',
-    verifiedDealer: false,
-    bio: 'Passionate timepiece collector looking for grail watches, perpetual calendars, and limited edition chronographs.',
-    rating: 5.0,
-    reviewCount: 6,
-    totalSalesCount: 2,
-    responseRate: '100%',
-    avgShipTime: 'N/A',
     created: '2023-03-20T00:00:00Z',
     accounts: INITIAL_ACCOUNTS.filter(a => a.userLoginId === 'login-julian')
   },

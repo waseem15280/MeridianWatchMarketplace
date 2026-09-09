@@ -323,7 +323,6 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         profilesRes,
         reviewsRes,
         ordersRes,
-        offersRes
         offersRes,
         loginsRes,
         userAccountsRes
@@ -334,7 +333,6 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         sellerHubApi.getProfiles(),
         sellerHubApi.getReviews(),
         customerOrdersApi.getOrders(),
-        customerOrdersApi.getBuyerOffers()
         customerOrdersApi.getBuyerOffers(),
         userManagementApi.getLogins(),
         userManagementApi.getAccounts()
@@ -349,7 +347,6 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       if (wishlistRes.status === 'fulfilled' && Array.isArray(wishlistRes.value)) {
         setWishlist(wishlistRes.value.map((item) => item.listingId));
       }
-      if (profilesRes.status === 'fulfilled' && Array.isArray(profilesRes.value) && profilesRes.value.length > 0) {
       if (loginsRes.status === 'fulfilled' && Array.isArray(loginsRes.value) && loginsRes.value.length > 0) {
         setAvailableLogins(loginsRes.value);
       }
@@ -394,9 +391,11 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Current active user account persona helper
   const currentUser = useMemo(() => {
     const user = accounts.find((acc) => acc.id === currentUserId);
+    if (user) return user;
+    if (userAccounts.length > 0) return userAccounts[0];
     return (
-      user ||
-      accounts[0] || {
+      accounts[0] ||
+      {
         id: 'user-default',
         name: 'Alexander Vance',
         email: 'alexander@horology.com',
@@ -413,10 +412,6 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         avgShipTime: 'Within 24 hours'
       }
     );
-  }, [accounts, currentUserId]);
-    if (user) return user;
-    if (userAccounts.length > 0) return userAccounts[0];
-    return accounts[0] || INITIAL_ACCOUNTS[0];
   }, [accounts, currentUserId, userAccounts]);
 
   const switchUser = (userId: string) => {
