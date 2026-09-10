@@ -711,36 +711,30 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
               </button>
             </div>
 
-            {/* Quick Demo Pickers */}
-            <div className="mb-4">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-[#78716C] mb-1.5">
-                Quick Demo Accounts (1-Click Switch)
-              </span>
-              <div className="grid grid-cols-2 gap-1.5">
-                {[
-                  { username: 'alexander', roleLabel: 'Seller • Collector • Buyer' },
-                  { username: 'julian', roleLabel: 'Buyer • Collector' },
-                  { username: 'admin', roleLabel: 'Platform Admin' },
-                  { username: 'geneva_dealer', roleLabel: 'Verified Dealer' }
-                ].map((demo) => (
-                  <button
-                    key={demo.username}
-                    type="button"
-                    onClick={() => {
-                      const match = availableLogins.find((l) => l.username === demo.username);
-                      if (match) {
-                        switchLogin(match.id);
+            {/* Available User Logins */}
+            {availableLogins.length > 0 && (
+              <div className="mb-4">
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-[#78716C] mb-1.5">
+                  Available Database Logins (1-Click Switch)
+                </span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {availableLogins.slice(0, 6).map((login) => (
+                    <button
+                      key={login.id}
+                      type="button"
+                      onClick={() => {
+                        switchLogin(login.id);
                         setIsLoginModalOpen(false);
-                      }
-                    }}
-                    className="p-2 rounded-xl bg-[#EDE8E0] hover:bg-[#E2DCD2] text-left transition-colors border border-[#D8D0C5]"
-                  >
-                    <div className="text-xs font-mono font-bold text-[#1C1917]">@{demo.username}</div>
-                    <div className="text-[9px] text-[#78716C]">{demo.roleLabel}</div>
-                  </button>
-                ))}
+                      }}
+                      className="p-2 rounded-xl bg-[#EDE8E0] hover:bg-[#E2DCD2] text-left transition-colors border border-[#D8D0C5]"
+                    >
+                      <div className="text-xs font-mono font-bold text-[#1C1917]">@{login.username}</div>
+                      <div className="text-[9px] text-[#78716C] truncate">{login.email}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="relative flex py-2 items-center">
               <div className="flex-grow border-t border-[#E5DFD5]"></div>

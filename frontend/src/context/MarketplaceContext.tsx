@@ -12,14 +12,6 @@ import {
   UserRole
 } from '../types';
 import {
-  INITIAL_ACCOUNTS,
-  INITIAL_LOGINS,
-  INITIAL_LISTINGS,
-  INITIAL_COLLECTION,
-  INITIAL_REVIEWS,
-  INITIAL_ORDERS
-} from '../data/initialData';
-import {
   marketplaceApi,
   collectorVaultApi,
   buyerWishlistApi,
@@ -28,6 +20,30 @@ import {
   userManagementApi,
   checkGatewayHealth
 } from '../services/api';
+
+const EMPTY_USER: UserAccount = {
+  id: '',
+  name: 'Loading user...',
+  email: '',
+  role: 'buyer',
+  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+  location: '',
+  memberSince: '',
+  verifiedDealer: false,
+  bio: '',
+  rating: 5.0,
+  reviewCount: 0,
+  totalSalesCount: 0,
+  responseRate: '100%',
+  avgShipTime: 'N/A'
+};
+
+const EMPTY_LOGIN: UserLogin = {
+  id: '',
+  username: 'guest',
+  email: '',
+  accounts: []
+};
 
 interface ToastMessage {
   id: string;
@@ -171,50 +187,50 @@ const DEFAULT_FILTERS: FilterOptions = {
 const MarketplaceContext = createContext<MarketplaceContextType | undefined>(undefined);
 
 export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Load initial local states with localStorage fallback
+  // Load initial local states with localStorage fallback (empty arrays if no cache)
   const [availableLogins, setAvailableLogins] = useState<Array<UserLogin & { accounts?: UserAccount[] }>>(() => {
     const saved = localStorage.getItem('chronos_available_logins');
-    return saved ? JSON.parse(saved) : INITIAL_LOGINS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [currentLoginId, setCurrentLoginId] = useState<string>(() => {
-    return localStorage.getItem('chronos_current_login_id') || 'login-alexander';
+    return localStorage.getItem('chronos_current_login_id') || '';
   });
 
   const [accounts, setAccounts] = useState<UserAccount[]>(() => {
     const saved = localStorage.getItem('chronos_accounts');
-    return saved ? JSON.parse(saved) : INITIAL_ACCOUNTS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [currentUserId, setCurrentUserId] = useState<string>(() => {
-    return localStorage.getItem('chronos_current_user_id') || 'user-current-seller';
+    return localStorage.getItem('chronos_current_user_id') || '';
   });
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('explore');
 
   const [listings, setListings] = useState<WatchListing[]>(() => {
     const saved = localStorage.getItem('chronos_listings');
-    return saved ? JSON.parse(saved) : INITIAL_LISTINGS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [collection, setCollection] = useState<CollectionWatch[]>(() => {
     const saved = localStorage.getItem('chronos_collection');
-    return saved ? JSON.parse(saved) : INITIAL_COLLECTION;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [wishlist, setWishlist] = useState<string[]>(() => {
     const saved = localStorage.getItem('chronos_wishlist');
-    return saved ? JSON.parse(saved) : ['watch-rolex-daytona', 'watch-grand-seiko-shunbun'];
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [reviews, setReviews] = useState<SellerReview[]>(() => {
     const saved = localStorage.getItem('chronos_reviews');
-    return saved ? JSON.parse(saved) : INITIAL_REVIEWS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [orders, setOrders] = useState<OrderTransaction[]>(() => {
     const saved = localStorage.getItem('chronos_orders');
-    return saved ? JSON.parse(saved) : INITIAL_ORDERS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [offers, setOffers] = useState<WatchOffer[]>(() => {
@@ -338,31 +354,58 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         userManagementApi.getAccounts()
       ]);
 
-      if (listingsRes.status === 'fulfilled' && Array.isArray(listingsRes.value) && listingsRes.value.length > 0) {
+      if (listingsRes.status === 'fulfilled' && Array.isArray(listingsRes.value)) {
         setListings(listingsRes.value);
+        localStorage.setItem('chronos_listings', JSON.stringify(listingsRes.value));
       }
-      if (collectionRes.status === 'fulfilled' && Array.isArray(collectionRes.value) && collectionRes.value.length > 0) {
+      if (collectionRes.status === 'fulfilled' && Array.isArray(collectionRes.value)) {
         setCollection(collectionRes.value);
+        localStorage.setItem('chronos_collection', JSON.stringify(collectionRes.value));
       }
       if (wishlistRes.status === 'fulfilled' && Array.isArray(wishlistRes.value)) {
-        setWishlist(wishlistRes.value.map((item) => item.listingId));
+        const ids = wishlistRes.value.map((item) => item.listingId);
+        setWishlist(ids);
+        localStorage.setItem('chronos_wishlist', JSON.stringify(ids));
       }
-      if (loginsRes.status === 'fulfilled' && Array.isArray(loginsRes.value) && loginsRes.value.length > 0) {
+      if (loginsRes.status === 'fulfilled' && Array.isArray(loginsRes.value)) {
         setAvailableLogins(loginsRes.value);
+        localStorage.setItem('chronos_available_logins', JSON.stringify(loginsRes.value));
+        if (loginsRes.value.length > 0) {
+          setCurrentLoginId((prev) => {
+            const exists = loginsRes.value.some((l) => l.id === prev);
+            const selected = exists ? prev : loginsRes.value[0].id;
+            localStorage.setItem('chronos_current_login_id', selected);
+            return selected;
+          });
+        }
       }
-      if (userAccountsRes.status === 'fulfilled' && Array.isArray(userAccountsRes.value) && userAccountsRes.value.length > 0) {
+      if (userAccountsRes.status === 'fulfilled' && Array.isArray(userAccountsRes.value)) {
         setAccounts(userAccountsRes.value);
-      } else if (profilesRes.status === 'fulfilled' && Array.isArray(profilesRes.value) && profilesRes.value.length > 0) {
+        localStorage.setItem('chronos_accounts', JSON.stringify(userAccountsRes.value));
+        if (userAccountsRes.value.length > 0) {
+          setCurrentUserId((prev) => {
+            const exists = userAccountsRes.value.some((a) => a.id === prev);
+            if (exists) return prev;
+            const defaultAccount = userAccountsRes.value.find((a) => a.isDefault) || userAccountsRes.value[0];
+            localStorage.setItem('chronos_current_user_id', defaultAccount.id);
+            return defaultAccount.id;
+          });
+        }
+      } else if (profilesRes.status === 'fulfilled' && Array.isArray(profilesRes.value)) {
         setAccounts(profilesRes.value);
+        localStorage.setItem('chronos_accounts', JSON.stringify(profilesRes.value));
       }
-      if (reviewsRes.status === 'fulfilled' && Array.isArray(reviewsRes.value) && reviewsRes.value.length > 0) {
+      if (reviewsRes.status === 'fulfilled' && Array.isArray(reviewsRes.value)) {
         setReviews(reviewsRes.value);
+        localStorage.setItem('chronos_reviews', JSON.stringify(reviewsRes.value));
       }
-      if (ordersRes.status === 'fulfilled' && Array.isArray(ordersRes.value) && ordersRes.value.length > 0) {
+      if (ordersRes.status === 'fulfilled' && Array.isArray(ordersRes.value)) {
         setOrders(ordersRes.value);
+        localStorage.setItem('chronos_orders', JSON.stringify(ordersRes.value));
       }
-      if (offersRes.status === 'fulfilled' && Array.isArray(offersRes.value) && offersRes.value.length > 0) {
+      if (offersRes.status === 'fulfilled' && Array.isArray(offersRes.value)) {
         setOffers(offersRes.value);
+        localStorage.setItem('chronos_offers', JSON.stringify(offersRes.value));
       }
     } catch (err) {
       console.warn('Backend microservices sync error:', err);
@@ -376,10 +419,9 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     refreshData();
   }, []);
 
-  // Current user helper
   // Current Login helper (Separated from accounts)
   const currentLogin = useMemo(() => {
-    return availableLogins.find((l) => l.id === currentLoginId) || availableLogins[0] || INITIAL_LOGINS[0];
+    return availableLogins.find((l) => l.id === currentLoginId) || availableLogins[0] || EMPTY_LOGIN;
   }, [availableLogins, currentLoginId]);
 
   // Accounts belonging to the current Login
@@ -393,32 +435,13 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const user = accounts.find((acc) => acc.id === currentUserId);
     if (user) return user;
     if (userAccounts.length > 0) return userAccounts[0];
-    return (
-      accounts[0] ||
-      {
-        id: 'user-default',
-        name: 'Alexander Vance',
-        email: 'alexander@horology.com',
-        role: 'seller',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-        location: 'New York, USA',
-        memberSince: '2022',
-        verifiedDealer: true,
-        bio: 'Horology enthusiast & seller.',
-        rating: 4.9,
-        reviewCount: 19,
-        totalSalesCount: 37,
-        responseRate: '99%',
-        avgShipTime: 'Within 24 hours'
-      }
-    );
+    return accounts[0] || EMPTY_USER;
   }, [accounts, currentUserId, userAccounts]);
 
   const switchUser = (userId: string) => {
     const target = accounts.find((a) => a.id === userId);
     if (target) {
       setCurrentUserId(userId);
-      showToast('Switched Account', `Logged in as ${target.name} (${target.role.toUpperCase()})`, 'info');
       showToast('Switched Persona', `Active account: ${target.name} (${target.role.toUpperCase()})`, 'info');
     }
   };
@@ -541,7 +564,6 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setAccounts((prev) =>
       prev.map((acc) => (acc.id === currentUser.id ? { ...acc, role: newRole } : acc))
     );
-    showToast('Role Mode Updated', `Switched to ${newRole === 'seller' ? 'Seller Hub' : 'Collector/Buyer'} mode`, 'info');
     showToast('Role Mode Updated', `Switched to ${newRole.toUpperCase()} mode`, 'info');
   };
 
