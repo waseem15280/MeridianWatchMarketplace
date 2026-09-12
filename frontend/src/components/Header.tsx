@@ -180,7 +180,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
   ];
 
   return (
-    <header id="main-header" className="sticky top-0 z-40 bg-[#FAF8F5]/90 backdrop-blur-xl border-b border-[#E5DFD5]">
+    <>
+      <header id="main-header" className="sticky top-0 z-40 bg-[#FAF8F5]/90 backdrop-blur-xl border-b border-[#E5DFD5]">
       {/* Top Banner: Authenticity Guarantee & Market Bar */}
       <div className="bg-[#2D2A26] text-[#E7DFD5] text-xs py-1.5 px-4 border-b border-[#3D3A36]">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -628,11 +629,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
           })}
         </div>
       </div>
+    </header>
 
-      {/* Add Role Persona Modal */}
-      {isAddAccountModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6">
+    {/* Add Role Persona Modal */}
+    {isAddAccountModalOpen && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+        <div className="relative bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 my-auto max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-4 mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-[#C5A880]/20 flex items-center justify-center">
@@ -754,8 +756,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
 
       {/* Log In Modal */}
       {isLoginModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+          <div className="relative bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 my-auto max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-4 mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-[#C5A880]/20 flex items-center justify-center">
@@ -886,8 +888,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
 
       {/* Register Modal */}
       {isRegisterModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+          <div className="relative bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 my-auto max-h-[90vh] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-4 mb-4 shrink-0">
               <div className="flex items-center gap-2.5">
@@ -910,7 +912,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
             </div>
 
             {/* Scrollable Form Content */}
-            <form onSubmit={handleRegisterSubmit} className="space-y-4 overflow-y-auto pr-1">
+            <form onSubmit={handleRegisterSubmit} className="space-y-4 overflow-y-auto pr-1 flex-1">
               {registerError && (
                 <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-start gap-2">
                   <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
@@ -1126,6 +1128,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 };
