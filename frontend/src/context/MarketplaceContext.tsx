@@ -18,7 +18,8 @@ import {
   sellerHubApi,
   customerOrdersApi,
   userManagementApi,
-  checkGatewayHealth
+  checkGatewayHealth,
+  RegisterRequest
 } from '../services/api';
 
 const EMPTY_USER: UserAccount = {
@@ -63,6 +64,7 @@ interface MarketplaceContextType {
   currentLogin: UserLogin;
   availableLogins: Array<UserLogin & { accounts?: UserAccount[] }>;
   loginUser: (usernameOrEmail: string, password: string) => Promise<boolean>;
+  registerUser: (data: RegisterRequest) => Promise<boolean>;
   switchLogin: (loginId: string) => Promise<void>;
 
   // User & Accounts (1 Login -> N Accounts, 1 role per Account)
@@ -509,6 +511,95 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     showToast('Authentication Error', 'Invalid credentials or user not found', 'error');
     return false;
+  };
+
+  const registerUser = async (data: RegisterRequest): Promise<boolean> => {
+    if (isGatewayConnected) {
+      try {
+        const res = await userManagementApi.register(data);
+        if (res && res.login) {
+          setAvailableLogins((prev) => {
+            const exists = prev.some((l) => l.id === res.login.id);
+            const updated = exists
+              ? prev.map((l) => (l.id === res.login.id ? { ...res.login, accounts: res.accounts } : l))
+              : [...prev, { ...res.login, accounts: res.accounts }];
+            localStorage.setItem('chronos_available_logins', JSON.stringify(updated));
+            return updated;
+          });
+          setCurrentLoginId(res.login.id);
+          localStorage.setItem('chronos_current_login_id', res.login.id);
+
+          setAccounts((prev) => {
+            const others = prev.filter((a) => a.userLoginId !== res.login.id);
+            const updated = [...others, ...res.accounts];
+            localStorage.setItem('chronos_accounts', JSON.stringify(updated));
+            return updated;
+          });
+
+          const activeAccId = res.activeAccountId || res.accounts[0]?.id;
+          if (activeAccId) {
+            setCurrentUserId(activeAccId);
+            localStorage.setItem('chronos_current_user_id', activeAccId);
+          }
+
+          showToast('Registration Successful', `Welcome to Meridian, @${res.login.username}! Active persona: ${data.role.toUpperCase()}`, 'success');
+          return true;
+        }
+      } catch (err: any) {
+        console.error('Backend registration error:', err);
+        const errorMsg = err?.data?.message || err?.message || 'Registration failed. Please check your details.';
+        showToast('Registration Error', errorMsg, 'error');
+        throw err;
+      }
+    }
+
+    // Offline / Local fallback logic
+    const fallbackLoginId = 'login-' + Date.now().toString(36);
+    const fallbackAccountId = 'account-' + Date.now().toString(36);
+    const newLogin: UserLogin & { accounts?: UserAccount[] } = {
+      id: fallbackLoginId,
+      username: data.username.trim(),
+      email: data.email.trim(),
+      accounts: []
+    };
+    const newAccount: UserAccount = {
+      id: fallbackAccountId,
+      userLoginId: fallbackLoginId,
+      name: data.accountName.trim(),
+      email: data.email.trim(),
+      role: data.role,
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+      location: data.location || 'Global',
+      memberSince: new Date().getFullYear().toString(),
+      verifiedDealer: data.role === 'seller',
+      bio: data.bio || `${data.role.toUpperCase()} profile persona for ${data.accountName}`,
+      rating: 5.0,
+      reviewCount: 0,
+      totalSalesCount: 0,
+      responseRate: '100%',
+      avgShipTime: data.role === 'seller' ? 'Within 24 hours' : 'N/A',
+      isDefault: true
+    };
+    newLogin.accounts = [newAccount];
+
+    setAvailableLogins((prev) => {
+      const updated = [...prev, newLogin];
+      localStorage.setItem('chronos_available_logins', JSON.stringify(updated));
+      return updated;
+    });
+    setCurrentLoginId(fallbackLoginId);
+    localStorage.setItem('chronos_current_login_id', fallbackLoginId);
+
+    setAccounts((prev) => {
+      const updated = [...prev, newAccount];
+      localStorage.setItem('chronos_accounts', JSON.stringify(updated));
+      return updated;
+    });
+    setCurrentUserId(fallbackAccountId);
+    localStorage.setItem('chronos_current_user_id', fallbackAccountId);
+
+    showToast('Account Created (Offline)', `Registered @${data.username} locally as ${data.role.toUpperCase()}`, 'success');
+    return true;
   };
 
   const createUserAccount = async (role: UserRole, name: string, bio?: string): Promise<UserAccount> => {
@@ -1196,6 +1287,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         currentLogin,
         availableLogins,
         loginUser,
+        registerUser,
         switchLogin,
         currentUser,
         userAccounts,

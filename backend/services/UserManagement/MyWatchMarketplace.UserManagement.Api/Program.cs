@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
 using MyWatchMarketplace.UserManagement.Application.DTOs;
 using MyWatchMarketplace.UserManagement.Domain.Entities;
 using MyWatchMarketplace.UserManagement.Domain.Enums;
@@ -10,6 +12,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddUserManagementInfrastructureServices(builder.Configuration);
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.PropertyNameCaseInsensitive = true;
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+});
 
 builder.Services.AddCors(options =>
 {

@@ -41,6 +41,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     switchLogin,
     createUserAccount,
     loginUser,
+    registerUser,
     activeTab,
     setActiveTab,
     wishlist,
@@ -69,6 +70,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
+
+  // Register Modal State
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [registerUsername, setRegisterUsername] = useState('');
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [registerAccountName, setRegisterAccountName] = useState('');
+  const [registerRole, setRegisterRole] = useState<UserRole>('buyer');
+  const [registerLocation, setRegisterLocation] = useState('');
+  const [registerBio, setRegisterBio] = useState('');
+  const [registerError, setRegisterError] = useState('');
+  const [isSubmittingRegister, setIsSubmittingRegister] = useState(false);
 
   const getRoleBadge = (role: UserRole) => {
     switch (role) {
@@ -112,6 +125,41 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
       }
     } finally {
       setIsSubmittingLogin(false);
+    }
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegisterError('');
+    if (!registerUsername.trim() || !registerEmail.trim() || !registerPassword || !registerAccountName.trim()) {
+      setRegisterError('Please fill in all required fields (Username, Email, Password, and Display Name).');
+      return;
+    }
+
+    setIsSubmittingRegister(true);
+    try {
+      await registerUser({
+        username: registerUsername.trim(),
+        email: registerEmail.trim(),
+        password: registerPassword,
+        accountName: registerAccountName.trim(),
+        role: registerRole,
+        location: registerLocation.trim() || undefined,
+        bio: registerBio.trim() || undefined
+      });
+      setIsRegisterModalOpen(false);
+      setRegisterUsername('');
+      setRegisterEmail('');
+      setRegisterPassword('');
+      setRegisterAccountName('');
+      setRegisterRole('buyer');
+      setRegisterLocation('');
+      setRegisterBio('');
+      setRegisterError('');
+    } catch (err: any) {
+      setRegisterError(err?.data?.message || err?.message || 'Registration failed. Please check your information.');
+    } finally {
+      setIsSubmittingRegister(false);
     }
   };
 
@@ -351,17 +399,32 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                           @{currentLogin.username}
                         </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsAccountMenuOpen(false);
-                          setIsLoginModalOpen(true);
-                        }}
-                        className="text-[10px] text-[#85642F] hover:underline font-semibold flex items-center gap-1 bg-[#FFFFFF] px-2 py-0.5 rounded-lg border border-[#D8D0C5]"
-                      >
-                        <LogIn className="w-3 h-3" />
-                        <span>Log In</span>
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          id="account-menu-login-btn"
+                          onClick={() => {
+                            setIsAccountMenuOpen(false);
+                            setIsLoginModalOpen(true);
+                          }}
+                          className="text-[10px] text-[#85642F] hover:underline font-semibold flex items-center gap-1 bg-[#FFFFFF] px-2 py-0.5 rounded-lg border border-[#D8D0C5] transition-colors"
+                        >
+                          <LogIn className="w-3 h-3" />
+                          <span>Log In</span>
+                        </button>
+                        <button
+                          type="button"
+                          id="account-menu-register-btn"
+                          onClick={() => {
+                            setIsAccountMenuOpen(false);
+                            setIsRegisterModalOpen(true);
+                          }}
+                          className="text-[10px] text-[#FAF8F5] bg-[#1C1917] hover:bg-[#3D3A36] font-semibold flex items-center gap-1 px-2 py-0.5 rounded-lg border border-[#1C1917] transition-colors shadow-2xs"
+                        >
+                          <UserPlus className="w-3 h-3 text-[#C5A880]" />
+                          <span>Register</span>
+                        </button>
+                      </div>
                     </div>
                     <div className="text-[10px] text-[#78716C] truncate mt-0.5">{currentLogin.email}</div>
                   </div>
@@ -758,7 +821,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   required
                   value={loginUsername}
                   onChange={(e) => setLoginUsername(e.target.value)}
-                  placeholder="e.g. alexander or alexander.vance@horology.com"
+                  placeholder="Username"
                   className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
                 />
               </div>
@@ -798,6 +861,265 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                       <span>Log In</span>
                     </>
                   )}
+                </button>
+              </div>
+
+              {/* Switch to Register */}
+              <div className="pt-3 text-center border-t border-[#E5DFD5]">
+                <span className="text-xs text-[#78716C]">Don't have an account? </span>
+                <button
+                  type="button"
+                  id="switch-to-register-btn"
+                  onClick={() => {
+                    setIsLoginModalOpen(false);
+                    setIsRegisterModalOpen(true);
+                  }}
+                  className="text-xs text-[#85642F] hover:text-[#1C1917] font-bold hover:underline"
+                >
+                  Register here
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Register Modal */}
+      {isRegisterModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 max-h-[92vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-4 mb-4 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-[#C5A880]/20 flex items-center justify-center">
+                  <UserPlus className="w-5 h-5 text-[#85642F]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#1C1917]">Create Meridian Account</h3>
+                  <p className="text-xs text-[#78716C]">Register credentials and choose your primary role persona</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                id="close-register-modal-btn"
+                onClick={() => setIsRegisterModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-[#EDE8E0] flex items-center justify-center text-[#78716C] hover:text-[#1C1917] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Content */}
+            <form onSubmit={handleRegisterSubmit} className="space-y-4 overflow-y-auto pr-1">
+              {registerError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-start gap-2">
+                  <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{registerError}</span>
+                </div>
+              )}
+
+              {/* Login Credentials Section */}
+              <div className="space-y-3">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[#85642F] flex items-center gap-1.5 border-b border-[#E5DFD5] pb-1">
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>1. Login Credentials</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1">
+                      Username *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      id="register-username-input"
+                      value={registerUsername}
+                      onChange={(e) => setRegisterUsername(e.target.value)}
+                      placeholder="e.g. sterling_collector"
+                      className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1">
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      id="register-email-input"
+                      value={registerEmail}
+                      onChange={(e) => setRegisterEmail(e.target.value)}
+                      placeholder="e.g. james@meridian.com"
+                      className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1">
+                    Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    id="register-password-input"
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
+                  />
+                </div>
+              </div>
+
+              {/* Account Persona Profile Section */}
+              <div className="space-y-3 pt-2">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[#85642F] flex items-center gap-1.5 border-b border-[#E5DFD5] pb-1">
+                  <User className="w-3.5 h-3.5" />
+                  <span>2. Primary Persona Profile (1 Role Rule)</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1">
+                      Display / Persona Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      id="register-account-name-input"
+                      value={registerAccountName}
+                      onChange={(e) => setRegisterAccountName(e.target.value)}
+                      placeholder="e.g. James Sterling"
+                      className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1">
+                      Location (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      id="register-location-input"
+                      value={registerLocation}
+                      onChange={(e) => setRegisterLocation(e.target.value)}
+                      placeholder="e.g. Geneva, Switzerland"
+                      className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
+                    />
+                  </div>
+                </div>
+
+                {/* Role Picker (Single role per persona) */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1.5">
+                    Select Initial Role Persona *
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      {
+                        role: 'buyer' as UserRole,
+                        title: 'Buyer',
+                        desc: 'Browse catalog, make offers, cart & orders'
+                      },
+                      {
+                        role: 'seller' as UserRole,
+                        title: 'Seller',
+                        desc: 'Create listings, respond to offers, seller hub'
+                      },
+                      {
+                        role: 'collector' as UserRole,
+                        title: 'Collector',
+                        desc: 'Personal watch vault, track valuations & history'
+                      },
+                      {
+                        role: 'admin' as UserRole,
+                        title: 'Admin',
+                        desc: 'Catalog oversight, marketplace administration'
+                      }
+                    ].map((item) => {
+                      const isSelected = registerRole === item.role;
+                      return (
+                        <button
+                          key={item.role}
+                          type="button"
+                          id={`reg-role-${item.role}`}
+                          onClick={() => setRegisterRole(item.role)}
+                          className={`p-2.5 rounded-xl border text-left transition-all ${
+                            isSelected
+                              ? 'border-[#85642F] bg-[#C5A880]/15 ring-2 ring-[#85642F]/30 shadow-xs'
+                              : 'border-[#D8D0C5] bg-[#FFFFFF] hover:border-[#B8AEA3]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold text-[#1C1917]">{item.title}</span>
+                            {isSelected && <CheckCircle className="w-3.5 h-3.5 text-[#85642F]" />}
+                          </div>
+                          <p className="text-[10px] text-[#78716C] leading-snug">{item.desc}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-[#78716C] italic mt-1.5">
+                    * You can always create additional personas for other roles under your login anytime.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1">
+                    Bio / Horology Specialization (Optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    id="register-bio-input"
+                    value={registerBio}
+                    onChange={(e) => setRegisterBio(e.target.value)}
+                    placeholder="Tell other horologists about your passion or collection focus..."
+                    className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
+                  />
+                </div>
+              </div>
+
+              {/* Form Action Buttons */}
+              <div className="flex items-center justify-between pt-3 border-t border-[#E5DFD5]">
+                <button
+                  type="button"
+                  onClick={() => setIsRegisterModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-[#D8D0C5] text-xs font-medium text-[#57534E] hover:bg-[#EDE8E0] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  id="submit-register-btn"
+                  disabled={isSubmittingRegister || !registerUsername.trim() || !registerEmail.trim() || !registerPassword || !registerAccountName.trim()}
+                  className="px-5 py-2 rounded-xl bg-[#1C1917] text-[#FAF8F5] text-xs font-bold hover:bg-[#3D3A36] disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-md"
+                >
+                  {isSubmittingRegister ? (
+                    <span>Registering...</span>
+                  ) : (
+                    <>
+                      <UserPlus className="w-3.5 h-3.5 text-[#C5A880]" />
+                      <span>Create Account & Register</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Switch to Login */}
+              <div className="pt-2 text-center border-t border-[#E5DFD5]">
+                <span className="text-xs text-[#78716C]">Already have an account? </span>
+                <button
+                  type="button"
+                  id="switch-to-login-from-reg-btn"
+                  onClick={() => {
+                    setIsRegisterModalOpen(false);
+                    setIsLoginModalOpen(true);
+                  }}
+                  className="text-xs text-[#85642F] hover:text-[#1C1917] font-bold hover:underline"
+                >
+                  Log In
                 </button>
               </div>
             </form>
