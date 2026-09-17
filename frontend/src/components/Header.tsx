@@ -188,11 +188,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5 text-[#E8CDA3] font-medium">
               <ShieldCheck className="w-3.5 h-3.5 text-[#C5A880]" />
-              100% Certified Horology Escrow & Authenticity Guarantee
+              Verified Sellers by watch community and buyers rating
             </span>
             <span className="hidden md:inline-block text-[#6E6760]">•</span>
             <span className="hidden md:inline-block text-[#B8AEA3]">
-              Verified dealer ratings & physical watchmaker inspections
+              Watch originality feedback
             </span>
           </div>
 
@@ -220,8 +220,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
               </span>
             </button>
             <div className="hidden sm:flex items-center gap-1.5 text-[#8E867E]">
-              <span>5 Microservices</span>
-              <span>6 Microservices (UserAccountDb)</span>
+              <span>6 Microservices</span>
+              
             </div>
           </div>
         </div>
