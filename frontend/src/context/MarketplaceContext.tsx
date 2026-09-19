@@ -22,29 +22,35 @@ import {
   RegisterRequest
 } from '../services/api';
 
-const EMPTY_USER: UserAccount = {
-  id: '',
-  name: 'Loading user...',
-  email: '',
+export const GUEST_LOGIN: UserLogin = {
+  id: 'guest',
+  username: 'guest',
+  email: 'guest@meridian.com',
+  accounts: []
+};
+
+export const GUEST_ACCOUNT: UserAccount = {
+  id: 'guest-buyer',
+  userLoginId: 'guest',
+  name: 'Guest Collector',
+  email: 'guest@meridian.com',
   role: 'buyer',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-  location: '',
-  memberSince: '',
+  location: 'Global',
+  memberSince: new Date().getFullYear().toString(),
   verifiedDealer: false,
-  bio: '',
+  bio: 'Exploring Meridian Horlogerie as a guest.',
   rating: 5.0,
   reviewCount: 0,
   totalSalesCount: 0,
   responseRate: '100%',
-  avgShipTime: 'N/A'
+  avgShipTime: 'N/A',
+  isDefault: true
 };
+GUEST_LOGIN.accounts = [GUEST_ACCOUNT];
 
-const EMPTY_LOGIN: UserLogin = {
-  id: '',
-  username: 'guest',
-  email: '',
-  accounts: []
-};
+const EMPTY_USER = GUEST_ACCOUNT;
+const EMPTY_LOGIN = GUEST_LOGIN;
 
 interface ToastMessage {
   id: string;
@@ -61,9 +67,11 @@ interface MarketplaceContextType {
 
   // User & Accounts
   // Authentication & Login (Separated from accounts)
+  isLoggedIn: boolean;
   currentLogin: UserLogin;
   availableLogins: Array<UserLogin & { accounts?: UserAccount[] }>;
   loginUser: (usernameOrEmail: string, password: string) => Promise<boolean>;
+  logoutUser: () => void;
   registerUser: (data: RegisterRequest) => Promise<boolean>;
   switchLogin: (loginId: string) => Promise<void>;
 
@@ -189,23 +197,44 @@ const DEFAULT_FILTERS: FilterOptions = {
 const MarketplaceContext = createContext<MarketplaceContextType | undefined>(undefined);
 
 export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Load initial local states with localStorage fallback (empty arrays if no cache)
-  const [availableLogins, setAvailableLogins] = useState<Array<UserLogin & { accounts?: UserAccount[] }>>(() => {
-    const saved = localStorage.getItem('chronos_available_logins');
-    return saved ? JSON.parse(saved) : [];
+  // Load initial local states with localStorage fallback (defaults to GUEST if no saved authenticated session)
+  const [currentLoginId, setCurrentLoginId] = useState<string>(() => {
+    const saved = localStorage.getItem('chronos_current_login_id');
+    return saved && saved !== 'guest' ? saved : GUEST_LOGIN.id;
   });
 
-  const [currentLoginId, setCurrentLoginId] = useState<string>(() => {
-    return localStorage.getItem('chronos_current_login_id') || '';
+  const [availableLogins, setAvailableLogins] = useState<Array<UserLogin & { accounts?: UserAccount[] }>>(() => {
+    const savedLoginId = localStorage.getItem('chronos_current_login_id');
+    const savedLogins = localStorage.getItem('chronos_available_logins');
+    if (savedLoginId && savedLoginId !== 'guest' && savedLogins) {
+      try {
+        const parsed = JSON.parse(savedLogins);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {
+        // fallback
+      }
+    }
+    return [GUEST_LOGIN];
   });
 
   const [accounts, setAccounts] = useState<UserAccount[]>(() => {
+    const savedLoginId = localStorage.getItem('chronos_current_login_id');
     const saved = localStorage.getItem('chronos_accounts');
-    return saved ? JSON.parse(saved) : [];
+    if (savedLoginId && savedLoginId !== 'guest' && saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {
+        // fallback
+      }
+    }
+    return [GUEST_ACCOUNT];
   });
 
   const [currentUserId, setCurrentUserId] = useState<string>(() => {
-    return localStorage.getItem('chronos_current_user_id') || '';
+    const savedLoginId = localStorage.getItem('chronos_current_login_id');
+    const saved = localStorage.getItem('chronos_current_user_id');
+    return savedLoginId && savedLoginId !== 'guest' && saved ? saved : GUEST_ACCOUNT.id;
   });
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('explore');
@@ -333,7 +362,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         return;
       }
 
-      // Query microservices in parallel via YARP Gateway (:5000)
+      // Query catalog and operational microservices in parallel via YARP Gateway (:5000)
+      // Note: User logins are NOT retrieved in bulk on startup or guest mode.
       const [
         listingsRes,
         collectionRes,
@@ -341,9 +371,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         profilesRes,
         reviewsRes,
         ordersRes,
-        offersRes,
-        loginsRes,
-        userAccountsRes
+        offersRes
       ] = await Promise.allSettled([
         marketplaceApi.getListings(),
         collectorVaultApi.getWatches(),
@@ -351,9 +379,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         sellerHubApi.getProfiles(),
         sellerHubApi.getReviews(),
         customerOrdersApi.getOrders(),
-        customerOrdersApi.getBuyerOffers(),
-        userManagementApi.getLogins(),
-        userManagementApi.getAccounts()
+        customerOrdersApi.getBuyerOffers()
       ]);
 
       if (listingsRes.status === 'fulfilled' && Array.isArray(listingsRes.value)) {
@@ -369,34 +395,22 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         setWishlist(ids);
         localStorage.setItem('chronos_wishlist', JSON.stringify(ids));
       }
-      if (loginsRes.status === 'fulfilled' && Array.isArray(loginsRes.value)) {
-        setAvailableLogins(loginsRes.value);
-        localStorage.setItem('chronos_available_logins', JSON.stringify(loginsRes.value));
-        if (loginsRes.value.length > 0) {
-          setCurrentLoginId((prev) => {
-            const exists = loginsRes.value.some((l) => l.id === prev);
-            const selected = exists ? prev : loginsRes.value[0].id;
-            localStorage.setItem('chronos_current_login_id', selected);
-            return selected;
-          });
+
+      // If user is already authenticated in localStorage, refresh ONLY their accounts
+      if (currentLoginId && currentLoginId !== 'guest') {
+        try {
+          const userAccounts = await userManagementApi.getLoginAccounts(currentLoginId);
+          if (Array.isArray(userAccounts) && userAccounts.length > 0) {
+            setAccounts(userAccounts);
+            localStorage.setItem('chronos_accounts', JSON.stringify(userAccounts));
+          }
+        } catch (accErr) {
+          console.warn('Could not refresh accounts for active login:', accErr);
         }
+      } else if (profilesRes.status === 'fulfilled' && Array.isArray(profilesRes.value) && profilesRes.value.length > 0) {
+        // Fallback seller profiles for marketplace cards only if no accounts
       }
-      if (userAccountsRes.status === 'fulfilled' && Array.isArray(userAccountsRes.value)) {
-        setAccounts(userAccountsRes.value);
-        localStorage.setItem('chronos_accounts', JSON.stringify(userAccountsRes.value));
-        if (userAccountsRes.value.length > 0) {
-          setCurrentUserId((prev) => {
-            const exists = userAccountsRes.value.some((a) => a.id === prev);
-            if (exists) return prev;
-            const defaultAccount = userAccountsRes.value.find((a) => a.isDefault) || userAccountsRes.value[0];
-            localStorage.setItem('chronos_current_user_id', defaultAccount.id);
-            return defaultAccount.id;
-          });
-        }
-      } else if (profilesRes.status === 'fulfilled' && Array.isArray(profilesRes.value)) {
-        setAccounts(profilesRes.value);
-        localStorage.setItem('chronos_accounts', JSON.stringify(profilesRes.value));
-      }
+
       if (reviewsRes.status === 'fulfilled' && Array.isArray(reviewsRes.value)) {
         setReviews(reviewsRes.value);
         localStorage.setItem('chronos_reviews', JSON.stringify(reviewsRes.value));
@@ -421,24 +435,32 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     refreshData();
   }, []);
 
+  // Authentication state flag
+  const isLoggedIn = useMemo(() => {
+    return Boolean(currentLoginId && currentLoginId !== 'guest');
+  }, [currentLoginId]);
+
   // Current Login helper (Separated from accounts)
   const currentLogin = useMemo(() => {
-    return availableLogins.find((l) => l.id === currentLoginId) || availableLogins[0] || EMPTY_LOGIN;
-  }, [availableLogins, currentLoginId]);
+    if (!isLoggedIn) return GUEST_LOGIN;
+    return availableLogins.find((l) => l.id === currentLoginId) || availableLogins[0] || GUEST_LOGIN;
+  }, [availableLogins, currentLoginId, isLoggedIn]);
 
   // Accounts belonging to the current Login
   const userAccounts = useMemo(() => {
+    if (!isLoggedIn) return [GUEST_ACCOUNT];
     const matched = accounts.filter((a) => a.userLoginId === currentLogin.id);
     return matched.length > 0 ? matched : accounts.filter((a) => a.id === currentUserId);
-  }, [accounts, currentLogin.id, currentUserId]);
+  }, [accounts, currentLogin.id, currentUserId, isLoggedIn]);
 
   // Current active user account persona helper
   const currentUser = useMemo(() => {
+    if (!isLoggedIn) return GUEST_ACCOUNT;
     const user = accounts.find((acc) => acc.id === currentUserId);
     if (user) return user;
     if (userAccounts.length > 0) return userAccounts[0];
-    return accounts[0] || EMPTY_USER;
-  }, [accounts, currentUserId, userAccounts]);
+    return accounts[0] || GUEST_ACCOUNT;
+  }, [accounts, currentUserId, userAccounts, isLoggedIn]);
 
   const switchUser = (userId: string) => {
     const target = accounts.find((a) => a.id === userId);
@@ -449,6 +471,10 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const switchLogin = async (loginId: string) => {
+    if (!loginId || loginId === 'guest') {
+      logoutUser();
+      return;
+    }
     const target = availableLogins.find((l) => l.id === loginId);
     if (!target) return;
     setCurrentLoginId(loginId);
@@ -483,34 +509,62 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const loginUser = async (usernameOrEmail: string, password: string): Promise<boolean> => {
     if (isGatewayConnected) {
       try {
-        const res = await userManagementApi.login(usernameOrEmail, password);
-        if (res && res.login) {
+        // Calls the new /api/users/validate endpoint to verify credentials against database
+        const res = await userManagementApi.validate(usernameOrEmail, password);
+        if (res && res.login && Array.isArray(res.accounts) && res.accounts.length > 0) {
+          const activeAccId = res.activeAccountId || res.accounts[0].id;
+
+          // Set state for authenticated session
           setCurrentLoginId(res.login.id);
+          setAvailableLogins([res.login]);
+          setAccounts(res.accounts);
+          setCurrentUserId(activeAccId);
+
+          // ONLY on successful login checks, fill localStorage with userlogin and all its associated accounts
           localStorage.setItem('chronos_current_login_id', res.login.id);
-          setAccounts((prev) => {
-            const others = prev.filter((a) => a.userLoginId !== res.login.id);
-            return [...others, ...res.accounts];
-          });
-          setCurrentUserId(res.activeAccountId || res.accounts[0]?.id || currentUserId);
+          localStorage.setItem('chronos_current_user_id', activeAccId);
+          localStorage.setItem('chronos_accounts', JSON.stringify(res.accounts));
+          localStorage.setItem('chronos_available_logins', JSON.stringify([res.login]));
+
           showToast('Authentication Successful', `Welcome back, @${res.login.username}!`, 'success');
           return true;
         }
-      } catch (err) {
-        console.warn('Backend login failed:', err);
+      } catch (err: any) {
+        console.warn('Backend login validation failed:', err);
+        const errMsg = err?.data?.message || err?.message || 'Invalid username or password.';
+        showToast('Authentication Error', errMsg, 'error');
+        // If login attempt fails, continue using guest login and accounts
+        return false;
       }
     }
 
-    // Local / Offline fallback check
+    // Offline / Local cache fallback check
     const matched = availableLogins.find(
-      (l) => l.username.toLowerCase() === usernameOrEmail.toLowerCase() || l.email.toLowerCase() === usernameOrEmail.toLowerCase()
+      (l) => (l.username.toLowerCase() === usernameOrEmail.toLowerCase() || l.email.toLowerCase() === usernameOrEmail.toLowerCase()) && l.id !== 'guest'
     );
     if (matched) {
       await switchLogin(matched.id);
       return true;
     }
 
-    showToast('Authentication Error', 'Invalid credentials or user not found', 'error');
+    showToast('Authentication Error', 'Invalid username or password.', 'error');
     return false;
+  };
+
+  const logoutUser = () => {
+    // Clear user session from localStorage
+    localStorage.removeItem('chronos_current_login_id');
+    localStorage.removeItem('chronos_current_user_id');
+    localStorage.removeItem('chronos_accounts');
+    localStorage.removeItem('chronos_available_logins');
+
+    // Reset context state to guest
+    setCurrentLoginId(GUEST_LOGIN.id);
+    setAvailableLogins([GUEST_LOGIN]);
+    setAccounts([GUEST_ACCOUNT]);
+    setCurrentUserId(GUEST_ACCOUNT.id);
+
+    showToast('Signed Out', 'You have been signed out. Returned to Guest mode.', 'info');
   };
 
   const registerUser = async (data: RegisterRequest): Promise<boolean> => {
@@ -1284,9 +1338,11 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         isGatewayConnected,
         isSyncing,
         refreshData,
+        isLoggedIn,
         currentLogin,
         availableLogins,
         loginUser,
+        logoutUser,
         registerUser,
         switchLogin,
         currentUser,

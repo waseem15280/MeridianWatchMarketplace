@@ -1,4 +1,4 @@
-﻿import { request } from './client';
+import { request } from './client';
 import { UserAccount, UserLogin, UserRole } from '../../types';
 
 export interface LoginResponse {
@@ -31,6 +31,14 @@ export interface CreateAccountRequest {
 }
 
 export const userManagementApi = {
+  // POST /api/users/validate (Explicit credential verification)
+  validate: async (usernameOrEmail: string, password: string): Promise<LoginResponse> => {
+    return request<LoginResponse>('/api/users/validate', {
+      method: 'POST',
+      body: JSON.stringify({ usernameOrEmail, password })
+    });
+  },
+
   // POST /api/users/login
   login: async (usernameOrEmail: string, password: string): Promise<LoginResponse> => {
     return request<LoginResponse>('/api/users/login', {

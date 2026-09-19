@@ -34,14 +34,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
   const {
     currentLogin,
     userAccounts,
-    availableLogins,
     currentUser,
     accounts,
     switchUser,
-    switchLogin,
     createUserAccount,
     loginUser,
+    logoutUser,
     registerUser,
+    isLoggedIn,
     activeTab,
     setActiveTab,
     wishlist,
@@ -113,9 +113,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
+    if (!loginUsername.trim() || !loginPassword) {
+      setLoginError('Please enter username/email and password.');
+      return;
+    }
     setIsSubmittingLogin(true);
     try {
-      const ok = await loginUser(loginUsername, loginPassword);
+      const ok = await loginUser(loginUsername.trim(), loginPassword);
       if (ok) {
         setIsLoginModalOpen(false);
         setLoginUsername('');
@@ -123,6 +127,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
       } else {
         setLoginError('Invalid username or password.');
       }
+    } catch (err: any) {
+      setLoginError(err?.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsSubmittingLogin(false);
     }
@@ -363,23 +369,21 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   className="w-7 h-7 rounded-lg object-cover border border-[#D8D0C5]"
                 />
                 <div className="hidden sm:block text-left text-xs">
-                  <div className="font-semibold text-[#1C1917] leading-tight flex items-center gap-1">
-                    <span className="truncate max-w-[100px]">{currentUser.name.split(' ')[0]}</span>
+                  <div className="font-semibold text-[#1C1917] leading-tight flex items-center gap-1.5">
+                    <span className="truncate max-w-[120px]">{currentUser.name}</span>
                     {currentUser.verifiedDealer && (
                       <ShieldCheck className="w-3 h-3 text-[#967139] shrink-0" />
                     )}
-                  </div>
-                  <div className="font-semibold text-[#1C1917] leading-tight flex items-center gap-1.5">
-                    <span className="truncate max-w-[120px]">{currentUser.name}</span>
                     {getRoleBadge(currentUser.role)}
-                  </div>
-                  <div className="text-[10px] text-[#78716C] font-mono capitalize">
-                    {currentUser.role} • ★ {currentUser.rating}
                   </div>
                   <div className="text-[10px] text-[#78716C] font-mono flex items-center gap-1">
                     <span>@{currentLogin.username}</span>
-                    <span>•</span>
-                    <span>★ {currentUser.rating}</span>
+                    {isLoggedIn && (
+                      <>
+                        <span>•</span>
+                        <span>★ {currentUser.rating}</span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <ChevronDown className="w-3.5 h-3.5 text-[#78716C]" />
@@ -399,169 +403,181 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                         <span className="text-xs font-bold text-[#1C1917] font-mono truncate">
                           @{currentLogin.username}
                         </span>
+                        {!isLoggedIn && (
+                          <span className="text-[9px] bg-[#D8D0C5] text-[#57534E] px-1.5 py-0.5 rounded font-sans font-medium">
+                            Guest
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          id="account-menu-login-btn"
-                          onClick={() => {
-                            setIsAccountMenuOpen(false);
-                            setIsLoginModalOpen(true);
-                          }}
-                          className="text-[10px] text-[#85642F] hover:underline font-semibold flex items-center gap-1 bg-[#FFFFFF] px-2 py-0.5 rounded-lg border border-[#D8D0C5] transition-colors"
-                        >
-                          <LogIn className="w-3 h-3" />
-                          <span>Log In</span>
-                        </button>
-                        <button
-                          type="button"
-                          id="account-menu-register-btn"
-                          onClick={() => {
-                            setIsAccountMenuOpen(false);
-                            setIsRegisterModalOpen(true);
-                          }}
-                          className="text-[10px] text-[#FAF8F5] bg-[#1C1917] hover:bg-[#3D3A36] font-semibold flex items-center gap-1 px-2 py-0.5 rounded-lg border border-[#1C1917] transition-colors shadow-2xs"
-                        >
-                          <UserPlus className="w-3 h-3 text-[#C5A880]" />
-                          <span>Register</span>
-                        </button>
+                        {isLoggedIn ? (
+                          <button
+                            type="button"
+                            id="account-menu-logout-btn"
+                            onClick={() => {
+                              logoutUser();
+                              setIsAccountMenuOpen(false);
+                            }}
+                            className="text-[10px] text-rose-700 hover:text-rose-800 font-semibold flex items-center gap-1 bg-[#FFFFFF] px-2 py-0.5 rounded-lg border border-rose-200 hover:border-rose-300 transition-colors"
+                          >
+                            <LogOut className="w-3 h-3" />
+                            <span>Log Out</span>
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              id="account-menu-login-btn"
+                              onClick={() => {
+                                setIsAccountMenuOpen(false);
+                                setIsLoginModalOpen(true);
+                              }}
+                              className="text-[10px] text-[#85642F] hover:underline font-semibold flex items-center gap-1 bg-[#FFFFFF] px-2 py-0.5 rounded-lg border border-[#D8D0C5] transition-colors"
+                            >
+                              <LogIn className="w-3 h-3" />
+                              <span>Log In</span>
+                            </button>
+                            <button
+                              type="button"
+                              id="account-menu-register-btn"
+                              onClick={() => {
+                                setIsAccountMenuOpen(false);
+                                setIsRegisterModalOpen(true);
+                              }}
+                              className="text-[10px] text-[#FAF8F5] bg-[#1C1917] hover:bg-[#3D3A36] font-semibold flex items-center gap-1 px-2 py-0.5 rounded-lg border border-[#1C1917] transition-colors shadow-2xs"
+                            >
+                              <UserPlus className="w-3 h-3 text-[#C5A880]" />
+                              <span>Register</span>
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="text-[10px] text-[#78716C] truncate mt-0.5">{currentLogin.email}</div>
                   </div>
 
-                  {/* Active Persona Profile Card */}
-                  <div className="px-2 py-2 border-b border-[#E5DFD5]">
-                    <div className="flex items-center gap-2.5">
-                      <img
-                        src={currentUser.avatar}
-                        alt={currentUser.name}
-                        referrerPolicy="no-referrer"
-                        className="w-10 h-10 rounded-xl object-cover border border-[#D8D0C5]"
-                      />
-                      <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-[#1C1917] truncate flex items-center gap-1">
-                          {currentUser.name}
-                          {currentUser.verifiedDealer && (
-                            <span className="text-[9px] bg-[#C5A880]/25 text-[#78592A] px-1 py-0.5 rounded font-normal">
-                              Verified
-                            </span>
-                          )}
-                        </h4>
-                        <p className="text-[11px] text-[#78716C] truncate">{currentUser.email}</p>
-                        <div className="mt-0.5">{getRoleBadge(currentUser.role)}</div>
-                        <div className="flex items-center gap-2 mt-1 text-[11px] text-[#57534E]">
-                          <span className="flex items-center gap-1 text-[#967139] font-medium">
-                            <Star className="w-3 h-3 fill-[#C5A880] text-[#967139]" />
-                            {currentUser.rating} ({currentUser.reviewCount})
-                          </span>
-                          <span className="text-[#C5A880]">•</span>
-                          <span className="text-[#78716C]">{currentUser.totalSalesCount} sales</span>
-                          <span className="text-[#78716C]">{currentUser.location.split(',')[0]}</span>
-                        </div>
-                      </div>
+                  {!isLoggedIn ? (
+                    <div className="px-3 py-3 bg-[#EDE8E0]/60 rounded-xl border border-[#D8D0C5] text-center my-2">
+                      <p className="text-xs font-semibold text-[#1C1917]">You are browsing as Guest</p>
+                      <p className="text-[11px] text-[#78716C] mt-1 leading-relaxed">
+                        Log in to manage your watch vault, create listings, submit offers, and access multiple persona accounts.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAccountMenuOpen(false);
+                          setIsLoginModalOpen(true);
+                        }}
+                        className="mt-2.5 w-full py-1.5 px-3 bg-[#1C1917] text-[#FAF8F5] text-xs font-bold rounded-lg hover:bg-[#3D3A36] transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        <LogIn className="w-3.5 h-3.5 text-[#C5A880]" />
+                        <span>Log In with Credentials</span>
+                      </button>
                     </div>
-                  </div>
-
-                  {/* Switch Account Persona */}
-                  <div className="mt-2.5 pt-1">
-                    <div className="text-[10px] font-semibold tracking-wider text-[#78716C] uppercase px-1 mb-1.5 flex items-center justify-between">
-                      <span>Accounts for @{currentLogin.username}</span>
-                      <span className="text-[9px] text-[#967139] font-medium">1 Role Each</span>
-                    </div>
-
-                    <div className="space-y-1 max-h-48 overflow-y-auto pr-0.5">
-                      {userAccounts.map((acc) => {
-                        const isSelected = acc.id === currentUser.id;
-                        return (
-                          <button
-                            key={acc.id}
-                            id={`switch-user-${acc.id}`}
-                            type="button"
-                            onClick={() => {
-                              switchUser(acc.id);
-                              setIsAccountMenuOpen(false);
-                            }}
-                            className={`w-full flex items-center justify-between p-2 rounded-xl text-left text-xs transition-colors ${
-                              isSelected
-                                ? 'bg-[#C5A880]/15 border border-[#C5A880]/40 text-[#1C1917] font-semibold'
-                                : 'hover:bg-[#EDE8E0] text-[#57534E]'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <img
-                                src={acc.avatar}
-                                alt={acc.name}
-                                referrerPolicy="no-referrer"
-                                className="w-6 h-6 rounded-lg object-cover"
-                              />
-                              <div className="truncate">
-                                <div className="font-medium text-[#1C1917] truncate">{acc.name}</div>
-                                <div className="text-[10px] text-[#78716C] capitalize">
-                                  {acc.role} • {acc.location.split(',')[0]}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                              {getRoleBadge(acc.role)}
-                              {isSelected && (
-                                <span className="text-[9px] font-bold text-[#85642F] bg-[#C5A880]/30 px-1 py-0.5 rounded">
-                                  Active
+                  ) : (
+                    <>
+                      {/* Active Persona Profile Card */}
+                      <div className="px-2 py-2 border-b border-[#E5DFD5]">
+                        <div className="flex items-center gap-2.5">
+                          <img
+                            src={currentUser.avatar}
+                            alt={currentUser.name}
+                            referrerPolicy="no-referrer"
+                            className="w-10 h-10 rounded-xl object-cover border border-[#D8D0C5]"
+                          />
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-bold text-[#1C1917] truncate flex items-center gap-1">
+                              {currentUser.name}
+                              {currentUser.verifiedDealer && (
+                                <span className="text-[9px] bg-[#C5A880]/25 text-[#78592A] px-1 py-0.5 rounded font-normal">
+                                  Verified
                                 </span>
                               )}
+                            </h4>
+                            <p className="text-[11px] text-[#78716C] truncate">{currentUser.email}</p>
+                            <div className="mt-0.5">{getRoleBadge(currentUser.role)}</div>
+                            <div className="flex items-center gap-2 mt-1 text-[11px] text-[#57534E]">
+                              <span className="flex items-center gap-1 text-[#967139] font-medium">
+                                <Star className="w-3 h-3 fill-[#C5A880] text-[#967139]" />
+                                {currentUser.rating} ({currentUser.reviewCount})
+                              </span>
+                              <span className="text-[#C5A880]">•</span>
+                              <span className="text-[#78716C]">{currentUser.totalSalesCount} sales</span>
+                              <span className="text-[#78716C]">{currentUser.location.split(',')[0]}</span>
                             </div>
-                          </button>
-                        );
-                      })}
-                    </div>
+                          </div>
+                        </div>
+                      </div>
 
-                    {/* Add Persona Button */}
-                    <button
-                      type="button"
-                      id="add-role-persona-btn"
-                      onClick={() => {
-                        setIsAccountMenuOpen(false);
-                        setIsAddAccountModalOpen(true);
-                      }}
-                      className="w-full mt-2 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl border border-dashed border-[#C5A880] text-xs font-semibold text-[#85642F] hover:bg-[#C5A880]/10 transition-colors"
-                    >
-                      <UserPlus className="w-3.5 h-3.5" />
-                      <span>+ Add New Role Persona</span>
-                    </button>
-                  </div>
+                      {/* Switch Account Persona */}
+                      <div className="mt-2.5 pt-1">
+                        <div className="text-[10px] font-semibold tracking-wider text-[#78716C] uppercase px-1 mb-1.5 flex items-center justify-between">
+                          <span>Accounts for @{currentLogin.username}</span>
+                          <span className="text-[9px] text-[#967139] font-medium">1 Role Each</span>
+                        </div>
 
-                  {/* Switch Login Account */}
-                  <div className="mt-2.5 pt-2 border-t border-[#E5DFD5]">
-                    <div className="text-[9px] font-semibold uppercase tracking-wider text-[#78716C] px-1 mb-1.5 flex items-center justify-between">
-                      <span>Switch User Login</span>
-                      <span className="text-[9px] text-[#85642F] font-mono">UserAccountDb</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1">
-                      {availableLogins.slice(0, 6).map((l) => {
-                        const isCurrent = l.id === currentLogin.id;
-                        return (
-                          <button
-                            key={l.id}
-                            id={`switch-login-${l.username}`}
-                            type="button"
-                            onClick={() => {
-                              switchLogin(l.id);
-                              setIsAccountMenuOpen(false);
-                            }}
-                            className={`py-1 px-1.5 rounded-lg text-[10px] font-mono truncate text-center transition-all ${
-                              isCurrent
-                                ? 'bg-[#1C1917] text-[#FAF8F5] font-bold shadow-xs'
-                                : 'bg-[#EDE8E0] hover:bg-[#E2DCD2] text-[#57534E]'
-                            }`}
-                            title={`Switch login to @${l.username}`}
-                          >
-                            @{l.username}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                        <div className="space-y-1 max-h-48 overflow-y-auto pr-0.5">
+                          {userAccounts.map((acc) => {
+                            const isSelected = acc.id === currentUser.id;
+                            return (
+                              <button
+                                key={acc.id}
+                                id={`switch-user-${acc.id}`}
+                                type="button"
+                                onClick={() => {
+                                  switchUser(acc.id);
+                                  setIsAccountMenuOpen(false);
+                                }}
+                                className={`w-full flex items-center justify-between p-2 rounded-xl text-left text-xs transition-colors ${
+                                  isSelected
+                                    ? 'bg-[#C5A880]/15 border border-[#C5A880]/40 text-[#1C1917] font-semibold'
+                                    : 'hover:bg-[#EDE8E0] text-[#57534E]'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <img
+                                    src={acc.avatar}
+                                    alt={acc.name}
+                                    referrerPolicy="no-referrer"
+                                    className="w-6 h-6 rounded-lg object-cover"
+                                  />
+                                  <div className="truncate">
+                                    <div className="font-medium text-[#1C1917] truncate">{acc.name}</div>
+                                    <div className="text-[10px] text-[#78716C] capitalize">
+                                      {acc.role} • {acc.location.split(',')[0]}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                  {getRoleBadge(acc.role)}
+                                  {isSelected && (
+                                    <span className="text-[9px] font-bold text-[#85642F] bg-[#C5A880]/30 px-1 py-0.5 rounded">
+                                      Active
+                                    </span>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Add Persona Button */}
+                        <button
+                          type="button"
+                          id="add-role-persona-btn"
+                          onClick={() => {
+                            setIsAccountMenuOpen(false);
+                            setIsAddAccountModalOpen(true);
+                          }}
+                          className="w-full mt-2 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl border border-dashed border-[#C5A880] text-xs font-semibold text-[#85642F] hover:bg-[#C5A880]/10 transition-colors"
+                        >
+                          <UserPlus className="w-3.5 h-3.5" />
+                          <span>+ Add New Role Persona</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
 
                   {/* Quick Hub Navigation */}
                   <div className="mt-3 pt-2 border-t border-[#E5DFD5] grid grid-cols-2 gap-1.5">
@@ -776,38 +792,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
               </button>
             </div>
 
-            {/* Available User Logins */}
-            {availableLogins.length > 0 && (
-              <div className="mb-4">
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-[#78716C] mb-1.5">
-                  Available Database Logins (1-Click Switch)
-                </span>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {availableLogins.slice(0, 6).map((login) => (
-                    <button
-                      key={login.id}
-                      type="button"
-                      onClick={() => {
-                        switchLogin(login.id);
-                        setIsLoginModalOpen(false);
-                      }}
-                      className="p-2 rounded-xl bg-[#EDE8E0] hover:bg-[#E2DCD2] text-left transition-colors border border-[#D8D0C5]"
-                    >
-                      <div className="text-xs font-mono font-bold text-[#1C1917]">@{login.username}</div>
-                      <div className="text-[9px] text-[#78716C] truncate">{login.email}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="relative flex py-2 items-center">
-              <div className="flex-grow border-t border-[#E5DFD5]"></div>
-              <span className="flex-shrink mx-2 text-[10px] uppercase font-bold text-[#78716C]">or with credentials</span>
-              <div className="flex-grow border-t border-[#E5DFD5]"></div>
-            </div>
-
-            <form onSubmit={handleLoginSubmit} className="space-y-3.5 mt-2">
+            <form onSubmit={handleLoginSubmit} className="space-y-3.5">
               {loginError && (
                 <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700">
                   {loginError}
@@ -823,14 +808,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   required
                   value={loginUsername}
                   onChange={(e) => setLoginUsername(e.target.value)}
-                  placeholder="Username"
+                  placeholder="e.g. waseema or waseem15280@gmail.com"
                   className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1">
-                  Password (default: password123 / admin123)
+                  Password
                 </label>
                 <input
                   type="password"
@@ -852,7 +837,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmittingLogin || !loginUsername}
+                  disabled={isSubmittingLogin || !loginUsername.trim() || !loginPassword}
                   className="px-5 py-2 rounded-xl bg-[#1C1917] text-[#FAF8F5] text-xs font-bold hover:bg-[#3D3A36] disabled:opacity-50 transition-colors flex items-center gap-1.5"
                 >
                   {isSubmittingLogin ? (

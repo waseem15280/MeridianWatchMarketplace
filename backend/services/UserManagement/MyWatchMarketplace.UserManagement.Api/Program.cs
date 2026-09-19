@@ -97,6 +97,47 @@ userApi.MapPost("/login", async (LoginRequest request, UserManagementDbContext d
     return Results.Ok(response);
 });
 
+// 1b. POST /api/users/validate - Explicit endpoint to validate username and password
+userApi.MapPost("/validate", async (LoginRequest request, UserManagementDbContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(request.UsernameOrEmail) || string.IsNullOrWhiteSpace(request.Password))
+    {
+        return Results.BadRequest(new { message = "Username/Email and password are required." });
+    }
+
+    var login = await db.Logins
+        .Include(l => l.Accounts)
+        .FirstOrDefaultAsync(l =>
+            l.Username.ToLower() == request.UsernameOrEmail.ToLower() ||
+            l.Email.ToLower() == request.UsernameOrEmail.ToLower());
+
+    if (login is null || !PasswordHasher.VerifyPassword(request.Password, login.PasswordHash))
+    {
+        return Results.Json(new { message = "Invalid username or password." }, statusCode: StatusCodes.Status401Unauthorized);
+    }
+
+    if (!login.IsActive)
+    {
+        return Results.BadRequest(new { message = "User login has been deactivated." });
+    }
+
+    login.LastLoginAt = DateTimeOffset.UtcNow;
+    await db.SaveChangesAsync();
+
+    var accountDtos = login.Accounts.Select(ToAccountDto).ToList();
+    var activeAccount = login.Accounts.FirstOrDefault(a => a.IsDefault) ?? login.Accounts.FirstOrDefault();
+    var activeAccountId = activeAccount?.Id ?? string.Empty;
+
+    var response = new LoginResponse(
+        Token: "mock-jwt-" + Guid.NewGuid().ToString("N"),
+        Login: ToLoginDto(login),
+        Accounts: accountDtos,
+        ActiveAccountId: activeAccountId
+    );
+
+    return Results.Ok(response);
+});
+
 // 2. POST /api/users/register
 userApi.MapPost("/register", async (RegisterRequest request, UserManagementDbContext db) =>
 {
