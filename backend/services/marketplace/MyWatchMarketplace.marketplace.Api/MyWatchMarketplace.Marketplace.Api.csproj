@@ -16,8 +16,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\MyWatchMarketplace.Contracts\MyWatchMarketplace.Contracts.csproj" />
-    <ProjectReference Include="..\MyWatchMarketplace.marketplace.Application\MyWatchMarketplace.marketplace.Application.csproj" />
-    <ProjectReference Include="..\MyWatchMarketplace.marketplace.Infrastructure\MyWatchMarketplace.marketplace.Infrastructure.csproj" />
+    <ProjectReference Include="..\MyWatchMarketplace.marketplace.Application\MyWatchMarketplace.Marketplace.Application.csproj" />
+    <ProjectReference Include="..\MyWatchMarketplace.marketplace.Infrastructure\MyWatchMarketplace.Marketplace.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

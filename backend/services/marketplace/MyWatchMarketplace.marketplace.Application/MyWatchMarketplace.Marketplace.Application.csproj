@@ -11,7 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MyWatchMarketplace.marketplace.Domain\MyWatchMarketplace.marketplace.Domain.csproj" />
+    <ProjectReference Include="..\MyWatchMarketplace.marketplace.Domain\MyWatchMarketplace.Marketplace.Domain.csproj" />
   </ItemGroup>
 
 </Project>

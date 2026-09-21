@@ -1,0 +1,226 @@
+services:
+  # =========================================================================
+  # 1. Database: PostgreSQL 17 Multi-Database Service
+  # =========================================================================
+  postgres:
+    image: postgres:17
+    container_name: MyWatchMarketplace-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Pa55w.rd}
+      POSTGRES_DB: ${POSTGRES_DB:-MarketplaceDb}
+      POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_MULTIPLE_DATABASES:-MarketplaceDb,CollectorVaultDb,BuyerWishlistDb,SellerHubDb,CustomerOrdersDb,UserAccountDb}
+    ports:
+      - "5432:5432"
+    volumes:
+      - MyWatchMarketplace-postgres-data:/var/lib/postgresql/data
+      - ./docker/init-db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-MarketplaceDb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - meridian-network
+
+  # =========================================================================
+  # 2. Marketplace API Microservice (:5101)
+  # =========================================================================
+  marketplace-api:
+    build:
+      context: ./backend
+      dockerfile: services/marketplace/Dockerfile
+    container_name: meridian-marketplace-api
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__MarketplaceDbConnection=Host=postgres;Port=5432;Database=MarketplaceDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-Pa55w.rd}
+    ports:
+      - "5101:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - meridian-network
+
+  # =========================================================================
+  # 3. Collector Vault API Microservice (:5102)
+  # =========================================================================
+  collector-vault-api:
+    build:
+      context: ./backend
+      dockerfile: services/CollectorVault/Dockerfile
+    container_name: meridian-collector-vault-api
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__CollectorVaultDbConnection=Host=postgres;Port=5432;Database=CollectorVaultDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-Pa55w.rd}
+      - Services__MarketplaceUrl=http://marketplace-api:8080
+    ports:
+      - "5102:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      marketplace-api:
+        condition: service_started
+    networks:
+      - meridian-network
+
+  # =========================================================================
+  # 4. Buyer Wishlist API Microservice (:5103)
+  # =========================================================================
+  buyer-wishlist-api:
+    build:
+      context: ./backend
+      dockerfile: services/BuyerWishlist/Dockerfile
+    container_name: meridian-buyer-wishlist-api
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__BuyerWishlistDbConnection=Host=postgres;Port=5432;Database=BuyerWishlistDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-Pa55w.rd}
+      - Services__MarketplaceUrl=http://marketplace-api:8080
+    ports:
+      - "5103:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      marketplace-api:
+        condition: service_started
+    networks:
+      - meridian-network
+
+  # =========================================================================
+  # 5. Seller Hub API Microservice (:5104)
+  # =========================================================================
+  seller-hub-api:
+    build:
+      context: ./backend
+      dockerfile: services/SellerHub/Dockerfile
+    container_name: meridian-seller-hub-api
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__SellerHubDbConnection=Host=postgres;Port=5432;Database=SellerHubDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-Pa55w.rd}
+    ports:
+      - "5104:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - meridian-network
+
+  # =========================================================================
+  # 6. Customer Orders API Microservice (:5105)
+  # =========================================================================
+  customer-orders-api:
+    build:
+      context: ./backend
+      dockerfile: services/CustomerOrders/Dockerfile
+    container_name: meridian-customer-orders-api
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__CustomerOrdersDbConnection=Host=postgres;Port=5432;Database=CustomerOrdersDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-Pa55w.rd}
+      - Services__MarketplaceUrl=http://marketplace-api:8080
+      - Services__SellerHubUrl=http://seller-hub-api:8080
+    ports:
+      - "5105:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      marketplace-api:
+        condition: service_started
+      seller-hub-api:
+        condition: service_started
+    networks:
+      - meridian-network
+
+  # =========================================================================
+  # 7. User Management API Microservice (:5106)
+  # =========================================================================
+  user-management-api:
+    build:
+      context: ./backend
+      dockerfile: services/UserManagement/Dockerfile
+    container_name: meridian-user-management-api
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__UserAccountDbConnection=Host=postgres;Port=5432;Database=UserAccountDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-Pa55w.rd}
+    ports:
+      - "5106:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - meridian-network
+
+  # =========================================================================
+  # 8. YARP API Gateway (:5000)
+  # =========================================================================
+  api-gateway:
+    build:
+      context: ./backend
+      dockerfile: gateway/MyWatchMarketplace.ApiGateway/Dockerfile
+    container_name: meridian-api-gateway
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ReverseProxy__Clusters__marketplace-cluster__Destinations__marketplace-destination__Address=http://marketplace-api:8080
+      - ReverseProxy__Clusters__collector-vault-cluster__Destinations__collector-vault-destination__Address=http://collector-vault-api:8080
+      - ReverseProxy__Clusters__buyer-wishlist-cluster__Destinations__buyer-wishlist-destination__Address=http://buyer-wishlist-api:8080
+      - ReverseProxy__Clusters__seller-hub-cluster__Destinations__seller-hub-destination__Address=http://seller-hub-api:8080
+      - ReverseProxy__Clusters__customer-orders-cluster__Destinations__customer-orders-destination__Address=http://customer-orders-api:8080
+      - ReverseProxy__Clusters__user-management-cluster__Destinations__user-management-destination__Address=http://user-management-api:8080
+    ports:
+      - "5000:8080"
+    depends_on:
+      marketplace-api:
+        condition: service_started
+      collector-vault-api:
+        condition: service_started
+      buyer-wishlist-api:
+        condition: service_started
+      seller-hub-api:
+        condition: service_started
+      customer-orders-api:
+        condition: service_started
+      user-management-api:
+        condition: service_started
+    networks:
+      - meridian-network
+
+  # =========================================================================
+  # 9. Frontend: React Vite SPA (:3000)
+  # =========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_GATEWAY_URL: http://localhost:5000
+    container_name: meridian-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      api-gateway:
+        condition: service_started
+    networks:
+      - meridian-network
+
+volumes:
+  MyWatchMarketplace-postgres-data:
+
+networks:
+  meridian-network:
+    driver: bridge
+

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -17,8 +17,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MyWatchMarketplace.marketplace.Application\MyWatchMarketplace.marketplace.Application.csproj" />
-    <ProjectReference Include="..\MyWatchMarketplace.marketplace.Domain\MyWatchMarketplace.marketplace.Domain.csproj" />
+    <ProjectReference Include="..\MyWatchMarketplace.marketplace.Application\MyWatchMarketplace.Marketplace.Application.csproj" />
+    <ProjectReference Include="..\MyWatchMarketplace.marketplace.Domain\MyWatchMarketplace.Marketplace.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
