@@ -11,12 +11,12 @@ public class BuyerOfferConfiguration : IEntityTypeConfiguration<BuyerOffer>
         builder.ToTable("BuyerOffers");
 
         builder.HasKey(o => o.Id);
-        builder.Property(o => o.Id).HasMaxLength(64);
+        builder.Property(o => o.Id).ValueGeneratedOnAdd();
 
         builder.Property(o => o.BuyerId).HasMaxLength(64).IsRequired();
         builder.Property(o => o.BuyerName).HasMaxLength(100).IsRequired();
         builder.Property(o => o.SellerId).HasMaxLength(64).IsRequired();
-        builder.Property(o => o.ListingId).HasMaxLength(64).IsRequired();
+        builder.Property(o => o.ListingId).IsRequired();
 
         builder.Property(o => o.WatchModel).HasMaxLength(150).IsRequired();
         builder.Property(o => o.WatchBrand).HasMaxLength(100).IsRequired();

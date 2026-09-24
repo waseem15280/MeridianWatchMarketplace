@@ -37,7 +37,6 @@ if (app.Environment.IsDevelopment())
     }
     catch (Exception ex)
     {
-        app.Logger.LogWarning(ex, "Could not initialise SellerHubDb on startup. Ensure PostgreSQL is running.");
         app.Logger.LogWarning(ex, "Could not initialise SellerHub database. Ensure PostgreSQL Docker is running.");
     }
 }
@@ -47,7 +46,8 @@ var sellerApi = app.MapGroup("/api/seller-hub");
 
 app.MapGet("/api/seller-hub/health", () => Results.Ok(new { status = "Healthy", service = "SellerHub" }))
    .WithName("SellerHubHealth");
-// 1. GET /api/seller-hub/profiles - List all user/seller accounts
+
+// 1. GET /api/seller-hub/profiles
 sellerApi.MapGet("/profiles", async (SellerHubDbContext db) =>
 {
     var profiles = await db.SellerProfiles.AsNoTracking()
@@ -71,8 +71,8 @@ sellerApi.MapGet("/profiles", async (SellerHubDbContext db) =>
     return Results.Ok(profiles);
 });
 
-// 2. GET /api/seller-hub/profiles/{userId}
-sellerApi.MapGet("/profiles/{userId}", async (string userId, SellerHubDbContext db) =>
+// 2. GET /api/seller-hub/profiles/{userId:int}
+sellerApi.MapGet("/profiles/{userId:int}", async (int userId, SellerHubDbContext db) =>
 {
     var p = await db.SellerProfiles.AsNoTracking().FirstOrDefaultAsync(x => x.Id == userId);
     if (p is null) return Results.NotFound(new { message = $"Profile {userId} not found." });
@@ -95,8 +95,8 @@ sellerApi.MapGet("/profiles/{userId}", async (string userId, SellerHubDbContext 
     ));
 });
 
-// 3. PUT /api/seller-hub/profiles/{userId}
-sellerApi.MapPut("/profiles/{userId}", async (string userId, UpdateSellerProfileRequest request, SellerHubDbContext db) =>
+// 3. PUT /api/seller-hub/profiles/{userId:int}
+sellerApi.MapPut("/profiles/{userId:int}", async (int userId, UpdateSellerProfileRequest request, SellerHubDbContext db) =>
 {
     var p = await db.SellerProfiles.FirstOrDefaultAsync(x => x.Id == userId);
     if (p is null) return Results.NotFound();
@@ -149,7 +149,6 @@ sellerApi.MapPost("/reviews", async (CreateSellerReviewRequest request, SellerHu
 {
     var review = new SellerReview
     {
-        Id = "rev-" + Guid.NewGuid().ToString("N")[..8],
         SellerId = request.SellerId,
         BuyerId = request.BuyerId,
         BuyerName = request.BuyerName,
@@ -166,21 +165,24 @@ sellerApi.MapPost("/reviews", async (CreateSellerReviewRequest request, SellerHu
     db.SellerReviews.Add(review);
     await db.SaveChangesAsync();
 
-    // Recompute seller rating
-    var seller = await db.SellerProfiles.FirstOrDefaultAsync(p => p.Id == request.SellerId);
-    if (seller is not null)
+    // Recompute seller rating if seller ID is numeric
+    if (int.TryParse(request.SellerId, out var sIntId))
     {
-        var allRatings = await db.SellerReviews.Where(r => r.SellerId == request.SellerId).Select(r => r.Rating).ToListAsync();
-        seller.Rating = Math.Round(allRatings.Average(), 2);
-        seller.ReviewCount = allRatings.Count;
-        await db.SaveChangesAsync();
+        var seller = await db.SellerProfiles.FirstOrDefaultAsync(p => p.Id == sIntId);
+        if (seller is not null)
+        {
+            var allRatings = await db.SellerReviews.Where(r => r.SellerId == request.SellerId).Select(r => r.Rating).ToListAsync();
+            seller.Rating = Math.Round(allRatings.Average(), 2);
+            seller.ReviewCount = allRatings.Count;
+            await db.SaveChangesAsync();
+        }
     }
 
     return Results.Created($"/api/seller-hub/reviews/{review.Id}", review);
 });
 
-// 6. POST /api/seller-hub/reviews/{reviewId}/reply
-sellerApi.MapPost("/reviews/{reviewId}/reply", async (string reviewId, ReviewReplyRequest request, SellerHubDbContext db) =>
+// 6. POST /api/seller-hub/reviews/{reviewId:int}/reply
+sellerApi.MapPost("/reviews/{reviewId:int}/reply", async (int reviewId, ReviewReplyRequest request, SellerHubDbContext db) =>
 {
     var review = await db.SellerReviews.FirstOrDefaultAsync(r => r.Id == reviewId);
     if (review is null) return Results.NotFound();
@@ -193,7 +195,7 @@ sellerApi.MapPost("/reviews/{reviewId}/reply", async (string reviewId, ReviewRep
 // 7. GET /api/seller-hub/offers?sellerId={sellerId}
 sellerApi.MapGet("/offers", async (string? sellerId, SellerHubDbContext db) =>
 {
-    var sId = sellerId ?? "user-current-seller";
+    var sId = sellerId ?? "1";
     var offers = await db.SellerOffers.AsNoTracking()
         .Where(o => o.SellerId == sId)
         .OrderByDescending(o => o.CreatedAt)
@@ -217,8 +219,8 @@ sellerApi.MapGet("/offers", async (string? sellerId, SellerHubDbContext db) =>
     return Results.Ok(offers);
 });
 
-// 8. PATCH /api/seller-hub/offers/{offerId}/respond
-sellerApi.MapPatch("/offers/{offerId}/respond", async (string offerId, RespondOfferRequest request, SellerHubDbContext db) =>
+// 8. PATCH /api/seller-hub/offers/{offerId:int}/respond
+sellerApi.MapPatch("/offers/{offerId:int}/respond", async (int offerId, RespondOfferRequest request, SellerHubDbContext db) =>
 {
     var offer = await db.SellerOffers.FirstOrDefaultAsync(o => o.Id == offerId);
     if (offer is null) return Results.NotFound();
@@ -233,11 +235,14 @@ sellerApi.MapPatch("/offers/{offerId}/respond", async (string offerId, RespondOf
 // 9. POST /api/seller-hub/sales-count (INTER-SERVICE: Called by CustomerOrders when order is completed)
 sellerApi.MapPost("/sales-count", async (SellerSaleNotificationRequest request, SellerHubDbContext db) =>
 {
-    var seller = await db.SellerProfiles.FirstOrDefaultAsync(p => p.Id == request.SellerId);
-    if (seller is not null)
+    if (int.TryParse(request.SellerId, out var sIntId))
     {
-        seller.TotalSalesCount++;
-        await db.SaveChangesAsync();
+        var seller = await db.SellerProfiles.FirstOrDefaultAsync(p => p.Id == sIntId);
+        if (seller is not null)
+        {
+            seller.TotalSalesCount++;
+            await db.SaveChangesAsync();
+        }
     }
     return Results.Ok(new { success = true });
 });
@@ -276,4 +281,3 @@ sellerApi.MapPost("/offers/sync", async (SyncOfferToSellerRequest request, Selle
 });
 
 app.Run();
-

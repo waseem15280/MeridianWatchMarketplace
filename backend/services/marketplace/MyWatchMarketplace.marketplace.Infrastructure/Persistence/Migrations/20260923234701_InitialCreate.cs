@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace MyWatchMarketplace.marketplace.Infrastructure.Persistence.Migrations
+namespace MyWatchMarketplace.Marketplace.Infrastructure.Persistence.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -16,7 +17,8 @@ namespace MyWatchMarketplace.marketplace.Infrastructure.Persistence.Migrations
                 name: "WatchListings",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     SellerId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     SellerName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     SellerRating = table.Column<double>(type: "double precision", nullable: false),
@@ -52,7 +54,7 @@ namespace MyWatchMarketplace.marketplace.Infrastructure.Persistence.Migrations
                     ViewsCount = table.Column<int>(type: "integer", nullable: false),
                     WishlistCount = table.Column<int>(type: "integer", nullable: false),
                     IsFeatured = table.Column<bool>(type: "boolean", nullable: true),
-                    FromPersonalCollectionId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    FromPersonalCollectionId = table.Column<int>(type: "integer", nullable: true),
                     Created = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     CreatedBy = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     LastModified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),

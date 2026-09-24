@@ -22,7 +22,7 @@ export const marketplaceApi = {
   },
 
   // GET /api/marketplace/listings/{id}
-  getListingById: async (id: string): Promise<WatchListing> => {
+  getListingById: async (id: string | number): Promise<WatchListing> => {
     return request<WatchListing>(`/api/marketplace/listings/${id}`);
   },
 
@@ -35,7 +35,7 @@ export const marketplaceApi = {
   },
 
   // PUT /api/marketplace/listings/{id}
-  updateListing: async (id: string, updates: Partial<WatchListing>): Promise<WatchListing> => {
+  updateListing: async (id: string | number, updates: Partial<WatchListing>): Promise<WatchListing> => {
     return request<WatchListing>(`/api/marketplace/listings/${id}`, {
       method: 'PUT',
       body: JSON.stringify(updates)
@@ -43,14 +43,14 @@ export const marketplaceApi = {
   },
 
   // DELETE /api/marketplace/listings/{id}
-  deleteListing: async (id: string): Promise<void> => {
+  deleteListing: async (id: string | number): Promise<void> => {
     return request<void>(`/api/marketplace/listings/${id}`, {
       method: 'DELETE'
     });
   },
 
   // PATCH /api/marketplace/listings/{id}/status
-  updateStatus: async (id: string, status: WatchListing['status']): Promise<{ id: string; status: string }> => {
+  updateStatus: async (id: string | number, status: WatchListing['status']): Promise<{ id: string; status: string }> => {
     return request<{ id: string; status: string }>(`/api/marketplace/listings/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status })
@@ -58,7 +58,7 @@ export const marketplaceApi = {
   },
 
   // POST /api/marketplace/listings/{id}/view
-  recordView: async (id: string): Promise<{ viewsCount: number }> => {
+  recordView: async (id: string | number): Promise<{ viewsCount: number }> => {
     return request<{ viewsCount: number }>(`/api/marketplace/listings/${id}/view`, {
       method: 'POST'
     });

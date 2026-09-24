@@ -20,16 +20,16 @@ public record CreateListingFromVaultRequest(
     string DialColor,
     List<string> Images,
     string Description,
-    string FromPersonalCollectionId
+    int? FromPersonalCollectionId
 );
 
-public record CreateListingResponse(string Id, string Status);
+public record CreateListingResponse(int Id, string Status);
 
 public record SellerSaleNotificationRequest(string SellerId, decimal Amount);
 
 public record SyncOfferToSellerRequest(
-    string OfferId,
-    string ListingId,
+    int OfferId,
+    int ListingId,
     string BuyerId,
     string BuyerName,
     string SellerId,
@@ -43,4 +43,3 @@ public record SyncOfferToSellerRequest(
 );
 
 public record RespondOfferRequest(string Status, decimal? CounterAmount);
-

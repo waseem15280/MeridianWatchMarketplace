@@ -3,7 +3,7 @@ using MyWatchMarketplace.SellerHub.Domain.Common;
 
 namespace MyWatchMarketplace.SellerHub.Domain.Entities;
 
-public class SellerReview : BaseAuditableEntity<string>
+public class SellerReview : BaseAuditableEntity<int>
 {
     public string SellerId { get; set; } = string.Empty;
 
@@ -29,4 +29,3 @@ public class SellerReview : BaseAuditableEntity<string>
 
     public string? SellerReply { get; set; }
 }
-

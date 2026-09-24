@@ -4,7 +4,7 @@ namespace MyWatchMarketplace.CollectorVault.Domain.Entities;
 
 public class ValuationRecord : BaseAuditableEntity<int>
 {
-    public string VaultWatchId { get; set; } = string.Empty;
+    public int VaultWatchId { get; set; }
 
     public DateTimeOffset RecordedDate { get; set; } = DateTimeOffset.UtcNow;
 
@@ -14,4 +14,3 @@ public class ValuationRecord : BaseAuditableEntity<int>
 
     public string? Notes { get; set; }
 }
-

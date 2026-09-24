@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using MyWatchMarketplace.UserManagement.Application.Common.Interfaces;
 using MyWatchMarketplace.UserManagement.Domain.Entities;
 
@@ -22,6 +22,7 @@ public class UserManagementDbContext : DbContext, IUserManagementDbContext
         modelBuilder.Entity<UserLogin>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.HasIndex(e => e.Username).IsUnique();
             entity.HasIndex(e => e.Email).IsUnique();
 
@@ -34,6 +35,7 @@ public class UserManagementDbContext : DbContext, IUserManagementDbContext
         modelBuilder.Entity<UserAccount>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
 
             entity.Property(e => e.Role)
                   .HasConversion<string>()

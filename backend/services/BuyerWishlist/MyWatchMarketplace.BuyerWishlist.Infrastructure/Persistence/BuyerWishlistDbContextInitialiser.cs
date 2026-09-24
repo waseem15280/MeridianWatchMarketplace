@@ -54,8 +54,9 @@ public class BuyerWishlistDbContextInitialiser
         {
             new()
             {
-                BuyerId = "user-current-seller",
-                ListingId = "watch-rolex-daytona",
+                Id = 1,
+                BuyerId = "1",
+                ListingId = 1,
                 WatchBrand = "Rolex",
                 WatchModel = "Cosmograph Daytona \"Panda\"",
                 PriceWhenAdded = 31500m,
@@ -65,8 +66,9 @@ public class BuyerWishlistDbContextInitialiser
             },
             new()
             {
-                BuyerId = "user-current-seller",
-                ListingId = "watch-patek-nautilus",
+                Id = 2,
+                BuyerId = "1",
+                ListingId = 2,
                 WatchBrand = "Patek Philippe",
                 WatchModel = "Nautilus Blue Dial",
                 PriceWhenAdded = 118000m,
@@ -78,7 +80,19 @@ public class BuyerWishlistDbContextInitialiser
 
         _context.WishlistItems.AddRange(seedItems);
         await _context.SaveChangesAsync();
+
+        if (_context.Database.IsNpgsql())
+        {
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync("SELECT setval(pg_get_serial_sequence('\"WishlistItems\"', 'Id'), (SELECT COALESCE(MAX(\"Id\"), 1) FROM \"WishlistItems\"));");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not reset Postgres sequences for BuyerWishlist.");
+            }
+        }
+
         _logger.LogInformation("Seeded {Count} wishlist items into BuyerWishlistDb.", seedItems.Count);
     }
 }
-

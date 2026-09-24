@@ -11,7 +11,7 @@ public class VaultWatchConfiguration : IEntityTypeConfiguration<VaultWatch>
         builder.ToTable("VaultWatches");
 
         builder.HasKey(w => w.Id);
-        builder.Property(w => w.Id).HasMaxLength(64);
+        builder.Property(w => w.Id).ValueGeneratedOnAdd();
 
         builder.Property(w => w.UserId).HasMaxLength(64).IsRequired();
         builder.Property(w => w.Brand).HasMaxLength(100).IsRequired();
@@ -27,7 +27,7 @@ public class VaultWatchConfiguration : IEntityTypeConfiguration<VaultWatch>
         builder.Property(w => w.EstimatedMarketValue).HasPrecision(18, 2).IsRequired();
         builder.Property(w => w.Images).HasColumnType("text[]");
         builder.Property(w => w.Notes).HasMaxLength(2000);
-        builder.Property(w => w.ListingId).HasMaxLength(64);
+        builder.Property(w => w.ListingId);
 
         builder.Property(w => w.CreatedBy).HasMaxLength(100);
         builder.Property(w => w.LastModifiedBy).HasMaxLength(100);

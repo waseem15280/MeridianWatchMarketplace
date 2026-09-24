@@ -37,7 +37,6 @@ if (app.Environment.IsDevelopment())
     }
     catch (Exception ex)
     {
-        app.Logger.LogWarning(ex, "Could not initialise CustomerOrdersDb on startup. Ensure PostgreSQL is running.");
         app.Logger.LogWarning(ex, "Could not initialise CustomerOrders database. Ensure PostgreSQL Docker is running.");
     }
 }
@@ -47,26 +46,23 @@ var ordersApi = app.MapGroup("/api/customer-orders");
 
 app.MapGet("/api/customer-orders/health", () => Results.Ok(new { status = "Healthy", service = "CustomerOrders" }))
    .WithName("CustomerOrdersHealth");
-// 1. GET /api/customer-orders?userId={userId}&role={buyer|seller}
-ordersApi.MapGet("/", async (string? userId, string? role, CustomerOrdersDbContext db) =>
+
+// 1. GET /api/customer-orders?buyerId={buyerId}&sellerId={sellerId}
+ordersApi.MapGet("/", async (string? buyerId, string? sellerId, CustomerOrdersDbContext db) =>
 {
-    var uId = userId ?? "user-current-seller";
     var query = db.CustomerOrders.AsNoTracking().AsQueryable();
 
-    if (role == "seller")
+    if (!string.IsNullOrWhiteSpace(buyerId))
     {
-        query = query.Where(o => o.SellerId == uId);
-    }
-    else if (role == "buyer")
-    {
-        query = query.Where(o => o.BuyerId == uId);
-    }
-    else
-    {
-        query = query.Where(o => o.BuyerId == uId || o.SellerId == uId);
+        query = query.Where(o => o.BuyerId == buyerId);
     }
 
-    var list = await query.OrderByDescending(o => o.CreatedAt)
+    if (!string.IsNullOrWhiteSpace(sellerId))
+    {
+        query = query.Where(o => o.SellerId == sellerId);
+    }
+
+    var orders = await query.OrderByDescending(o => o.CreatedAt)
         .Select(o => new CustomerOrderDto(
             o.Id,
             o.ListingId,
@@ -90,11 +86,11 @@ ordersApi.MapGet("/", async (string? userId, string? role, CustomerOrdersDbConte
             o.HasReviewed
         )).ToListAsync();
 
-    return Results.Ok(list);
+    return Results.Ok(orders);
 });
 
-// 2. GET /api/customer-orders/{id}
-ordersApi.MapGet("/{id}", async (string id, CustomerOrdersDbContext db) =>
+// 2. GET /api/customer-orders/{id:int}
+ordersApi.MapGet("/{id:int}", async (int id, CustomerOrdersDbContext db) =>
 {
     var o = await db.CustomerOrders.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
     if (o is null) return Results.NotFound(new { message = $"Order {id} not found." });
@@ -129,13 +125,12 @@ ordersApi.MapPost("/", async (
     CustomerOrdersDbContext db,
     IMarketplaceClient marketplaceClient) =>
 {
-    var buyerId = request.BuyerId ?? "user-current-buyer";
+    var buyerId = request.BuyerId ?? "4";
     var buyerName = request.BuyerName ?? "Julian Sterling";
     var totalAmount = request.Price + request.ShippingFee;
 
     var order = new CustomerOrder
     {
-        Id = "ord-" + Guid.NewGuid().ToString("N")[..8],
         ListingId = request.ListingId,
         WatchModel = request.WatchModel,
         WatchBrand = request.WatchBrand,
@@ -148,10 +143,10 @@ ordersApi.MapPost("/", async (
         Price = request.Price,
         ShippingFee = request.ShippingFee,
         TotalAmount = totalAmount,
+        Status = "pending",
         ShippingAddress = request.ShippingAddress,
         PaymentMethod = request.PaymentMethod ?? "Escrow via Stripe",
         PaymentStatus = "Held in Escrow",
-        Status = "pending",
         CreatedAt = DateTimeOffset.UtcNow,
         HasReviewed = false
     };
@@ -159,15 +154,15 @@ ordersApi.MapPost("/", async (
     db.CustomerOrders.Add(order);
     await db.SaveChangesAsync();
 
-    // Notify Marketplace that watch is reserved
-    await marketplaceClient.UpdateListingStatusAsync(request.ListingId, "reserved");
+    // Call Marketplace microservice to mark the watch as pending
+    await marketplaceClient.UpdateListingStatusAsync(order.ListingId, "pending");
 
     return Results.Created($"/api/customer-orders/{order.Id}", order);
 });
 
-// 4. PATCH /api/customer-orders/{id}/status - Update status & escrow release (INTER-SERVICE: CustomerOrders -> Marketplace + SellerHub)
-ordersApi.MapPatch("/{id}/status", async (
-    string id,
+// 4. PATCH /api/customer-orders/{id:int}/status - Update status & escrow release (INTER-SERVICE: CustomerOrders -> Marketplace + SellerHub)
+ordersApi.MapPatch("/{id:int}/status", async (
+    int id,
     UpdateOrderStatusRequest request,
     CustomerOrdersDbContext db,
     IMarketplaceClient marketplaceClient,
@@ -182,7 +177,7 @@ ordersApi.MapPatch("/{id}/status", async (
         order.TrackingNumber = request.TrackingNumber;
     }
 
-    if (request.Status == "completed" || request.Status == "delivered")
+    if (request.Status == "completed")
     {
         order.PaymentStatus = "Funds Released";
         // Notify Marketplace watch is sold
@@ -202,7 +197,7 @@ ordersApi.MapPatch("/{id}/status", async (
 // 5. GET /api/customer-orders/offers?buyerId={buyerId}
 ordersApi.MapGet("/offers", async (string? buyerId, CustomerOrdersDbContext db) =>
 {
-    var bId = buyerId ?? "user-current-seller";
+    var bId = buyerId ?? "1";
     var offers = await db.BuyerOffers.AsNoTracking()
         .Where(o => o.BuyerId == bId)
         .OrderByDescending(o => o.CreatedAt)
@@ -232,12 +227,11 @@ ordersApi.MapPost("/offers", async (
     CustomerOrdersDbContext db,
     ISellerHubClient sellerHubClient) =>
 {
-    var buyerId = request.BuyerId ?? "user-current-seller";
+    var buyerId = request.BuyerId ?? "1";
     var buyerName = request.BuyerName ?? "Alexander Vance";
 
     var offer = new BuyerOffer
     {
-        Id = "off-" + Guid.NewGuid().ToString("N")[..8],
         ListingId = request.ListingId,
         BuyerId = buyerId,
         BuyerName = buyerName,
@@ -255,7 +249,7 @@ ordersApi.MapPost("/offers", async (
     db.BuyerOffers.Add(offer);
     await db.SaveChangesAsync();
 
-    // Sync offer to SellerHub inbox
+    // Replicate offer to SellerHub microservice
     await sellerHubClient.SyncOfferToSellerAsync(new SyncOfferToSellerRequest(
         offer.Id,
         offer.ListingId,
@@ -274,9 +268,9 @@ ordersApi.MapPost("/offers", async (
     return Results.Created($"/api/customer-orders/offers/{offer.Id}", offer);
 });
 
-// 7. PATCH /api/customer-orders/offers/{offerId}/respond - Respond to counter offer
-ordersApi.MapPatch("/offers/{offerId}/respond", async (
-    string offerId,
+// 7. PATCH /api/customer-orders/offers/{offerId:int}/respond - Respond to counter offer
+ordersApi.MapPatch("/offers/{offerId:int}/respond", async (
+    int offerId,
     RespondBuyerOfferRequest request,
     CustomerOrdersDbContext db,
     ISellerHubClient sellerHubClient) =>
@@ -296,4 +290,3 @@ ordersApi.MapPatch("/offers/{offerId}/respond", async (
 });
 
 app.Run();
-

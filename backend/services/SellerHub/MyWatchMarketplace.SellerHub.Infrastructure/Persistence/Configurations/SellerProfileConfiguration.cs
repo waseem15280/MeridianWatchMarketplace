@@ -11,7 +11,7 @@ public class SellerProfileConfiguration : IEntityTypeConfiguration<SellerProfile
         builder.ToTable("SellerProfiles");
 
         builder.HasKey(s => s.Id);
-        builder.Property(s => s.Id).HasMaxLength(64);
+        builder.Property(s => s.Id).ValueGeneratedOnAdd();
 
         builder.Property(s => s.Name).HasMaxLength(100).IsRequired();
         builder.Property(s => s.Email).HasMaxLength(256).IsRequired();

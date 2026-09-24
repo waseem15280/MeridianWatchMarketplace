@@ -1,7 +1,7 @@
 export type UserRole = 'buyer' | 'seller' | 'collector' | 'admin';
 
 export interface UserLogin {
-  id: string;
+  id: string | number;
   username: string;
   email: string;
   created?: string;
@@ -26,7 +26,7 @@ export type WatchCaseMaterial =
   | 'Two-Tone (Steel & Gold)';
 
 export interface SellerReview {
-  id: string;
+  id: string | number;
   sellerId: string;
   buyerId: string;
   buyerName: string;
@@ -47,8 +47,8 @@ export interface SellerReview {
 }
 
 export interface UserAccount {
-  id: string;
-  userLoginId?: string;
+  id: string | number;
+  userLoginId?: string | number;
   name: string;
   email: string;
   role: UserRole;
@@ -67,7 +67,7 @@ export interface UserAccount {
 }
 
 export interface WatchListing {
-  id: string;
+  id: string | number;
   sellerId: string;
   sellerName: string;
   sellerRating: number;
@@ -112,11 +112,11 @@ export interface WatchListing {
   viewsCount: number;
   wishlistCount: number;
   isFeatured?: boolean;
-  fromPersonalCollectionId?: string;
+  fromPersonalCollectionId?: string | number;
 }
 
 export interface CollectionWatch {
-  id: string;
+  id: string | number;
   userId: string;
   brand: string;
   model: string;
@@ -134,13 +134,13 @@ export interface CollectionWatch {
   images: string[];
   notes?: string;
   isListedForSale: boolean;
-  listingId?: string;
+  listingId?: string | number;
   createdAt: string;
 }
 
 export interface OrderTransaction {
-  id: string;
-  listingId: string;
+  id: string | number;
+  listingId: string | number;
   watchModel: string;
   watchBrand: string;
   watchReference: string;
@@ -159,8 +159,8 @@ export interface OrderTransaction {
 }
 
 export interface WatchOffer {
-  id: string;
-  listingId: string;
+  id: string | number;
+  listingId: string | number;
   watchModel: string;
   watchBrand: string;
   watchImage: string;

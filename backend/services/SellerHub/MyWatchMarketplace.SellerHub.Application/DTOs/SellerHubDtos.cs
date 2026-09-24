@@ -3,7 +3,7 @@ using MyWatchMarketplace.SellerHub.Domain.Common;
 namespace MyWatchMarketplace.SellerHub.Application.DTOs;
 
 public record SellerProfileDto(
-    string Id,
+    int Id,
     string Name,
     string Email,
     string Avatar,
@@ -31,7 +31,7 @@ public record UpdateSellerProfileRequest(
 );
 
 public record SellerReviewDto(
-    string Id,
+    int Id,
     string SellerId,
     string BuyerId,
     string BuyerName,
@@ -62,9 +62,9 @@ public record CreateSellerReviewRequest(
 public record ReviewReplyRequest(string SellerReply);
 
 public record SellerOfferNegotiationDto(
-    string Id,
+    int Id,
     string SellerId,
-    string ListingId,
+    int ListingId,
     string BuyerId,
     string BuyerName,
     string WatchModel,
@@ -82,4 +82,3 @@ public record RespondToSellerOfferRequest(
     string Status,
     decimal? CounterAmount
 );
-

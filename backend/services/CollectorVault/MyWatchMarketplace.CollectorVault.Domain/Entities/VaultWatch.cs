@@ -2,7 +2,7 @@ using MyWatchMarketplace.SharedKernel.Common;
 
 namespace MyWatchMarketplace.CollectorVault.Domain.Entities;
 
-public class VaultWatch : BaseAuditableEntity<string>
+public class VaultWatch : BaseAuditableEntity<int>
 {
     public string UserId { get; set; } = string.Empty;
 
@@ -38,8 +38,7 @@ public class VaultWatch : BaseAuditableEntity<string>
 
     public bool IsListedForSale { get; set; }
 
-    public string? ListingId { get; set; }
+    public int? ListingId { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
-

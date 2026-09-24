@@ -14,13 +14,13 @@ export const customerOrdersApi = {
   },
 
   // GET /api/customer-orders/{id}
-  getOrderById: async (id: string): Promise<OrderTransaction> => {
+  getOrderById: async (id: string | number): Promise<OrderTransaction> => {
     return request<OrderTransaction>(`/api/customer-orders/${encodeURIComponent(id)}`);
   },
 
   // POST /api/customer-orders (Checkout)
   createOrder: async (data: {
-    listingId: string;
+    listingId: string | number;
     watchModel: string;
     watchBrand: string;
     watchReference: string;
@@ -41,7 +41,7 @@ export const customerOrdersApi = {
   },
 
   // PATCH /api/customer-orders/{id}/status
-  updateOrderStatus: async (id: string, status: OrderTransaction['status'], trackingNumber?: string): Promise<OrderTransaction> => {
+  updateOrderStatus: async (id: string | number, status: OrderTransaction['status'], trackingNumber?: string): Promise<OrderTransaction> => {
     return request<OrderTransaction>(`/api/customer-orders/${encodeURIComponent(id)}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status, trackingNumber })
@@ -56,7 +56,7 @@ export const customerOrdersApi = {
 
   // POST /api/customer-orders/offers
   createOffer: async (data: {
-    listingId: string;
+    listingId: string | number;
     buyerId?: string;
     buyerName?: string;
     sellerId: string;
@@ -74,7 +74,7 @@ export const customerOrdersApi = {
   },
 
   // PATCH /api/customer-orders/offers/{offerId}/respond
-  respondToOffer: async (offerId: string, status: string, counterAmount?: number): Promise<WatchOffer> => {
+  respondToOffer: async (offerId: string | number, status: string, counterAmount?: number): Promise<WatchOffer> => {
     return request<WatchOffer>(`/api/customer-orders/offers/${encodeURIComponent(offerId)}/respond`, {
       method: 'PATCH',
       body: JSON.stringify({ status, counterAmount })

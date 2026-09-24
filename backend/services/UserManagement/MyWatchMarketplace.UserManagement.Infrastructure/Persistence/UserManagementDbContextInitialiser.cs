@@ -1,8 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyWatchMarketplace.UserManagement.Domain.Entities;
 using MyWatchMarketplace.UserManagement.Domain.Enums;
-using MyWatchMarketplace.UserManagement.Infrastructure.Security;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace MyWatchMarketplace.UserManagement.Infrastructure.Persistence;
 
@@ -25,7 +26,15 @@ public class UserManagementDbContextInitialiser
         {
             if (_context.Database.IsNpgsql())
             {
-                await _context.Database.EnsureCreatedAsync();
+                var pending = await _context.Database.GetPendingMigrationsAsync();
+                if (pending != null && pending.Any())
+                {
+                    await _context.Database.MigrateAsync();
+                }
+                else
+                {
+                    await _context.Database.EnsureCreatedAsync();
+                }
             }
 
             await SeedAsync();
@@ -44,15 +53,22 @@ public class UserManagementDbContextInitialiser
             return;
         }
 
-        var defaultPasswordHash = PasswordHasher.HashPassword("password123");
-        var adminPasswordHash = PasswordHasher.HashPassword("admin123");
+        string HashPassword(string password)
+        {
+            using var sha256 = SHA256.Create();
+            var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+            return Convert.ToHexString(bytes).ToLowerInvariant();
+        }
+
+        var defaultPasswordHash = HashPassword("password123");
+        var adminPasswordHash = HashPassword("admin123");
 
         var logins = new List<UserLogin>
         {
             // 1. Alexander Vance - Has 3 personas: Seller, Collector, Buyer
             new()
             {
-                Id = "login-alexander",
+                Id = 1,
                 Username = "alexander",
                 Email = "alexander.vance@horology.com",
                 PasswordHash = defaultPasswordHash,
@@ -62,8 +78,8 @@ public class UserManagementDbContextInitialiser
                 {
                     new()
                     {
-                        Id = "user-current-seller",
-                        UserLoginId = "login-alexander",
+                        Id = 1,
+                        UserLoginId = 1,
                         Name = "Alexander Vance (Dealer Studio)",
                         Email = "alexander.vance@horology.com",
                         Role = UserRole.Seller,
@@ -82,8 +98,8 @@ public class UserManagementDbContextInitialiser
                     },
                     new()
                     {
-                        Id = "account-alexander-collector",
-                        UserLoginId = "login-alexander",
+                        Id = 2,
+                        UserLoginId = 1,
                         Name = "Alexander Vance (Private Vault)",
                         Email = "alexander.vault@horology.com",
                         Role = UserRole.Collector,
@@ -102,8 +118,8 @@ public class UserManagementDbContextInitialiser
                     },
                     new()
                     {
-                        Id = "account-alexander-buyer",
-                        UserLoginId = "login-alexander",
+                        Id = 3,
+                        UserLoginId = 1,
                         Name = "Alexander Vance (Buyer)",
                         Email = "alexander.buyer@horology.com",
                         Role = UserRole.Buyer,
@@ -126,7 +142,7 @@ public class UserManagementDbContextInitialiser
             // 2. Julian Sterling - Has 2 personas: Buyer and Collector
             new()
             {
-                Id = "login-julian",
+                Id = 2,
                 Username = "julian",
                 Email = "j.sterling@collector.io",
                 PasswordHash = defaultPasswordHash,
@@ -136,8 +152,8 @@ public class UserManagementDbContextInitialiser
                 {
                     new()
                     {
-                        Id = "user-current-buyer",
-                        UserLoginId = "login-julian",
+                        Id = 4,
+                        UserLoginId = 2,
                         Name = "Julian Sterling (Acquisition Account)",
                         Email = "j.sterling@collector.io",
                         Role = UserRole.Buyer,
@@ -156,8 +172,8 @@ public class UserManagementDbContextInitialiser
                     },
                     new()
                     {
-                        Id = "account-julian-collector",
-                        UserLoginId = "login-julian",
+                        Id = 5,
+                        UserLoginId = 2,
                         Name = "Julian Sterling (Vault)",
                         Email = "j.sterling.vault@collector.io",
                         Role = UserRole.Collector,
@@ -180,7 +196,7 @@ public class UserManagementDbContextInitialiser
             // 3. Admin Account
             new()
             {
-                Id = "login-admin",
+                Id = 3,
                 Username = "admin",
                 Email = "admin@meridianmarket.com",
                 PasswordHash = adminPasswordHash,
@@ -190,8 +206,8 @@ public class UserManagementDbContextInitialiser
                 {
                     new()
                     {
-                        Id = "account-admin-ops",
-                        UserLoginId = "login-admin",
+                        Id = 6,
+                        UserLoginId = 3,
                         Name = "Meridian Platform Admin",
                         Email = "admin@meridianmarket.com",
                         Role = UserRole.Admin,
@@ -214,7 +230,7 @@ public class UserManagementDbContextInitialiser
             // 4. Geneva Horology Gallery
             new()
             {
-                Id = "login-geneva",
+                Id = 4,
                 Username = "geneva_dealer",
                 Email = "contact@genevahorology.ch",
                 PasswordHash = defaultPasswordHash,
@@ -224,8 +240,8 @@ public class UserManagementDbContextInitialiser
                 {
                     new()
                     {
-                        Id = "seller-geneva",
-                        UserLoginId = "login-geneva",
+                        Id = 7,
+                        UserLoginId = 4,
                         Name = "Geneva Horology Gallery",
                         Email = "contact@genevahorology.ch",
                         Role = UserRole.Seller,
@@ -248,7 +264,7 @@ public class UserManagementDbContextInitialiser
             // 5. Crown & Caliber Atelier
             new()
             {
-                Id = "login-crown",
+                Id = 5,
                 Username = "crown_atelier",
                 Email = "vault@crowncaliber.co.uk",
                 PasswordHash = defaultPasswordHash,
@@ -258,8 +274,8 @@ public class UserManagementDbContextInitialiser
                 {
                     new()
                     {
-                        Id = "seller-crown",
-                        UserLoginId = "login-crown",
+                        Id = 8,
+                        UserLoginId = 5,
                         Name = "Crown & Caliber Atelier",
                         Email = "vault@crowncaliber.co.uk",
                         Role = UserRole.Seller,
@@ -282,7 +298,7 @@ public class UserManagementDbContextInitialiser
             // 6. Ginza Chrono Vault
             new()
             {
-                Id = "login-tokyo",
+                Id = 6,
                 Username = "ginza_vault",
                 Email = "tokyo@ginzachronovault.jp",
                 PasswordHash = defaultPasswordHash,
@@ -292,8 +308,8 @@ public class UserManagementDbContextInitialiser
                 {
                     new()
                     {
-                        Id = "seller-tokyo",
-                        UserLoginId = "login-tokyo",
+                        Id = 9,
+                        UserLoginId = 6,
                         Name = "Ginza Chrono Vault",
                         Email = "tokyo@ginzachronovault.jp",
                         Role = UserRole.Seller,
@@ -316,6 +332,20 @@ public class UserManagementDbContextInitialiser
 
         _context.Logins.AddRange(logins);
         await _context.SaveChangesAsync();
+
+        if (_context.Database.IsNpgsql())
+        {
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync("SELECT setval(pg_get_serial_sequence('\"Logins\"', 'Id'), (SELECT COALESCE(MAX(\"Id\"), 1) FROM \"Logins\"));");
+                await _context.Database.ExecuteSqlRawAsync("SELECT setval(pg_get_serial_sequence('\"Accounts\"', 'Id'), (SELECT COALESCE(MAX(\"Id\"), 1) FROM \"Accounts\"));");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not reset Postgres sequences for UserManagement.");
+            }
+        }
+
         _logger.LogInformation("Seeded {Count} user logins with multiple distinct role accounts into UserAccountDb.", logins.Count);
     }
 }

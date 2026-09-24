@@ -6,11 +6,7 @@ using MyWatchMarketplace.marketplace.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-
-// Register Infrastructure services (EF Core DbContext, PostgreSQL Npgsql provider)
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
 builder.Services.AddCors(options =>
@@ -27,13 +23,10 @@ var app = builder.Build();
 
 app.UseCors("AllowAll");
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 
-    // Initialise and apply pending database migrations
-    // Initialise and apply database seed on startup
     using var scope = app.Services.CreateScope();
     var initialiser = scope.ServiceProvider.GetRequiredService<MarketplaceDbContextInitialiser>();
     try
@@ -42,13 +35,15 @@ if (app.Environment.IsDevelopment())
     }
     catch (Exception ex)
     {
-        app.Logger.LogWarning(ex, "Could not run database migrations on startup. Please ensure the PostgreSQL Docker container is running.");
         app.Logger.LogWarning(ex, "Could not initialise Marketplace database. Please ensure PostgreSQL Docker is running.");
     }
 }
 
 app.UseHttpsRedirection();
 var listingsApi = app.MapGroup("/api/marketplace/listings");
+
+app.MapGet("/api/marketplace/health", () => Results.Ok(new { status = "Healthy", service = "Marketplace" }))
+   .WithName("MarketplaceHealth");
 
 // 1. GET /api/marketplace/listings - Query with filtering & search
 listingsApi.MapGet("/", async (
@@ -158,8 +153,8 @@ listingsApi.MapGet("/", async (
     return Results.Ok(results);
 });
 
-// 2. GET /api/marketplace/listings/{id}
-listingsApi.MapGet("/{id}", async (string id, MarketplaceDbContext db) =>
+// 2. GET /api/marketplace/listings/{id:int}
+listingsApi.MapGet("/{id:int}", async (int id, MarketplaceDbContext db) =>
 {
     var listing = await db.WatchListings.AsNoTracking().FirstOrDefaultAsync(w => w.Id == id);
     if (listing is null) return Results.NotFound(new { message = $"Listing {id} not found." });
@@ -210,8 +205,7 @@ listingsApi.MapPost("/", async (CreateWatchListingRequest request, MarketplaceDb
 {
     var listing = new WatchListing
     {
-        Id = "watch-" + Guid.NewGuid().ToString("N")[..8],
-        SellerId = request.SellerId ?? "user-current-seller",
+        SellerId = request.SellerId ?? "1",
         SellerName = request.SellerName ?? "Alexander Vance",
         SellerRating = request.SellerRating ?? 4.92,
         SellerReviewCount = request.SellerReviewCount ?? 19,
@@ -255,8 +249,8 @@ listingsApi.MapPost("/", async (CreateWatchListingRequest request, MarketplaceDb
     return Results.Created($"/api/marketplace/listings/{listing.Id}", listing);
 });
 
-// 4. PUT /api/marketplace/listings/{id} - Update listing
-listingsApi.MapPut("/{id}", async (string id, UpdateWatchListingRequest request, MarketplaceDbContext db) =>
+// 4. PUT /api/marketplace/listings/{id:int} - Update listing
+listingsApi.MapPut("/{id:int}", async (int id, UpdateWatchListingRequest request, MarketplaceDbContext db) =>
 {
     var listing = await db.WatchListings.FirstOrDefaultAsync(w => w.Id == id);
     if (listing is null) return Results.NotFound(new { message = $"Listing {id} not found." });
@@ -274,8 +268,8 @@ listingsApi.MapPut("/{id}", async (string id, UpdateWatchListingRequest request,
     return Results.Ok(listing);
 });
 
-// 5. DELETE /api/marketplace/listings/{id}
-listingsApi.MapDelete("/{id}", async (string id, MarketplaceDbContext db) =>
+// 5. DELETE /api/marketplace/listings/{id:int}
+listingsApi.MapDelete("/{id:int}", async (int id, MarketplaceDbContext db) =>
 {
     var listing = await db.WatchListings.FirstOrDefaultAsync(w => w.Id == id);
     if (listing is null) return Results.NotFound(new { message = $"Listing {id} not found." });
@@ -285,8 +279,8 @@ listingsApi.MapDelete("/{id}", async (string id, MarketplaceDbContext db) =>
     return Results.NoContent();
 });
 
-// 6. PATCH /api/marketplace/listings/{id}/status (Called by CustomerOrders / SellerHub)
-listingsApi.MapPatch("/{id}/status", async (string id, MyWatchMarketplace.Contracts.DTOs.UpdateListingStatusRequest request, MarketplaceDbContext db) =>
+// 6. PATCH /api/marketplace/listings/{id:int}/status (Called by CustomerOrders / SellerHub)
+listingsApi.MapPatch("/{id:int}/status", async (int id, MyWatchMarketplace.Contracts.DTOs.UpdateListingStatusRequest request, MarketplaceDbContext db) =>
 {
     var listing = await db.WatchListings.FirstOrDefaultAsync(w => w.Id == id);
     if (listing is null) return Results.NotFound(new { message = $"Listing {id} not found." });
@@ -296,8 +290,8 @@ listingsApi.MapPatch("/{id}/status", async (string id, MyWatchMarketplace.Contra
     return Results.Ok(new { id = listing.Id, status = listing.Status });
 });
 
-// 7. POST /api/marketplace/listings/{id}/view
-listingsApi.MapPost("/{id}/view", async (string id, MarketplaceDbContext db) =>
+// 7. POST /api/marketplace/listings/{id:int}/view
+listingsApi.MapPost("/{id:int}/view", async (int id, MarketplaceDbContext db) =>
 {
     var listing = await db.WatchListings.FirstOrDefaultAsync(w => w.Id == id);
     if (listing is null) return Results.NotFound();
@@ -307,8 +301,8 @@ listingsApi.MapPost("/{id}/view", async (string id, MarketplaceDbContext db) =>
     return Results.Ok(new { viewsCount = listing.ViewsCount });
 });
 
-// 8. POST /api/marketplace/listings/{id}/wishlist-delta (Called by BuyerWishlist)
-listingsApi.MapPost("/{id}/wishlist-delta", async (string id, MyWatchMarketplace.Contracts.DTOs.WishlistCountDeltaRequest request, MarketplaceDbContext db) =>
+// 8. POST /api/marketplace/listings/{id:int}/wishlist-delta (Called by BuyerWishlist)
+listingsApi.MapPost("/{id:int}/wishlist-delta", async (int id, MyWatchMarketplace.Contracts.DTOs.WishlistCountDeltaRequest request, MarketplaceDbContext db) =>
 {
     var listing = await db.WatchListings.FirstOrDefaultAsync(w => w.Id == id);
     if (listing is null) return Results.NotFound();

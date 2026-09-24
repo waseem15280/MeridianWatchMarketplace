@@ -24,8 +24,11 @@ namespace MyWatchMarketplace.UserManagement.Infrastructure.Persistence.Migration
 
             modelBuilder.Entity("MyWatchMarketplace.UserManagement.Domain.Entities.UserAccount", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Avatar")
                         .IsRequired()
@@ -93,9 +96,8 @@ namespace MyWatchMarketplace.UserManagement.Infrastructure.Persistence.Migration
                     b.Property<int>("TotalSalesCount")
                         .HasColumnType("integer");
 
-                    b.Property<string>("UserLoginId")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("UserLoginId")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("VerifiedDealer")
                         .HasColumnType("boolean");
@@ -109,8 +111,11 @@ namespace MyWatchMarketplace.UserManagement.Infrastructure.Persistence.Migration
 
             modelBuilder.Entity("MyWatchMarketplace.UserManagement.Domain.Entities.UserLogin", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTimeOffset>("Created")
                         .HasColumnType("timestamp with time zone");

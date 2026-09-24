@@ -13,7 +13,7 @@ public class ValuationRecordConfiguration : IEntityTypeConfiguration<ValuationRe
         builder.HasKey(v => v.Id);
         builder.Property(v => v.Id).ValueGeneratedOnAdd();
 
-        builder.Property(v => v.VaultWatchId).HasMaxLength(64).IsRequired();
+        builder.Property(v => v.VaultWatchId).IsRequired();
         builder.Property(v => v.EstimatedValue).HasPrecision(18, 2).IsRequired();
         builder.Property(v => v.Source).HasMaxLength(100).IsRequired();
 

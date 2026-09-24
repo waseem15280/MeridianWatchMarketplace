@@ -54,15 +54,15 @@ public class CustomerOrdersDbContextInitialiser
         {
             new()
             {
-                Id = "ord-omega-speedmaster",
-                ListingId = "watch-omega-moonwatch",
+                Id = 1,
+                ListingId = 1,
                 WatchModel = "Speedmaster Professional Moonwatch Sapphire",
                 WatchBrand = "Omega",
                 WatchReference = "310.30.42.50.01.002",
                 WatchImage = "https://images.unsplash.com/photo-1547996160-71dfa63582d8?auto=format&fit=crop&w=1200&q=80",
-                BuyerId = "user-current-buyer",
+                BuyerId = "4",
                 BuyerName = "Julian Sterling",
-                SellerId = "user-current-seller",
+                SellerId = "1",
                 SellerName = "Alexander Vance",
                 Price = 6800m,
                 ShippingFee = 150m,
@@ -77,15 +77,15 @@ public class CustomerOrdersDbContextInitialiser
             },
             new()
             {
-                Id = "ord-rolex-sub",
-                ListingId = "watch-rolex-submariner",
+                Id = 2,
+                ListingId = 2,
                 WatchModel = "Submariner Date \"Starbucks\"",
                 WatchBrand = "Rolex",
                 WatchReference = "126610LV",
                 WatchImage = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80",
-                BuyerId = "user-current-buyer",
+                BuyerId = "4",
                 BuyerName = "Julian Sterling",
-                SellerId = "seller-crown",
+                SellerId = "8",
                 SellerName = "Crown & Caliber Atelier",
                 Price = 14200m,
                 ShippingFee = 150m,
@@ -102,7 +102,19 @@ public class CustomerOrdersDbContextInitialiser
 
         _context.CustomerOrders.AddRange(seedOrders);
         await _context.SaveChangesAsync();
+
+        if (_context.Database.IsNpgsql())
+        {
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync("SELECT setval(pg_get_serial_sequence('\"CustomerOrders\"', 'Id'), (SELECT COALESCE(MAX(\"Id\"), 1) FROM \"CustomerOrders\"));");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not reset Postgres sequences for CustomerOrders.");
+            }
+        }
+
         _logger.LogInformation("Seeded {Count} orders into CustomerOrdersDb.", seedOrders.Count);
     }
 }
-

@@ -1,11 +1,11 @@
-﻿using MyWatchMarketplace.SharedKernel.Common;
+using MyWatchMarketplace.SharedKernel.Common;
 using MyWatchMarketplace.UserManagement.Domain.Enums;
 
 namespace MyWatchMarketplace.UserManagement.Domain.Entities;
 
-public class UserAccount : BaseAuditableEntity<string>
+public class UserAccount : BaseAuditableEntity<int>
 {
-    public string UserLoginId { get; set; } = string.Empty;
+    public int UserLoginId { get; set; }
 
     public UserLogin? UserLogin { get; set; }
 

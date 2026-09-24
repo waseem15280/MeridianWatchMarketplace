@@ -20,7 +20,7 @@ public class SellerHubClient : ISellerHubClient
         try
         {
             var response = await _httpClient.PostAsJsonAsync(
-                "/api/seller-hub/sales-count",
+                $"/api/seller-hub/sellers/{sellerId}/sales-notification",
                 new SellerSaleNotificationRequest(sellerId, amount),
                 cancellationToken);
 
@@ -51,7 +51,7 @@ public class SellerHubClient : ISellerHubClient
         }
     }
 
-    public async Task<bool> UpdateOfferStatusAsync(string offerId, string status, decimal? counterAmount = null, CancellationToken cancellationToken = default)
+    public async Task<bool> UpdateOfferStatusAsync(int offerId, string status, decimal? counterAmount = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -69,4 +69,3 @@ public class SellerHubClient : ISellerHubClient
         }
     }
 }
-

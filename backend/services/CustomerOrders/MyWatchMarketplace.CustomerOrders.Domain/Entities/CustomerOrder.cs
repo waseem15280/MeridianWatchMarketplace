@@ -2,9 +2,9 @@ using MyWatchMarketplace.SharedKernel.Common;
 
 namespace MyWatchMarketplace.CustomerOrders.Domain.Entities;
 
-public class CustomerOrder : BaseAuditableEntity<string>
+public class CustomerOrder : BaseAuditableEntity<int>
 {
-    public string ListingId { get; set; } = string.Empty;
+    public int ListingId { get; set; }
 
     public string WatchModel { get; set; } = string.Empty;
 
@@ -42,4 +42,3 @@ public class CustomerOrder : BaseAuditableEntity<string>
 
     public bool HasReviewed { get; set; }
 }
-

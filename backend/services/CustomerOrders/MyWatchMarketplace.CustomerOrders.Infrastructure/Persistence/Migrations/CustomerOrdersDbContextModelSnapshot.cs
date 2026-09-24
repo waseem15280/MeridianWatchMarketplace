@@ -24,9 +24,11 @@ namespace MyWatchMarketplace.CustomerOrders.Infrastructure.Persistence.Migration
 
             modelBuilder.Entity("MyWatchMarketplace.CustomerOrders.Domain.Entities.BuyerOffer", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("BuyerId")
                         .IsRequired()
@@ -59,10 +61,8 @@ namespace MyWatchMarketplace.CustomerOrders.Infrastructure.Persistence.Migration
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("ListingId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<int>("ListingId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Message")
                         .IsRequired()
@@ -119,9 +119,11 @@ namespace MyWatchMarketplace.CustomerOrders.Infrastructure.Persistence.Migration
 
             modelBuilder.Entity("MyWatchMarketplace.CustomerOrders.Domain.Entities.CustomerOrder", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("BuyerId")
                         .IsRequired()
@@ -153,10 +155,8 @@ namespace MyWatchMarketplace.CustomerOrders.Infrastructure.Persistence.Migration
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("ListingId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<int>("ListingId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()

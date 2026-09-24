@@ -2,11 +2,11 @@ using MyWatchMarketplace.SharedKernel.Common;
 
 namespace MyWatchMarketplace.SellerHub.Domain.Entities;
 
-public class SellerOfferNegotiation : BaseAuditableEntity<string>
+public class SellerOfferNegotiation : BaseAuditableEntity<int>
 {
     public string SellerId { get; set; } = string.Empty;
 
-    public string ListingId { get; set; } = string.Empty;
+    public int ListingId { get; set; }
 
     public string BuyerId { get; set; } = string.Empty;
 
@@ -30,4 +30,3 @@ public class SellerOfferNegotiation : BaseAuditableEntity<string>
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
-

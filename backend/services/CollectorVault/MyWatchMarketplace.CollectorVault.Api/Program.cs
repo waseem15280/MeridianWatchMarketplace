@@ -37,7 +37,6 @@ if (app.Environment.IsDevelopment())
     }
     catch (Exception ex)
     {
-        app.Logger.LogWarning(ex, "Could not initialise CollectorVaultDb on startup. Ensure PostgreSQL is running.");
         app.Logger.LogWarning(ex, "Could not initialise CollectorVault database. Ensure PostgreSQL Docker is running.");
     }
 }
@@ -47,6 +46,7 @@ var vaultApi = app.MapGroup("/api/collector-vault/watches");
 
 app.MapGet("/api/collector-vault/health", () => Results.Ok(new { status = "Healthy", service = "CollectorVault" }))
    .WithName("CollectorVaultHealth");
+
 // 1. GET /api/collector-vault/watches?userId={userId}
 vaultApi.MapGet("/", async (string? userId, CollectorVaultDbContext db) =>
 {
@@ -84,8 +84,8 @@ vaultApi.MapGet("/", async (string? userId, CollectorVaultDbContext db) =>
     return Results.Ok(list);
 });
 
-// 2. GET /api/collector-vault/watches/{id}
-vaultApi.MapGet("/{id}", async (string id, CollectorVaultDbContext db) =>
+// 2. GET /api/collector-vault/watches/{id:int}
+vaultApi.MapGet("/{id:int}", async (int id, CollectorVaultDbContext db) =>
 {
     var watch = await db.VaultWatches.AsNoTracking().FirstOrDefaultAsync(w => w.Id == id);
     if (watch is null) return Results.NotFound(new { message = $"Watch {id} not found in vault." });
@@ -119,8 +119,7 @@ vaultApi.MapPost("/", async (CreateVaultWatchRequest request, CollectorVaultDbCo
 {
     var watch = new VaultWatch
     {
-        Id = "vault-" + Guid.NewGuid().ToString("N")[..8],
-        UserId = request.UserId ?? "user-current-seller",
+        UserId = request.UserId ?? "1",
         Brand = request.Brand,
         Model = request.Model,
         ReferenceNumber = request.ReferenceNumber,
@@ -146,8 +145,8 @@ vaultApi.MapPost("/", async (CreateVaultWatchRequest request, CollectorVaultDbCo
     return Results.Created($"/api/collector-vault/watches/{watch.Id}", watch);
 });
 
-// 4. PUT /api/collector-vault/watches/{id}
-vaultApi.MapPut("/{id}", async (string id, UpdateVaultWatchRequest request, CollectorVaultDbContext db) =>
+// 4. PUT /api/collector-vault/watches/{id:int}
+vaultApi.MapPut("/{id:int}", async (int id, UpdateVaultWatchRequest request, CollectorVaultDbContext db) =>
 {
     var watch = await db.VaultWatches.FirstOrDefaultAsync(w => w.Id == id);
     if (watch is null) return Results.NotFound();
@@ -163,8 +162,8 @@ vaultApi.MapPut("/{id}", async (string id, UpdateVaultWatchRequest request, Coll
     return Results.Ok(watch);
 });
 
-// 5. DELETE /api/collector-vault/watches/{id}
-vaultApi.MapDelete("/{id}", async (string id, CollectorVaultDbContext db) =>
+// 5. DELETE /api/collector-vault/watches/{id:int}
+vaultApi.MapDelete("/{id:int}", async (int id, CollectorVaultDbContext db) =>
 {
     var watch = await db.VaultWatches.FirstOrDefaultAsync(w => w.Id == id);
     if (watch is null) return Results.NotFound();
@@ -174,8 +173,8 @@ vaultApi.MapDelete("/{id}", async (string id, CollectorVaultDbContext db) =>
     return Results.NoContent();
 });
 
-// 6. POST /api/collector-vault/watches/{id}/valuations - Record valuation snapshot
-vaultApi.MapPost("/{id}/valuations", async (string id, AddValuationRequest request, CollectorVaultDbContext db) =>
+// 6. POST /api/collector-vault/watches/{id:int}/valuations
+vaultApi.MapPost("/{id:int}/valuations", async (int id, AddValuationRequest request, CollectorVaultDbContext db) =>
 {
     var watch = await db.VaultWatches.FirstOrDefaultAsync(w => w.Id == id);
     if (watch is null) return Results.NotFound();
@@ -183,9 +182,9 @@ vaultApi.MapPost("/{id}/valuations", async (string id, AddValuationRequest reque
     var record = new ValuationRecord
     {
         VaultWatchId = id,
-        EstimatedValue = request.EstimatedValue,
         RecordedDate = DateTimeOffset.UtcNow,
-        Source = request.Source ?? "Collector Appraisal",
+        EstimatedValue = request.EstimatedValue,
+        Source = request.Source ?? "User",
         Notes = request.Notes
     };
 
@@ -197,8 +196,8 @@ vaultApi.MapPost("/{id}/valuations", async (string id, AddValuationRequest reque
     return Results.Created($"/api/collector-vault/watches/{id}/valuations/{record.Id}", record);
 });
 
-// 7. GET /api/collector-vault/watches/{id}/valuations
-vaultApi.MapGet("/{id}/valuations", async (string id, CollectorVaultDbContext db) =>
+// 7. GET /api/collector-vault/watches/{id:int}/valuations
+vaultApi.MapGet("/{id:int}/valuations", async (int id, CollectorVaultDbContext db) =>
 {
     var records = await db.ValuationRecords.AsNoTracking()
         .Where(v => v.VaultWatchId == id)
@@ -209,9 +208,9 @@ vaultApi.MapGet("/{id}/valuations", async (string id, CollectorVaultDbContext db
     return Results.Ok(records);
 });
 
-// 8. POST /api/collector-vault/watches/{id}/list-for-sale (INTER-SERVICE: CollectorVault -> Marketplace)
-vaultApi.MapPost("/{id}/list-for-sale", async (
-    string id,
+// 8. POST /api/collector-vault/watches/{id:int}/list-for-sale (INTER-SERVICE: CollectorVault -> Marketplace)
+vaultApi.MapPost("/{id:int}/list-for-sale", async (
+    int id,
     ListVaultWatchForSaleRequest request,
     CollectorVaultDbContext db,
     IMarketplaceClient marketplaceClient) =>
@@ -242,15 +241,15 @@ vaultApi.MapPost("/{id}/list-for-sale", async (
     var createdListing = await marketplaceClient.CreateListingFromVaultAsync(listingReq);
 
     watch.IsListedForSale = true;
-    watch.ListingId = createdListing?.Id ?? "watch-" + Guid.NewGuid().ToString("N")[..8];
+    watch.ListingId = createdListing?.Id;
 
     await db.SaveChangesAsync();
 
     return Results.Ok(new { message = "Listed for sale on Marketplace", watchId = watch.Id, listingId = watch.ListingId });
 });
 
-// 9. POST /api/collector-vault/watches/{id}/unlink-listing
-vaultApi.MapPost("/{id}/unlink-listing", async (string id, CollectorVaultDbContext db) =>
+// 9. POST /api/collector-vault/watches/{id:int}/unlink-listing
+vaultApi.MapPost("/{id:int}/unlink-listing", async (int id, CollectorVaultDbContext db) =>
 {
     var watch = await db.VaultWatches.FirstOrDefaultAsync(w => w.Id == id);
     if (watch is null) return Results.NotFound();
@@ -263,4 +262,3 @@ vaultApi.MapPost("/{id}/unlink-listing", async (string id, CollectorVaultDbConte
 });
 
 app.Run();
-

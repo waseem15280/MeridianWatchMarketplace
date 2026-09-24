@@ -3,7 +3,7 @@ import { request } from './client';
 export interface WishlistItemResponse {
   id: number;
   buyerId: string;
-  listingId: string;
+  listingId: string | number;
   watchBrand?: string;
   watchModel?: string;
   priceWhenAdded?: number;
@@ -20,12 +20,12 @@ export const buyerWishlistApi = {
   },
 
   // GET /api/buyer-wishlist/check?buyerId={buyerId}&listingId={listingId}
-  checkInWishlist: async (buyerId: string, listingId: string): Promise<{ inWishlist: boolean }> => {
+  checkInWishlist: async (buyerId: string, listingId: string | number): Promise<{ inWishlist: boolean }> => {
     return request<{ inWishlist: boolean }>(`/api/buyer-wishlist/check?buyerId=${encodeURIComponent(buyerId)}&listingId=${encodeURIComponent(listingId)}`);
   },
 
   // POST /api/buyer-wishlist
-  addToWishlist: async (data: { buyerId?: string; listingId: string; watchBrand?: string; watchModel?: string; priceWhenAdded?: number; notes?: string; priority?: string }): Promise<WishlistItemResponse> => {
+  addToWishlist: async (data: { buyerId?: string; listingId: string | number; watchBrand?: string; watchModel?: string; priceWhenAdded?: number; notes?: string; priority?: string }): Promise<WishlistItemResponse> => {
     return request<WishlistItemResponse>('/api/buyer-wishlist', {
       method: 'POST',
       body: JSON.stringify(data)
@@ -33,7 +33,7 @@ export const buyerWishlistApi = {
   },
 
   // DELETE /api/buyer-wishlist/{listingId}?buyerId={buyerId}
-  removeFromWishlist: async (listingId: string, buyerId?: string): Promise<void> => {
+  removeFromWishlist: async (listingId: string | number, buyerId?: string): Promise<void> => {
     const endpoint = buyerId ? `/api/buyer-wishlist/${listingId}?buyerId=${encodeURIComponent(buyerId)}` : `/api/buyer-wishlist/${listingId}`;
     return request<void>(endpoint, {
       method: 'DELETE'
@@ -49,7 +49,7 @@ export const buyerWishlistApi = {
   },
 
   // PUT /api/buyer-wishlist/{id}/notes
-  updateNotes: async (id: number, notes: string, priority?: string): Promise<WishlistItemResponse> => {
+  updateNotes: async (id: number | string, notes: string, priority?: string): Promise<WishlistItemResponse> => {
     return request<WishlistItemResponse>(`/api/buyer-wishlist/${id}/notes`, {
       method: 'PUT',
       body: JSON.stringify({ notes, priority })

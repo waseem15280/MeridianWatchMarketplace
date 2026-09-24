@@ -15,7 +15,7 @@ public class MarketplaceClient : IMarketplaceClient
         _logger = logger;
     }
 
-    public async Task<bool> UpdateListingStatusAsync(string listingId, string status, CancellationToken cancellationToken = default)
+    public async Task<bool> UpdateListingStatusAsync(int listingId, string status, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -33,7 +33,7 @@ public class MarketplaceClient : IMarketplaceClient
         }
     }
 
-    public async Task<bool> AdjustWishlistCountAsync(string listingId, int delta, CancellationToken cancellationToken = default)
+    public async Task<bool> AdjustWishlistCountAsync(int listingId, int delta, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -75,4 +75,3 @@ public class MarketplaceClient : IMarketplaceClient
         }
     }
 }
-

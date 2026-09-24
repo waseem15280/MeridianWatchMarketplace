@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyWatchMarketplace.BuyerWishlist.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(BuyerWishlistDbContext))]
-    [Migration("20260909210816_InitialCreate")]
+    [Migration("20260923234744_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -55,10 +55,8 @@ namespace MyWatchMarketplace.BuyerWishlist.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("ListingId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<int>("ListingId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)

@@ -1,7 +1,7 @@
 namespace MyWatchMarketplace.CollectorVault.Application.DTOs;
 
 public record VaultWatchDto(
-    string Id,
+    int Id,
     string UserId,
     string Brand,
     string Model,
@@ -19,7 +19,7 @@ public record VaultWatchDto(
     List<string> Images,
     string? Notes,
     bool IsListedForSale,
-    string? ListingId,
+    int? ListingId,
     DateTimeOffset CreatedAt
 );
 
@@ -53,7 +53,7 @@ public record UpdateVaultWatchRequest(
 
 public record ValuationRecordDto(
     int Id,
-    string VaultWatchId,
+    int VaultWatchId,
     decimal EstimatedValue,
     DateTimeOffset RecordedDate,
     string Source,

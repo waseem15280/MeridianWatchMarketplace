@@ -19,7 +19,7 @@ namespace MyWatchMarketplace.CollectorVault.Infrastructure.Persistence.Migration
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    VaultWatchId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    VaultWatchId = table.Column<int>(type: "integer", nullable: false),
                     RecordedDate = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     EstimatedValue = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: false),
                     Source = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
@@ -38,7 +38,8 @@ namespace MyWatchMarketplace.CollectorVault.Infrastructure.Persistence.Migration
                 name: "VaultWatches",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     UserId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     Brand = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Model = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
@@ -56,7 +57,7 @@ namespace MyWatchMarketplace.CollectorVault.Infrastructure.Persistence.Migration
                     Images = table.Column<List<string>>(type: "text[]", nullable: false),
                     Notes = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
                     IsListedForSale = table.Column<bool>(type: "boolean", nullable: false),
-                    ListingId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    ListingId = table.Column<int>(type: "integer", nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     Created = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     CreatedBy = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),

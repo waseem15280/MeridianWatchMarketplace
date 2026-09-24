@@ -37,7 +37,6 @@ if (app.Environment.IsDevelopment())
     }
     catch (Exception ex)
     {
-        app.Logger.LogWarning(ex, "Could not initialise BuyerWishlistDb on startup. Ensure PostgreSQL is running.");
         app.Logger.LogWarning(ex, "Could not initialise BuyerWishlist database. Ensure PostgreSQL Docker is running.");
     }
 }
@@ -47,10 +46,11 @@ var wishlistApi = app.MapGroup("/api/buyer-wishlist");
 
 app.MapGet("/api/buyer-wishlist/health", () => Results.Ok(new { status = "Healthy", service = "BuyerWishlist" }))
    .WithName("BuyerWishlistHealth");
+
 // 1. GET /api/buyer-wishlist?buyerId={buyerId}
 wishlistApi.MapGet("/", async (string? buyerId, BuyerWishlistDbContext db) =>
 {
-    var bId = buyerId ?? "user-current-seller";
+    var bId = buyerId ?? "1";
     var items = await db.WishlistItems.AsNoTracking()
         .Where(w => w.BuyerId == bId)
         .OrderByDescending(w => w.AddedAt)
@@ -70,7 +70,7 @@ wishlistApi.MapGet("/", async (string? buyerId, BuyerWishlistDbContext db) =>
 });
 
 // 2. GET /api/buyer-wishlist/check?buyerId={buyerId}&listingId={listingId}
-wishlistApi.MapGet("/check", async (string buyerId, string listingId, BuyerWishlistDbContext db) =>
+wishlistApi.MapGet("/check", async (string buyerId, int listingId, BuyerWishlistDbContext db) =>
 {
     var exists = await db.WishlistItems.AsNoTracking()
         .AnyAsync(w => w.BuyerId == buyerId && w.ListingId == listingId);
@@ -84,7 +84,7 @@ wishlistApi.MapPost("/", async (
     BuyerWishlistDbContext db,
     IMarketplaceClient marketplaceClient) =>
 {
-    var buyerId = request.BuyerId ?? "user-current-seller";
+    var buyerId = request.BuyerId ?? "1";
 
     var existing = await db.WishlistItems
         .FirstOrDefaultAsync(w => w.BuyerId == buyerId && w.ListingId == request.ListingId);
@@ -139,14 +139,14 @@ wishlistApi.MapPost("/", async (
     ));
 });
 
-// 4. DELETE /api/buyer-wishlist/{listingId}?buyerId={buyerId} (INTER-SERVICE: BuyerWishlist -> Marketplace)
-wishlistApi.MapDelete("/{listingId}", async (
-    string listingId,
+// 4. DELETE /api/buyer-wishlist/{listingId:int}?buyerId={buyerId} (INTER-SERVICE: BuyerWishlist -> Marketplace)
+wishlistApi.MapDelete("/{listingId:int}", async (
+    int listingId,
     string? buyerId,
     BuyerWishlistDbContext db,
     IMarketplaceClient marketplaceClient) =>
 {
-    var bId = buyerId ?? "user-current-seller";
+    var bId = buyerId ?? "1";
     var item = await db.WishlistItems
         .FirstOrDefaultAsync(w => w.BuyerId == bId && w.ListingId == listingId);
 
@@ -164,7 +164,7 @@ wishlistApi.MapDelete("/{listingId}", async (
 // 5. DELETE /api/buyer-wishlist/clear?buyerId={buyerId}
 wishlistApi.MapDelete("/clear", async (string? buyerId, BuyerWishlistDbContext db) =>
 {
-    var bId = buyerId ?? "user-current-seller";
+    var bId = buyerId ?? "1";
     var items = await db.WishlistItems.Where(w => w.BuyerId == bId).ToListAsync();
 
     db.WishlistItems.RemoveRange(items);
@@ -173,7 +173,7 @@ wishlistApi.MapDelete("/clear", async (string? buyerId, BuyerWishlistDbContext d
     return Results.NoContent();
 });
 
-// 6. PUT /api/buyer-wishlist/{id}/notes
+// 6. PUT /api/buyer-wishlist/{id:int}/notes
 wishlistApi.MapPut("/{id:int}/notes", async (int id, UpdateWishlistNotesRequest request, BuyerWishlistDbContext db) =>
 {
     var item = await db.WishlistItems.FirstOrDefaultAsync(w => w.Id == id);
@@ -190,4 +190,3 @@ wishlistApi.MapPut("/{id:int}/notes", async (int id, UpdateWishlistNotesRequest 
 });
 
 app.Run();
-

@@ -3,7 +3,7 @@ import { CollectionWatch } from '../../types';
 
 export interface ValuationRecordResponse {
   id: number;
-  vaultWatchId: string;
+  vaultWatchId: string | number;
   estimatedValue: number;
   recordedDate: string;
   source: string;
@@ -18,7 +18,7 @@ export const collectorVaultApi = {
   },
 
   // GET /api/collector-vault/watches/{id}
-  getWatchById: async (id: string): Promise<CollectionWatch> => {
+  getWatchById: async (id: string | number): Promise<CollectionWatch> => {
     return request<CollectionWatch>(`/api/collector-vault/watches/${id}`);
   },
 
@@ -31,7 +31,7 @@ export const collectorVaultApi = {
   },
 
   // PUT /api/collector-vault/watches/{id}
-  updateWatch: async (id: string, updates: Partial<CollectionWatch>): Promise<CollectionWatch> => {
+  updateWatch: async (id: string | number, updates: Partial<CollectionWatch>): Promise<CollectionWatch> => {
     return request<CollectionWatch>(`/api/collector-vault/watches/${id}`, {
       method: 'PUT',
       body: JSON.stringify(updates)
@@ -39,14 +39,14 @@ export const collectorVaultApi = {
   },
 
   // DELETE /api/collector-vault/watches/{id}
-  deleteWatch: async (id: string): Promise<void> => {
+  deleteWatch: async (id: string | number): Promise<void> => {
     return request<void>(`/api/collector-vault/watches/${id}`, {
       method: 'DELETE'
     });
   },
 
   // POST /api/collector-vault/watches/{id}/valuations
-  addValuation: async (id: string, valuation: { estimatedValue: number; notes?: string; source?: string }): Promise<ValuationRecordResponse> => {
+  addValuation: async (id: string | number, valuation: { estimatedValue: number; notes?: string; source?: string }): Promise<ValuationRecordResponse> => {
     return request<ValuationRecordResponse>(`/api/collector-vault/watches/${id}/valuations`, {
       method: 'POST',
       body: JSON.stringify(valuation)
@@ -54,12 +54,12 @@ export const collectorVaultApi = {
   },
 
   // GET /api/collector-vault/watches/{id}/valuations
-  getValuations: async (id: string): Promise<ValuationRecordResponse[]> => {
+  getValuations: async (id: string | number): Promise<ValuationRecordResponse[]> => {
     return request<ValuationRecordResponse[]>(`/api/collector-vault/watches/${id}/valuations`);
   },
 
   // POST /api/collector-vault/watches/{id}/list-for-sale (Orchestrates listing creation on Marketplace)
-  listForSale: async (id: string, data: { price: number; description?: string; sellerId?: string; sellerName?: string }): Promise<{ message: string; watchId: string; listingId: string }> => {
+  listForSale: async (id: string | number, data: { price: number; description?: string; sellerId?: string; sellerName?: string }): Promise<{ message: string; watchId: string; listingId: string | number }> => {
     return request<{ message: string; watchId: string; listingId: string }>(`/api/collector-vault/watches/${id}/list-for-sale`, {
       method: 'POST',
       body: JSON.stringify(data)
@@ -67,7 +67,7 @@ export const collectorVaultApi = {
   },
 
   // POST /api/collector-vault/watches/{id}/unlink-listing
-  unlinkListing: async (id: string): Promise<{ message: string; watchId: string }> => {
+  unlinkListing: async (id: string | number): Promise<{ message: string; watchId: string }> => {
     return request<{ message: string; watchId: string }>(`/api/collector-vault/watches/${id}/unlink-listing`, {
       method: 'POST'
     });

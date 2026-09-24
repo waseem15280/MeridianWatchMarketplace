@@ -1,8 +1,8 @@
-﻿using MyWatchMarketplace.SharedKernel.Common;
+using MyWatchMarketplace.SharedKernel.Common;
 
 namespace MyWatchMarketplace.UserManagement.Domain.Entities;
 
-public class UserLogin : BaseAuditableEntity<string>
+public class UserLogin : BaseAuditableEntity<int>
 {
     public string Username { get; set; } = string.Empty;
 

@@ -9,7 +9,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace MyWatchMarketplace.marketplace.Infrastructure.Persistence.Migrations
+namespace MyWatchMarketplace.Marketplace.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(MarketplaceDbContext))]
     partial class MarketplaceDbContextModelSnapshot : ModelSnapshot
@@ -25,9 +25,11 @@ namespace MyWatchMarketplace.marketplace.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("MyWatchMarketplace.marketplace.Domain.Entities.WatchListing", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("AuthenticityVerified")
                         .HasColumnType("boolean");
@@ -86,9 +88,8 @@ namespace MyWatchMarketplace.marketplace.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<string>("FromPersonalCollectionId")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<int?>("FromPersonalCollectionId")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("HasOriginalBox")
                         .HasColumnType("boolean");

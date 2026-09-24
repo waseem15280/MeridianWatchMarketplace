@@ -54,8 +54,8 @@ public class MarketplaceDbContextInitialiser
         {
             new()
             {
-                Id = "watch-rolex-daytona",
-                SellerId = "seller-geneva",
+                Id = 1,
+                SellerId = "7",
                 SellerName = "Geneva Horology Gallery",
                 SellerRating = 4.95,
                 SellerReviewCount = 48,
@@ -98,8 +98,8 @@ public class MarketplaceDbContextInitialiser
             },
             new()
             {
-                Id = "watch-patek-nautilus",
-                SellerId = "seller-tokyo",
+                Id = 2,
+                SellerId = "9",
                 SellerName = "Ginza Chrono Vault",
                 SellerRating = 4.98,
                 SellerReviewCount = 65,
@@ -140,8 +140,8 @@ public class MarketplaceDbContextInitialiser
             },
             new()
             {
-                Id = "watch-ap-royaloak",
-                SellerId = "seller-crown",
+                Id = 3,
+                SellerId = "8",
                 SellerName = "Crown & Caliber Atelier",
                 SellerRating = 4.88,
                 SellerReviewCount = 32,
@@ -184,6 +184,19 @@ public class MarketplaceDbContextInitialiser
 
         _context.WatchListings.AddRange(seedListings);
         await _context.SaveChangesAsync();
+
+        if (_context.Database.IsNpgsql())
+        {
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync("SELECT setval(pg_get_serial_sequence('\"WatchListings\"', 'Id'), (SELECT COALESCE(MAX(\"Id\"), 1) FROM \"WatchListings\"));");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not reset Postgres sequences for Marketplace.");
+            }
+        }
+
         _logger.LogInformation("Seeded {Count} initial watch listings into MarketplaceDb.", seedListings.Count);
     }
 }

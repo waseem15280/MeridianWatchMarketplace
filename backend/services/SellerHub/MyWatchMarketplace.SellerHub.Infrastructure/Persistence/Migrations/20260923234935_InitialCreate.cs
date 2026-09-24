@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -15,9 +16,10 @@ namespace MyWatchMarketplace.SellerHub.Infrastructure.Persistence.Migrations
                 name: "SellerOfferNegotiations",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     SellerId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    ListingId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    ListingId = table.Column<int>(type: "integer", nullable: false),
                     BuyerId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     BuyerName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     WatchModel = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
@@ -43,7 +45,8 @@ namespace MyWatchMarketplace.SellerHub.Infrastructure.Persistence.Migrations
                 name: "SellerProfiles",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
                     Avatar = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
@@ -71,7 +74,8 @@ namespace MyWatchMarketplace.SellerHub.Infrastructure.Persistence.Migrations
                 name: "SellerReviews",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     SellerId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     BuyerId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     BuyerName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),

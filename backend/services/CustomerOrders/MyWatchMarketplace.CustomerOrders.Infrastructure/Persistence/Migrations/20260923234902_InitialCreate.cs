@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -15,8 +16,9 @@ namespace MyWatchMarketplace.CustomerOrders.Infrastructure.Persistence.Migration
                 name: "BuyerOffers",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    ListingId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    ListingId = table.Column<int>(type: "integer", nullable: false),
                     BuyerId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     BuyerName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     SellerId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
@@ -43,8 +45,9 @@ namespace MyWatchMarketplace.CustomerOrders.Infrastructure.Persistence.Migration
                 name: "CustomerOrders",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    ListingId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    ListingId = table.Column<int>(type: "integer", nullable: false),
                     WatchModel = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: false),
                     WatchBrand = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     WatchReference = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),

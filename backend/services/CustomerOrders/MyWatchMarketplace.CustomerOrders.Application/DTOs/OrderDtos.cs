@@ -1,8 +1,8 @@
 namespace MyWatchMarketplace.CustomerOrders.Application.DTOs;
 
 public record CustomerOrderDto(
-    string Id,
-    string ListingId,
+    int Id,
+    int ListingId,
     string WatchModel,
     string WatchBrand,
     string WatchReference,
@@ -24,7 +24,7 @@ public record CustomerOrderDto(
 );
 
 public record CreateCustomerOrderRequest(
-    string ListingId,
+    int ListingId,
     string WatchModel,
     string WatchBrand,
     string WatchReference,
@@ -45,8 +45,8 @@ public record UpdateOrderStatusRequest(
 );
 
 public record BuyerOfferDto(
-    string Id,
-    string ListingId,
+    int Id,
+    int ListingId,
     string BuyerId,
     string BuyerName,
     string SellerId,
@@ -62,7 +62,7 @@ public record BuyerOfferDto(
 );
 
 public record CreateBuyerOfferRequest(
-    string ListingId,
+    int ListingId,
     string? BuyerId,
     string? BuyerName,
     string SellerId,
@@ -78,4 +78,3 @@ public record RespondBuyerOfferRequest(
     string Status,
     decimal? CounterAmount
 );
-

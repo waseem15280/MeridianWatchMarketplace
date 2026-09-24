@@ -1,7 +1,7 @@
 namespace MyWatchMarketplace.marketplace.Application.DTOs;
 
 public record WatchListingDto(
-    string Id,
+    int Id,
     string SellerId,
     string SellerName,
     double SellerRating,
@@ -37,7 +37,7 @@ public record WatchListingDto(
     int ViewsCount,
     int WishlistCount,
     bool? IsFeatured,
-    string? FromPersonalCollectionId
+    int? FromPersonalCollectionId
 );
 
 public record CreateWatchListingRequest(
@@ -72,7 +72,7 @@ public record CreateWatchListingRequest(
     string? ProvenanceNotes,
     bool AuthenticityVerified,
     bool? IsFeatured,
-    string? FromPersonalCollectionId
+    int? FromPersonalCollectionId
 );
 
 public record UpdateWatchListingRequest(
@@ -97,4 +97,3 @@ public record ListingFilterQuery(
     bool? HasPapers,
     string? SortBy
 );
-

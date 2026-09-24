@@ -19,7 +19,7 @@ namespace MyWatchMarketplace.BuyerWishlist.Infrastructure.Persistence.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     BuyerId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    ListingId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    ListingId = table.Column<int>(type: "integer", nullable: false),
                     WatchBrand = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     WatchModel = table.Column<string>(type: "character varying(150)", maxLength: 150, nullable: true),
                     PriceWhenAdded = table.Column<decimal>(type: "numeric(18,2)", precision: 18, scale: 2, nullable: true),

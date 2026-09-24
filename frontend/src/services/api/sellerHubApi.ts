@@ -8,12 +8,12 @@ export const sellerHubApi = {
   },
 
   // GET /api/seller-hub/profiles/{userId}
-  getProfileById: async (userId: string): Promise<UserAccount> => {
+  getProfileById: async (userId: string | number): Promise<UserAccount> => {
     return request<UserAccount>(`/api/seller-hub/profiles/${encodeURIComponent(userId)}`);
   },
 
   // PUT /api/seller-hub/profiles/{userId}
-  updateProfile: async (userId: string, updates: Partial<UserAccount>): Promise<UserAccount> => {
+  updateProfile: async (userId: string | number, updates: Partial<UserAccount>): Promise<UserAccount> => {
     return request<UserAccount>(`/api/seller-hub/profiles/${encodeURIComponent(userId)}`, {
       method: 'PUT',
       body: JSON.stringify(updates)
@@ -35,7 +35,7 @@ export const sellerHubApi = {
   },
 
   // POST /api/seller-hub/reviews/{reviewId}/reply
-  replyToReview: async (reviewId: string, sellerReply: string): Promise<SellerReview> => {
+  replyToReview: async (reviewId: string | number, sellerReply: string): Promise<SellerReview> => {
     return request<SellerReview>(`/api/seller-hub/reviews/${encodeURIComponent(reviewId)}/reply`, {
       method: 'POST',
       body: JSON.stringify({ sellerReply })
@@ -49,7 +49,7 @@ export const sellerHubApi = {
   },
 
   // PATCH /api/seller-hub/offers/{offerId}/respond
-  respondToOffer: async (offerId: string, status: string, counterAmount?: number): Promise<WatchOffer> => {
+  respondToOffer: async (offerId: string | number, status: string, counterAmount?: number): Promise<WatchOffer> => {
     return request<WatchOffer>(`/api/seller-hub/offers/${encodeURIComponent(offerId)}/respond`, {
       method: 'PATCH',
       body: JSON.stringify({ status, counterAmount })

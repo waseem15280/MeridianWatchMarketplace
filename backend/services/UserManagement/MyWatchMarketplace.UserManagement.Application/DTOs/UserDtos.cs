@@ -1,9 +1,9 @@
-﻿using MyWatchMarketplace.UserManagement.Domain.Enums;
+using MyWatchMarketplace.UserManagement.Domain.Enums;
 
 namespace MyWatchMarketplace.UserManagement.Application.DTOs;
 
 public record UserLoginDto(
-    string Id,
+    int Id,
     string Username,
     string Email,
     DateTimeOffset Created,
@@ -11,8 +11,8 @@ public record UserLoginDto(
 );
 
 public record UserAccountDto(
-    string Id,
-    string UserLoginId,
+    int Id,
+    int UserLoginId,
     string Name,
     string Email,
     string Role,
@@ -39,7 +39,7 @@ public record LoginResponse(
     string Token,
     UserLoginDto Login,
     List<UserAccountDto> Accounts,
-    string ActiveAccountId
+    int ActiveAccountId
 );
 
 public record RegisterRequest(
@@ -53,7 +53,7 @@ public record RegisterRequest(
 );
 
 public record CreateUserAccountRequest(
-    string UserLoginId,
+    int UserLoginId,
     string Name,
     string Email,
     UserRole Role,

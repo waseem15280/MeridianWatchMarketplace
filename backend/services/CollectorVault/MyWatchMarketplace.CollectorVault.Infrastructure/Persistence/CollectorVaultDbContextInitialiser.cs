@@ -54,8 +54,8 @@ public class CollectorVaultDbContextInitialiser
         {
             new()
             {
-                Id = "vault-omega-speedmaster",
-                UserId = "user-current-seller",
+                Id = 1,
+                UserId = "1",
                 Brand = "Omega",
                 Model = "Speedmaster Professional \"Pre-Moon\"",
                 ReferenceNumber = "145.022-69ST",
@@ -79,8 +79,8 @@ public class CollectorVaultDbContextInitialiser
             },
             new()
             {
-                Id = "vault-cartier-santos",
-                UserId = "user-current-seller",
+                Id = 2,
+                UserId = "1",
                 Brand = "Cartier",
                 Model = "Santos de Cartier Medium",
                 ReferenceNumber = "WSSA0029",
@@ -104,8 +104,8 @@ public class CollectorVaultDbContextInitialiser
             },
             new()
             {
-                Id = "vault-tudor-blackbay",
-                UserId = "user-current-seller",
+                Id = 3,
+                UserId = "1",
                 Brand = "Tudor",
                 Model = "Black Bay 58 \"Navy Blue\"",
                 ReferenceNumber = "M79030B-0001",
@@ -131,7 +131,19 @@ public class CollectorVaultDbContextInitialiser
 
         _context.VaultWatches.AddRange(seedWatches);
         await _context.SaveChangesAsync();
+
+        if (_context.Database.IsNpgsql())
+        {
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync("SELECT setval(pg_get_serial_sequence('\"VaultWatches\"', 'Id'), (SELECT COALESCE(MAX(\"Id\"), 1) FROM \"VaultWatches\"));");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not reset Postgres sequences for CollectorVault.");
+            }
+        }
+
         _logger.LogInformation("Seeded {Count} vault watches into CollectorVaultDb.", seedWatches.Count);
     }
 }
-

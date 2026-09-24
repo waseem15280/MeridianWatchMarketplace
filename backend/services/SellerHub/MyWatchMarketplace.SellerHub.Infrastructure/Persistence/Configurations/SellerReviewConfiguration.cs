@@ -11,7 +11,7 @@ public class SellerReviewConfiguration : IEntityTypeConfiguration<SellerReview>
         builder.ToTable("SellerReviews");
 
         builder.HasKey(r => r.Id);
-        builder.Property(r => r.Id).HasMaxLength(64);
+        builder.Property(r => r.Id).ValueGeneratedOnAdd();
 
         builder.Property(r => r.SellerId).HasMaxLength(64).IsRequired();
         builder.Property(r => r.BuyerId).HasMaxLength(64).IsRequired();

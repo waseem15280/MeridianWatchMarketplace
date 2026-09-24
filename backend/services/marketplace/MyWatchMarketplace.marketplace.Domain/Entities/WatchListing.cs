@@ -2,7 +2,7 @@ using MyWatchMarketplace.SharedKernel.Common;
 
 namespace MyWatchMarketplace.marketplace.Domain.Entities;
 
-public class WatchListing : BaseAuditableEntity<string>
+public class WatchListing : BaseAuditableEntity<int>
 {
     public string SellerId { get; set; } = string.Empty;
 
@@ -78,5 +78,5 @@ public class WatchListing : BaseAuditableEntity<string>
 
     public bool? IsFeatured { get; set; }
 
-    public string? FromPersonalCollectionId { get; set; }
+    public int? FromPersonalCollectionId { get; set; }
 }

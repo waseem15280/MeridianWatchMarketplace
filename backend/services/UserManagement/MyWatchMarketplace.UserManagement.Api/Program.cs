@@ -1,23 +1,15 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using MyWatchMarketplace.UserManagement.Application.DTOs;
 using MyWatchMarketplace.UserManagement.Domain.Entities;
 using MyWatchMarketplace.UserManagement.Domain.Enums;
 using MyWatchMarketplace.UserManagement.Infrastructure;
-using MyWatchMarketplace.UserManagement.Infrastructure.Persistence;
 using MyWatchMarketplace.UserManagement.Infrastructure.Security;
+using MyWatchMarketplace.UserManagement.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddUserManagementInfrastructureServices(builder.Configuration);
-
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.PropertyNameCaseInsensitive = true;
-    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
-});
 
 builder.Services.AddCors(options =>
 {
@@ -45,7 +37,7 @@ if (app.Environment.IsDevelopment())
     }
     catch (Exception ex)
     {
-        app.Logger.LogWarning(ex, "Could not initialise UserAccountDb on startup. Ensure PostgreSQL is running.");
+        app.Logger.LogWarning(ex, "Could not initialise UserManagement database. Ensure PostgreSQL Docker is running.");
     }
 }
 
@@ -85,7 +77,7 @@ userApi.MapPost("/login", async (LoginRequest request, UserManagementDbContext d
 
     var accountDtos = login.Accounts.Select(ToAccountDto).ToList();
     var activeAccount = login.Accounts.FirstOrDefault(a => a.IsDefault) ?? login.Accounts.FirstOrDefault();
-    var activeAccountId = activeAccount?.Id ?? string.Empty;
+    var activeAccountId = activeAccount?.Id ?? 0;
 
     var response = new LoginResponse(
         Token: "mock-jwt-" + Guid.NewGuid().ToString("N"),
@@ -126,7 +118,7 @@ userApi.MapPost("/validate", async (LoginRequest request, UserManagementDbContex
 
     var accountDtos = login.Accounts.Select(ToAccountDto).ToList();
     var activeAccount = login.Accounts.FirstOrDefault(a => a.IsDefault) ?? login.Accounts.FirstOrDefault();
-    var activeAccountId = activeAccount?.Id ?? string.Empty;
+    var activeAccountId = activeAccount?.Id ?? 0;
 
     var response = new LoginResponse(
         Token: "mock-jwt-" + Guid.NewGuid().ToString("N"),
@@ -158,12 +150,8 @@ userApi.MapPost("/register", async (RegisterRequest request, UserManagementDbCon
         return Results.Conflict(new { message = "A user with this username or email already exists." });
     }
 
-    var newLoginId = "login-" + Guid.NewGuid().ToString("N")[..8];
-    var newAccountId = "account-" + Guid.NewGuid().ToString("N")[..8];
-
     var login = new UserLogin
     {
-        Id = newLoginId,
         Username = request.Username.Trim(),
         Email = request.Email.Trim(),
         PasswordHash = PasswordHasher.HashPassword(request.Password),
@@ -173,12 +161,10 @@ userApi.MapPost("/register", async (RegisterRequest request, UserManagementDbCon
 
     var account = new UserAccount
     {
-        Id = newAccountId,
-        UserLoginId = newLoginId,
         Name = request.AccountName.Trim(),
         Email = request.Email.Trim(),
         Role = request.Role,
-        Avatar = $"https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
+        Avatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
         Location = request.Location ?? "Global",
         MemberSince = DateTime.UtcNow.Year.ToString(),
         VerifiedDealer = request.Role == UserRole.Seller,
@@ -226,8 +212,8 @@ userApi.MapGet("/logins", async (UserManagementDbContext db) =>
     return Results.Ok(result);
 });
 
-// 4. GET /api/users/logins/{loginId}/accounts
-userApi.MapGet("/logins/{loginId}/accounts", async (string loginId, UserManagementDbContext db) =>
+// 4. GET /api/users/logins/{loginId:int}/accounts
+userApi.MapGet("/logins/{loginId:int}/accounts", async (int loginId, UserManagementDbContext db) =>
 {
     var accounts = await db.Accounts.AsNoTracking()
         .Where(a => a.UserLoginId == loginId)
@@ -239,13 +225,13 @@ userApi.MapGet("/logins/{loginId}/accounts", async (string loginId, UserManageme
 });
 
 // 5. GET /api/users/accounts - Query all accounts with optional role and loginId filter
-userApi.MapGet("/accounts", async (string? role, string? loginId, UserManagementDbContext db) =>
+userApi.MapGet("/accounts", async (string? role, int? loginId, UserManagementDbContext db) =>
 {
     var query = db.Accounts.AsNoTracking().AsQueryable();
 
-    if (!string.IsNullOrWhiteSpace(loginId))
+    if (loginId.HasValue)
     {
-        query = query.Where(a => a.UserLoginId == loginId);
+        query = query.Where(a => a.UserLoginId == loginId.Value);
     }
 
     if (!string.IsNullOrWhiteSpace(role) && Enum.TryParse<UserRole>(role, true, out var parsedRole))
@@ -261,8 +247,8 @@ userApi.MapGet("/accounts", async (string? role, string? loginId, UserManagement
     return Results.Ok(accounts.Select(ToAccountDto));
 });
 
-// 6. GET /api/users/accounts/{id}
-userApi.MapGet("/accounts/{id}", async (string id, UserManagementDbContext db) =>
+// 6. GET /api/users/accounts/{id:int}
+userApi.MapGet("/accounts/{id:int}", async (int id, UserManagementDbContext db) =>
 {
     var account = await db.Accounts.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id);
     if (account is null) return Results.NotFound(new { message = $"UserAccount {id} not found." });
@@ -296,7 +282,6 @@ userApi.MapPost("/accounts", async (CreateUserAccountRequest request, UserManage
 
     var account = new UserAccount
     {
-        Id = "account-" + Guid.NewGuid().ToString("N")[..8],
         UserLoginId = request.UserLoginId,
         Name = request.Name.Trim(),
         Email = request.Email.Trim(),
@@ -321,8 +306,8 @@ userApi.MapPost("/accounts", async (CreateUserAccountRequest request, UserManage
     return Results.Created($"/api/users/accounts/{account.Id}", ToAccountDto(account));
 });
 
-// 8. PUT /api/users/accounts/{id}
-userApi.MapPut("/accounts/{id}", async (string id, UpdateUserAccountRequest request, UserManagementDbContext db) =>
+// 8. PUT /api/users/accounts/{id:int}
+userApi.MapPut("/accounts/{id:int}", async (int id, UpdateUserAccountRequest request, UserManagementDbContext db) =>
 {
     var account = await db.Accounts.FirstOrDefaultAsync(a => a.Id == id);
     if (account is null) return Results.NotFound(new { message = $"UserAccount {id} not found." });
@@ -339,8 +324,8 @@ userApi.MapPut("/accounts/{id}", async (string id, UpdateUserAccountRequest requ
     return Results.Ok(ToAccountDto(account));
 });
 
-// 9. POST /api/users/accounts/{id}/set-default
-userApi.MapPost("/accounts/{id}/set-default", async (string id, UserManagementDbContext db) =>
+// 9. POST /api/users/accounts/{id:int}/set-default
+userApi.MapPost("/accounts/{id:int}/set-default", async (int id, UserManagementDbContext db) =>
 {
     var target = await db.Accounts.FirstOrDefaultAsync(a => a.Id == id);
     if (target is null) return Results.NotFound();
@@ -355,8 +340,8 @@ userApi.MapPost("/accounts/{id}/set-default", async (string id, UserManagementDb
     return Results.Ok(ToAccountDto(target));
 });
 
-// 10. DELETE /api/users/accounts/{id}
-userApi.MapDelete("/accounts/{id}", async (string id, UserManagementDbContext db) =>
+// 10. DELETE /api/users/accounts/{id:int}
+userApi.MapDelete("/accounts/{id:int}", async (int id, UserManagementDbContext db) =>
 {
     var account = await db.Accounts.FirstOrDefaultAsync(a => a.Id == id);
     if (account is null) return Results.NotFound();

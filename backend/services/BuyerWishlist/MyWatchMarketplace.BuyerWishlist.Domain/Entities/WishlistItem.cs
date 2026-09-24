@@ -7,7 +7,7 @@ public class WishlistItem : BaseAuditableEntity<int>
 {
     public string BuyerId { get; set; } = string.Empty;
 
-    public string ListingId { get; set; } = string.Empty;
+    public int ListingId { get; set; }
 
     public string? WatchBrand { get; set; }
 
@@ -21,4 +21,3 @@ public class WishlistItem : BaseAuditableEntity<int>
 
     public DateTimeOffset AddedAt { get; set; } = DateTimeOffset.UtcNow;
 }
-

@@ -5,7 +5,7 @@ export interface LoginResponse {
   token: string;
   login: UserLogin;
   accounts: UserAccount[];
-  activeAccountId: string;
+  activeAccountId: string | number;
 }
 
 export interface RegisterRequest {
@@ -19,7 +19,7 @@ export interface RegisterRequest {
 }
 
 export interface CreateAccountRequest {
-  userLoginId: string;
+  userLoginId: string | number;
   name: string;
   email: string;
   role: UserRole;
@@ -61,12 +61,12 @@ export const userManagementApi = {
   },
 
   // GET /api/users/logins/{loginId}/accounts
-  getLoginAccounts: async (loginId: string): Promise<UserAccount[]> => {
+  getLoginAccounts: async (loginId: string | number): Promise<UserAccount[]> => {
     return request<UserAccount[]>(`/api/users/logins/${encodeURIComponent(loginId)}/accounts`);
   },
 
   // GET /api/users/accounts
-  getAccounts: async (filters?: { role?: string; loginId?: string }): Promise<UserAccount[]> => {
+  getAccounts: async (filters?: { role?: string; loginId?: string | number }): Promise<UserAccount[]> => {
     const params = new URLSearchParams();
     if (filters?.role) params.set('role', filters.role);
     if (filters?.loginId) params.set('loginId', filters.loginId);
@@ -75,7 +75,7 @@ export const userManagementApi = {
   },
 
   // GET /api/users/accounts/{id}
-  getAccountById: async (id: string): Promise<UserAccount> => {
+  getAccountById: async (id: string | number): Promise<UserAccount> => {
     return request<UserAccount>(`/api/users/accounts/${encodeURIComponent(id)}`);
   },
 
@@ -88,7 +88,7 @@ export const userManagementApi = {
   },
 
   // PUT /api/users/accounts/{id}
-  updateAccount: async (id: string, updates: Partial<UserAccount>): Promise<UserAccount> => {
+  updateAccount: async (id: string | number, updates: Partial<UserAccount>): Promise<UserAccount> => {
     return request<UserAccount>(`/api/users/accounts/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(updates)
@@ -96,14 +96,14 @@ export const userManagementApi = {
   },
 
   // POST /api/users/accounts/{id}/set-default
-  setDefaultAccount: async (id: string): Promise<UserAccount> => {
+  setDefaultAccount: async (id: string | number): Promise<UserAccount> => {
     return request<UserAccount>(`/api/users/accounts/${encodeURIComponent(id)}/set-default`, {
       method: 'POST'
     });
   },
 
   // DELETE /api/users/accounts/{id}
-  deleteAccount: async (id: string): Promise<void> => {
+  deleteAccount: async (id: string | number): Promise<void> => {
     return request<void>(`/api/users/accounts/${encodeURIComponent(id)}`, {
       method: 'DELETE'
     });

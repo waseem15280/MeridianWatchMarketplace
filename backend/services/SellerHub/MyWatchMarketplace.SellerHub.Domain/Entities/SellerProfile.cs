@@ -2,7 +2,7 @@ using MyWatchMarketplace.SharedKernel.Common;
 
 namespace MyWatchMarketplace.SellerHub.Domain.Entities;
 
-public class SellerProfile : BaseAuditableEntity<string>
+public class SellerProfile : BaseAuditableEntity<int>
 {
     public string Name { get; set; } = string.Empty;
 
@@ -30,4 +30,3 @@ public class SellerProfile : BaseAuditableEntity<string>
 
     public string? Phone { get; set; }
 }
-

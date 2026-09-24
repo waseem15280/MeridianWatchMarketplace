@@ -14,7 +14,7 @@ public class WishlistItemConfiguration : IEntityTypeConfiguration<WishlistItem>
         builder.Property(w => w.Id).ValueGeneratedOnAdd();
 
         builder.Property(w => w.BuyerId).HasMaxLength(64).IsRequired();
-        builder.Property(w => w.ListingId).HasMaxLength(64).IsRequired();
+        builder.Property(w => w.ListingId).IsRequired();
         builder.Property(w => w.WatchBrand).HasMaxLength(100);
         builder.Property(w => w.WatchModel).HasMaxLength(150);
         builder.Property(w => w.PriceWhenAdded).HasPrecision(18, 2);

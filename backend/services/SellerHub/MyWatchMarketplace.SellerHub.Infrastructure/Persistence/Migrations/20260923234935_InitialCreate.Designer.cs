@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyWatchMarketplace.SellerHub.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(SellerHubDbContext))]
-    [Migration("20260909211141_InitialCreate")]
+    [Migration("20260923234935_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -27,9 +27,11 @@ namespace MyWatchMarketplace.SellerHub.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("MyWatchMarketplace.SellerHub.Domain.Entities.SellerOfferNegotiation", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("BuyerId")
                         .IsRequired()
@@ -62,10 +64,8 @@ namespace MyWatchMarketplace.SellerHub.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("ListingId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<int>("ListingId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Message")
                         .IsRequired()
@@ -120,9 +120,11 @@ namespace MyWatchMarketplace.SellerHub.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("MyWatchMarketplace.SellerHub.Domain.Entities.SellerProfile", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Avatar")
                         .IsRequired()
@@ -205,9 +207,11 @@ namespace MyWatchMarketplace.SellerHub.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("MyWatchMarketplace.SellerHub.Domain.Entities.SellerReview", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("BuyerAvatar")
                         .HasMaxLength(500)
@@ -284,8 +288,8 @@ namespace MyWatchMarketplace.SellerHub.Infrastructure.Persistence.Migrations
                 {
                     b.OwnsOne("MyWatchMarketplace.SellerHub.Domain.Common.ReviewSubRatings", "SubRatings", b1 =>
                         {
-                            b1.Property<string>("SellerReviewId")
-                                .HasColumnType("character varying(64)");
+                            b1.Property<int>("SellerReviewId")
+                                .HasColumnType("integer");
 
                             b1.Property<int>("Accuracy")
                                 .HasColumnType("integer")

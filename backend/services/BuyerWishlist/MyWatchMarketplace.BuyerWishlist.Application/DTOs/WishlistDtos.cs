@@ -3,7 +3,7 @@ namespace MyWatchMarketplace.BuyerWishlist.Application.DTOs;
 public record WishlistItemDto(
     int Id,
     string BuyerId,
-    string ListingId,
+    int ListingId,
     string? WatchBrand,
     string? WatchModel,
     decimal? PriceWhenAdded,
@@ -14,7 +14,7 @@ public record WishlistItemDto(
 
 public record AddWishlistItemRequest(
     string? BuyerId,
-    string ListingId,
+    int ListingId,
     string? WatchBrand,
     string? WatchModel,
     decimal? PriceWhenAdded,
@@ -26,4 +26,3 @@ public record UpdateWishlistNotesRequest(
     string? Notes,
     string? Priority
 );
-

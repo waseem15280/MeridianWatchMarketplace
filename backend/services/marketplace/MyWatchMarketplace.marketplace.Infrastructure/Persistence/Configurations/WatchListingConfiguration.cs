@@ -11,8 +11,7 @@ public class WatchListingConfiguration : IEntityTypeConfiguration<WatchListing>
         builder.ToTable("WatchListings");
 
         builder.HasKey(w => w.Id);
-        builder.Property(w => w.Id)
-            .HasMaxLength(64);
+        builder.Property(w => w.Id).ValueGeneratedOnAdd();
 
         builder.Property(w => w.SellerId)
             .HasMaxLength(64)
@@ -95,8 +94,7 @@ public class WatchListingConfiguration : IEntityTypeConfiguration<WatchListing>
             .IsRequired()
             .HasDefaultValue("active");
 
-        builder.Property(w => w.FromPersonalCollectionId)
-            .HasMaxLength(64);
+        builder.Property(w => w.FromPersonalCollectionId);
 
         builder.Property(w => w.CreatedBy)
             .HasMaxLength(100);

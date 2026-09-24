@@ -54,7 +54,7 @@ public class SellerHubDbContextInitialiser
         {
             new()
             {
-                Id = "seller-geneva",
+                Id = 7,
                 Name = "Geneva Horology Gallery",
                 Email = "contact@genevahorology.ch",
                 Avatar = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80",
@@ -71,7 +71,7 @@ public class SellerHubDbContextInitialiser
             },
             new()
             {
-                Id = "seller-crown",
+                Id = 8,
                 Name = "Crown & Caliber Atelier",
                 Email = "vault@crowncaliber.co.uk",
                 Avatar = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80",
@@ -88,7 +88,7 @@ public class SellerHubDbContextInitialiser
             },
             new()
             {
-                Id = "seller-tokyo",
+                Id = 9,
                 Name = "Ginza Chrono Vault",
                 Email = "tokyo@ginzachronovault.jp",
                 Avatar = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=300&q=80",
@@ -105,7 +105,7 @@ public class SellerHubDbContextInitialiser
             },
             new()
             {
-                Id = "user-current-seller",
+                Id = 1,
                 Name = "Alexander Vance",
                 Email = "alexander.vance@horology.com",
                 Avatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
@@ -122,7 +122,7 @@ public class SellerHubDbContextInitialiser
             },
             new()
             {
-                Id = "user-current-buyer",
+                Id = 4,
                 Name = "Julian Sterling",
                 Email = "j.sterling@collector.io",
                 Avatar = "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=300&q=80",
@@ -142,9 +142,9 @@ public class SellerHubDbContextInitialiser
         {
             new()
             {
-                Id = "rev-1",
-                SellerId = "seller-geneva",
-                BuyerId = "user-current-buyer",
+                Id = 1,
+                SellerId = "7",
+                BuyerId = "4",
                 BuyerName = "Julian Sterling",
                 BuyerAvatar = "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=300&q=80",
                 Rating = 5,
@@ -164,9 +164,9 @@ public class SellerHubDbContextInitialiser
             },
             new()
             {
-                Id = "rev-2",
-                SellerId = "user-current-seller",
-                BuyerId = "user-current-buyer",
+                Id = 2,
+                SellerId = "1",
+                BuyerId = "4",
                 BuyerName = "Julian Sterling",
                 BuyerAvatar = "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=300&q=80",
                 Rating = 5,
@@ -189,7 +189,20 @@ public class SellerHubDbContextInitialiser
         _context.SellerProfiles.AddRange(seedProfiles);
         _context.SellerReviews.AddRange(seedReviews);
         await _context.SaveChangesAsync();
+
+        if (_context.Database.IsNpgsql())
+        {
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync("SELECT setval(pg_get_serial_sequence('\"SellerProfiles\"', 'Id'), (SELECT COALESCE(MAX(\"Id\"), 1) FROM \"SellerProfiles\"));");
+                await _context.Database.ExecuteSqlRawAsync("SELECT setval(pg_get_serial_sequence('\"SellerReviews\"', 'Id'), (SELECT COALESCE(MAX(\"Id\"), 1) FROM \"SellerReviews\"));");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not reset Postgres sequences for SellerHub.");
+            }
+        }
+
         _logger.LogInformation("Seeded {ProfileCount} seller profiles and {ReviewCount} reviews into SellerHubDb.", seedProfiles.Count, seedReviews.Count);
     }
 }
-

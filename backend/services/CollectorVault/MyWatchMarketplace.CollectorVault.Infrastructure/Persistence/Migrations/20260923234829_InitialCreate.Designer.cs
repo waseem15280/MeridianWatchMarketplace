@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyWatchMarketplace.CollectorVault.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CollectorVaultDbContext))]
-    [Migration("20260909210913_InitialCreate")]
+    [Migration("20260923234829_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -63,10 +63,8 @@ namespace MyWatchMarketplace.CollectorVault.Infrastructure.Persistence.Migration
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("VaultWatchId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<int>("VaultWatchId")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -77,9 +75,11 @@ namespace MyWatchMarketplace.CollectorVault.Infrastructure.Persistence.Migration
 
             modelBuilder.Entity("MyWatchMarketplace.CollectorVault.Domain.Entities.VaultWatch", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Brand")
                         .IsRequired()
@@ -132,9 +132,8 @@ namespace MyWatchMarketplace.CollectorVault.Infrastructure.Persistence.Migration
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("ListingId")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                    b.Property<int?>("ListingId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Model")
                         .IsRequired()
