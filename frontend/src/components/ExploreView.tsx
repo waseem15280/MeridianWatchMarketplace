@@ -53,7 +53,7 @@ export const ExploreView: React.FC = () => {
           </div>
 
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-[#1C1917] font-serif leading-tight">
-            The Meridian Antiquité Horlogerie Marketplace
+            The Heritage Club of Sellers & Collectors: Show your timepieces with Confidence
           </h1>
 
           <p className="text-sm md:text-base text-[#57534E] leading-relaxed">

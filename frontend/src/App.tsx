@@ -41,11 +41,11 @@ const MarketplaceApp: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-[#78716C]">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2D2A26] text-[#F5F2ED] flex items-center justify-center font-serif text-sm font-bold shadow-sm">
-              M
+              THC
             </div>
             <div>
-              <span className="font-serif font-bold text-[#1C1917] tracking-widest text-sm">MERIDIAN</span>
-              <p className="text-[11px] text-[#8C7D70]">The Fine Antiquité Horlogerie Marketplace & Curated Vault</p>
+              <span className="font-serif font-bold text-[#1C1917] tracking-widest text-sm">THC</span>
+              <p className="text-[11px] text-[#8C7D70]">The Heritage Club of timepiece Collectors & sellers</p>
             </div>
           </div>
 
@@ -65,7 +65,7 @@ const MarketplaceApp: React.FC = () => {
           </div>
 
           <div className="text-[#8C7D70] text-center md:text-right font-mono text-[11px]">
-            © {new Date().getFullYear()} Meridian Antiquité Horlogerie. All rights reserved.
+            © {new Date().getFullYear()} THC The Heritage Club. All rights reserved.
           </div>
         </div>
       </footer>

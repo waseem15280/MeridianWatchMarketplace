@@ -25,7 +25,7 @@ import {
 export const GUEST_LOGIN: UserLogin = {
   id: 'guest',
   username: 'guest',
-  email: 'guest@meridian.com',
+  email: 'guest@thc.com',
   accounts: []
 };
 
@@ -33,13 +33,13 @@ export const GUEST_ACCOUNT: UserAccount = {
   id: 'guest-buyer',
   userLoginId: 'guest',
   name: 'Guest Collector',
-  email: 'guest@meridian.com',
+  email: 'guest@thc.com',
   role: 'buyer',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
   location: 'Global',
   memberSince: new Date().getFullYear().toString(),
   verifiedDealer: false,
-  bio: 'Exploring Meridian Horlogerie as a guest.',
+  bio: 'Exploring The Heritage Club as a guest.',
   rating: 5.0,
   reviewCount: 0,
   totalSalesCount: 0,
@@ -596,7 +596,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
             localStorage.setItem('chronos_current_user_id', activeAccId);
           }
 
-          showToast('Registration Successful', `Welcome to Meridian, @${res.login.username}! Active persona: ${data.role.toUpperCase()}`, 'success');
+          showToast('Registration Successful', `Welcome to The Heritage Club, @${res.login.username}! Active persona: ${data.role.toUpperCase()}`, 'success');
           return true;
         }
       } catch (err: any) {

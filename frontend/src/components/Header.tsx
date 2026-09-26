@@ -249,10 +249,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
               </div>
               <div>
                 <span className="text-lg font-bold tracking-wider uppercase font-serif text-[#1C1917] group-hover:text-[#85642F] transition-colors">
-                  Meridian
+                  THC
                 </span>
                 <span className="block text-[10px] tracking-widest text-[#967139] uppercase font-mono -mt-1 font-semibold">
-                  Antiquité Horlogerie
+                  The Heritage Club
                 </span>
               </div>
             </button>
@@ -882,7 +882,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   <UserPlus className="w-5 h-5 text-[#85642F]" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-[#1C1917]">Create Meridian Account</h3>
+                  <h3 className="text-base font-bold text-[#1C1917]">Create THC Account</h3>
                   <p className="text-xs text-[#78716C]">Register credentials and choose your primary role persona</p>
                 </div>
               </div>
@@ -938,7 +938,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                       id="register-email-input"
                       value={registerEmail}
                       onChange={(e) => setRegisterEmail(e.target.value)}
-                      placeholder="e.g. james@meridian.com"
+                      placeholder="e.g. example@email.com"
                       className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
                     />
                   </div>
