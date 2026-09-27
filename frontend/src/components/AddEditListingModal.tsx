@@ -55,40 +55,36 @@ const PRESET_WATCH_IMAGES = [
 ];
 
 const POPULAR_BRANDS = [
-  'Rolex',
-  'Patek Philippe',
-  'Audemars Piguet',
+  'HMT',
+  'Seiko',
+  'Citizen',
+  'Ricoh',
+  'Titan',
   'Omega',
-  'Cartier',
-  'Grand Seiko',
-  'Tudor',
-  'Vacheron Constantin',
-  'IWC',
-  'Jaeger-LeCoultre'
+  'Allwyn',
+  'Timex',
+  'Casio',
+  'Westend'
 ];
 
 const MOVEMENTS: WatchMovement[] = [
   'Automatic',
   'Manual Winding',
-  'Spring Drive',
   'Quartz',
-  'Tourbillon',
-  'Co-Axial Chronometer'
+  'Digital',
+  'Solar',
+  'Hybrid'
 ];
 
 const CONDITIONS: WatchCondition[] = ['Unworn', 'Mint', 'Very Good', 'Good', 'Fair'];
 
 const CASE_MATERIALS: WatchCaseMaterial[] = [
   'Stainless Steel',
-  'Oystersteel',
-  '18k Yellow Gold',
-  '18k Rose/Pink Gold',
-  '18k White Gold',
+  'Gold Plated',
   'Platinum',
   'Titanium',
   'Ceramic',
-  'Two-Tone (Steel & Gold)'
-];
+  'Bronze'];
 
 export const AddEditListingModal: React.FC = () => {
   const {

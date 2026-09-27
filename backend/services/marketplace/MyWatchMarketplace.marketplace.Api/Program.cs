@@ -231,7 +231,7 @@ listingsApi.MapPost("/", async (CreateWatchListingRequest request, MarketplaceDb
         HasOriginalPapers = request.HasOriginalPapers,
         HasServicePapers = request.HasServicePapers,
         WarrantyUntil = request.WarrantyUntil,
-        Images = request.Images ?? new(),
+        Images = request.Images ?? new(), // Call Cloudinary API to upload images and get URLs assigned to Images property
         Description = request.Description,
         ProvenanceNotes = request.ProvenanceNotes,
         AuthenticityVerified = request.AuthenticityVerified,

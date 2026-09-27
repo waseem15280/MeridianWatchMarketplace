@@ -28,7 +28,7 @@ export const AddCollectionWatchModal: React.FC = () => {
     showToast
   } = useMarketplace();
 
-  const [brand, setBrand] = useState('Rolex');
+  const [brand, setBrand] = useState('HMT');
   const [model, setModel] = useState('');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [year, setYear] = useState(2023);
@@ -163,7 +163,7 @@ export const AddCollectionWatchModal: React.FC = () => {
                 type="text"
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
-                placeholder="e.g. Rolex, Patek Philippe"
+                placeholder="e.g. HMT, Seiko"
                 required
                 className="w-full bg-[#FFFFFF] border border-[#D8D0C5] rounded-xl px-3.5 py-2.5 text-xs text-[#1C1917] focus:outline-none focus:border-[#967139]"
               />

@@ -11,19 +11,15 @@ export interface UserLogin {
 
 export type WatchCondition = 'Unworn' | 'Mint' | 'Very Good' | 'Good' | 'Fair';
 
-export type WatchMovement = 'Automatic' | 'Manual Winding' | 'Quartz' | 'Tourbillon' | 'Spring Drive' | 'Co-Axial Chronometer';
+export type WatchMovement = 'Automatic' | 'Manual Winding' | 'Quartz' | 'Digital' | 'Solar' | 'Hybrid';
 
 export type WatchCaseMaterial = 
   | 'Stainless Steel' 
-  | 'Oystersteel' 
-  | '18k Yellow Gold' 
-  | '18k Rose/Pink Gold' 
-  | '18k White Gold' 
+  | 'Gold Plated' 
   | 'Platinum' 
   | 'Titanium' 
   | 'Ceramic' 
-  | 'Bronze' 
-  | 'Two-Tone (Steel & Gold)';
+  | 'Bronze';
 
 export interface SellerReview {
   id: string | number;
