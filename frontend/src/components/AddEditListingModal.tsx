@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useMarketplace } from '../context/MarketplaceContext';
+import { marketplaceApi } from '../services/api/marketplaceApi';
 import {
   X,
   Plus,
-  Image,
+  Upload,
+  Camera,
+  Loader2,
   Sparkles,
   ShieldCheck,
   Package,
@@ -18,41 +21,6 @@ import {
   WatchMovement,
   WatchCaseMaterial
 } from '../types';
-
-const PRESET_WATCH_IMAGES = [
-  {
-    name: 'Rolex Daytona White Dial',
-    url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80'
-  },
-  {
-    name: 'Rolex Submariner Green/Black',
-    url: 'https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?auto=format&fit=crop&w=1200&q=80'
-  },
-  {
-    name: 'Patek Philippe Nautilus Blue',
-    url: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=1200&q=80'
-  },
-  {
-    name: 'Audemars Piguet Royal Oak',
-    url: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80'
-  },
-  {
-    name: 'Omega Speedmaster Chrono',
-    url: 'https://images.unsplash.com/photo-1622434641406-a158123450f9?auto=format&fit=crop&w=1200&q=80'
-  },
-  {
-    name: 'Cartier Santos Steel',
-    url: 'https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&w=1200&q=80'
-  },
-  {
-    name: 'Grand Seiko Shunbun Titanium',
-    url: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1200&q=80'
-  },
-  {
-    name: 'Tudor Black Bay Vintage',
-    url: 'https://images.unsplash.com/photo-1587836374828-4dbafa94cf0e?auto=format&fit=crop&w=1200&q=80'
-  }
-];
 
 const POPULAR_BRANDS = [
   'HMT',
@@ -84,7 +52,15 @@ const CASE_MATERIALS: WatchCaseMaterial[] = [
   'Platinum',
   'Titanium',
   'Ceramic',
-  'Bronze'];
+  'Bronze'
+];
+
+interface ImageItem {
+  id: string;
+  previewUrl: string;
+  file?: File;
+  existingUrl?: string;
+}
 
 export const AddEditListingModal: React.FC = () => {
   const {
@@ -112,8 +88,12 @@ export const AddEditListingModal: React.FC = () => {
   const [hasOriginalPapers, setHasOriginalPapers] = useState(true);
   const [description, setDescription] = useState('');
   const [provenanceNotes, setProvenanceNotes] = useState('');
-  const [imageUrls, setImageUrls] = useState<string[]>([PRESET_WATCH_IMAGES[0].url]);
-  const [customImageUrl, setCustomImageUrl] = useState('');
+
+  // Image upload state (up to 5 images)
+  const [imageItems, setImageItems] = useState<ImageItem[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Pre-fill if editing
   useEffect(() => {
@@ -133,7 +113,14 @@ export const AddEditListingModal: React.FC = () => {
       setHasOriginalPapers(editingListing.hasOriginalPapers);
       setDescription(editingListing.description);
       setProvenanceNotes(editingListing.provenanceNotes || '');
-      setImageUrls(editingListing.images);
+
+      setImageItems(
+        (editingListing.images || []).map((url, i) => ({
+          id: `existing-${i}-${url}`,
+          previewUrl: url,
+          existingUrl: url
+        }))
+      );
     } else {
       setModel('');
       setReferenceNumber('');
@@ -142,13 +129,79 @@ export const AddEditListingModal: React.FC = () => {
       setCondition('Mint');
       setDescription('');
       setProvenanceNotes('');
-      setImageUrls([PRESET_WATCH_IMAGES[0].url]);
+      setImageItems([]);
     }
   }, [editingListing, isAddListingOpen]);
 
   if (!isAddListingOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFilesSelected = (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+
+    const remainingSlots = 5 - imageItems.length;
+    if (remainingSlots <= 0) {
+      showToast('Limit Reached', 'You can upload a maximum of 5 images per timepiece listing.', 'warning');
+      return;
+    }
+
+    if (fileArray.length > remainingSlots) {
+      showToast('Limit Exceeded', `Only ${remainingSlots} more image(s) can be added (maximum 5 images allowed).`, 'warning');
+    }
+
+    const filesToAdd = fileArray.slice(0, remainingSlots);
+    const validItems: ImageItem[] = [];
+
+    for (const file of filesToAdd) {
+      if (!file.type.startsWith('image/')) {
+        showToast('Invalid File', `'${file.name}' is not an image file`, 'error');
+        continue;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showToast('File Too Large', `'${file.name}' exceeds the 10MB limit`, 'error');
+        continue;
+      }
+
+      validItems.push({
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        file,
+        previewUrl: URL.createObjectURL(file)
+      });
+    }
+
+    if (validItems.length > 0) {
+      setImageItems((prev) => [...prev, ...validItems]);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImageItems((prev) => {
+      const item = prev[index];
+      if (item.file && item.previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files) {
+      handleFilesSelected(e.dataTransfer.files);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!model.trim() || !referenceNumber.trim() || price <= 0) {
@@ -156,67 +209,96 @@ export const AddEditListingModal: React.FC = () => {
       return;
     }
 
-    if (imageUrls.length === 0) {
-      showToast('Image Required', 'Please select or add at least one watch photo', 'warning');
+    if (imageItems.length === 0) {
+      showToast('Image Required', 'Please upload at least one timepiece photograph (maximum 5).', 'warning');
       return;
     }
 
-    if (editingListing) {
-      updateListing(editingListing.id, {
-        brand,
-        model,
-        referenceNumber,
-        year,
-        price,
-        condition,
-        movement,
-        caseMaterial,
-        caseDiameter,
-        dialColor,
-        braceletMaterial,
-        hasOriginalBox,
-        hasOriginalPapers,
-        description: description || `Certified ${brand} ${model} in ${condition} condition.`,
-        provenanceNotes,
-        images: imageUrls
+    setIsUploading(true);
+
+    try {
+      // Determine which files need to be uploaded to Cloudinary
+      const newFilesToUpload: { index: number; file: File }[] = [];
+      const finalUrls: (string | null)[] = new Array(imageItems.length).fill(null);
+
+      imageItems.forEach((item, index) => {
+        if (item.existingUrl) {
+          finalUrls[index] = item.existingUrl;
+        } else if (item.file) {
+          newFilesToUpload.push({ index, file: item.file });
+        }
       });
-    } else {
-      createListing({
-        brand,
-        model,
-        referenceNumber,
-        year,
-        price,
-        currency: 'USD',
-        condition,
-        movement,
-        caseMaterial,
-        caseDiameter,
-        dialColor,
-        braceletMaterial,
-        hasOriginalBox,
-        hasOriginalPapers,
-        description: description || `Certified authentic ${brand} ${model} reference ${referenceNumber}. Inspected and timed.`,
-        provenanceNotes,
-        images: imageUrls,
-        authenticityVerified: true,
-        status: 'active'
+
+      if (newFilesToUpload.length > 0) {
+        const uploadResponse = await marketplaceApi.uploadImages(newFilesToUpload.map((x) => x.file));
+        uploadResponse.urls.forEach((url, i) => {
+          const originalIndex = newFilesToUpload[i].index;
+          finalUrls[originalIndex] = url;
+        });
+      }
+
+      const verifiedUrls = finalUrls.filter((u): u is string => typeof u === 'string' && u.length > 0);
+
+      if (editingListing) {
+        await updateListing(editingListing.id, {
+          brand,
+          model,
+          referenceNumber,
+          year,
+          price,
+          condition,
+          movement,
+          caseMaterial,
+          caseDiameter,
+          dialColor,
+          braceletMaterial,
+          hasOriginalBox,
+          hasOriginalPapers,
+          description: description || `Certified ${brand} ${model} in ${condition} condition.`,
+          provenanceNotes,
+          images: verifiedUrls
+        });
+        showToast('Listing Updated', 'Your timepiece listing and Cloudinary photography have been updated.', 'success');
+      } else {
+        await createListing({
+          brand,
+          model,
+          referenceNumber,
+          year,
+          price,
+          currency: 'USD',
+          condition,
+          movement,
+          caseMaterial,
+          caseDiameter,
+          dialColor,
+          braceletMaterial,
+          hasOriginalBox,
+          hasOriginalPapers,
+          description: description || `Certified authentic ${brand} ${model} reference ${referenceNumber}. Inspected and timed.`,
+          provenanceNotes,
+          images: verifiedUrls,
+          authenticityVerified: true,
+          status: 'active'
+        });
+        showToast('Listing Published', 'Your timepiece has been published to the marketplace with Cloudinary images.', 'success');
+      }
+
+      // Cleanup local blob URLs
+      imageItems.forEach((item) => {
+        if (item.file && item.previewUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
       });
+
+      setIsAddListingOpen(false);
+      setEditingListing(null);
+    } catch (err: any) {
+      console.error('Error saving listing with Cloudinary:', err);
+      showToast('Upload Error', err?.message || 'Failed to upload images or save listing. Please try again.', 'error');
+    } finally {
+      setIsUploading(false);
     }
-
-    setIsAddListingOpen(false);
-    setEditingListing(null);
-  };
-
-  const addCustomImage = () => {
-    if (customImageUrl.trim()) {
-      setImageUrls((prev) => [...prev, customImageUrl.trim()]);
-      setCustomImageUrl('');
-    }
-  };
-
-  const removeImage = (index: number) => {
-    setImageUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -238,11 +320,12 @@ export const AddEditListingModal: React.FC = () => {
 
           <button
             id="close-add-listing-btn"
+            disabled={isUploading}
             onClick={() => {
               setIsAddListingOpen(false);
               setEditingListing(null);
             }}
-            className="p-2 rounded-xl bg-[#FAF8F5] text-[#57534E] hover:text-[#1C1917] hover:bg-[#EDE8E0] border border-[#D8D0C5] transition-colors"
+            className="p-2 rounded-xl bg-[#FAF8F5] text-[#57534E] hover:text-[#1C1917] hover:bg-[#EDE8E0] border border-[#D8D0C5] transition-colors disabled:opacity-50"
           >
             <X className="w-5 h-5" />
           </button>
@@ -473,74 +556,95 @@ export const AddEditListingModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Visuals & Photo Selector */}
+          {/* Image Upload & Cloudinary Gallery */}
           <div className="space-y-3">
-            <label className="block text-xs font-semibold text-[#57534E] uppercase tracking-wider">
-              Timepiece Photography & Gallery
-            </label>
-
-            {/* Selected image previews */}
-            <div className="flex items-center gap-3 overflow-x-auto pb-2">
-              {imageUrls.map((url, idx) => (
-                <div key={idx} className="relative w-24 h-20 rounded-xl overflow-hidden border border-[#D8D0C5] shrink-0 group shadow-2xs">
-                  <img src={url} alt="watch" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(idx)}
-                    className="absolute top-1 right-1 bg-black/80 hover:bg-rose-600 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold text-[#57534E] uppercase tracking-wider">
+                Timepiece Photography (Maximum 5 Images) *
+              </label>
+              <span className="text-[11px] font-medium text-[#78716C]">
+                {imageItems.length} / 5 photos selected
+              </span>
             </div>
 
-            {/* Quick Presets Picker */}
-            <div>
-              <div className="text-[11px] text-[#78716C] font-semibold mb-1.5">
-                Quick Select Luxury Photo Presets:
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {PRESET_WATCH_IMAGES.map((preset, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      if (!imageUrls.includes(preset.url)) {
-                        setImageUrls([preset.url, ...imageUrls]);
-                      }
-                    }}
-                    className="p-2 rounded-xl bg-[#FFFFFF] border border-[#E5DFD5] hover:border-[#967139] text-left text-[11px] text-[#1C1917] transition-colors flex items-center gap-2 truncate shadow-2xs"
+            {/* Hidden native file input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              multiple
+              accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files) {
+                  handleFilesSelected(e.target.files);
+                  e.target.value = '';
+                }
+              }}
+            />
+
+            {/* Image Previews Grid */}
+            {imageItems.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 pt-1 pb-1">
+                {imageItems.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    className="relative group aspect-square rounded-2xl overflow-hidden border-2 border-[#D8D0C5] bg-[#FFFFFF] shadow-sm hover:border-[#967139] transition-all"
                   >
                     <img
-                      src={preset.url}
-                      alt={preset.name}
-                      referrerPolicy="no-referrer"
-                      className="w-7 h-7 rounded-lg object-cover shrink-0 border border-[#E5DFD5]"
+                      src={item.previewUrl}
+                      alt={`Watch photo ${idx + 1}`}
+                      className="w-full h-full object-cover"
                     />
-                    <span className="truncate">{preset.name.split(' ')[0]} {preset.name.split(' ')[1]}</span>
-                  </button>
+
+                    {/* Cover Photo Badge */}
+                    {idx === 0 && (
+                      <span className="absolute bottom-1.5 left-1.5 bg-[#1C1917]/90 text-[#C5A880] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md shadow-xs backdrop-blur-xs">
+                        Cover Photo
+                      </span>
+                    )}
+
+                    {/* Delete button */}
+                    <button
+                      type="button"
+                      disabled={isUploading}
+                      onClick={() => removeImage(idx)}
+                      aria-label="Remove image"
+                      className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/70 hover:bg-rose-600 text-white transition-colors opacity-90 group-hover:opacity-100 disabled:opacity-30 shadow-md"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 ))}
               </div>
-            </div>
+            )}
 
-            {/* Custom URL Input */}
-            <div className="flex items-center gap-2 pt-1">
-              <input
-                type="url"
-                value={customImageUrl}
-                onChange={(e) => setCustomImageUrl(e.target.value)}
-                placeholder="Or paste custom image URL (https://...)"
-                className="flex-1 bg-[#FFFFFF] border border-[#D8D0C5] rounded-xl px-3 py-2 text-xs text-[#1C1917] focus:outline-none focus:border-[#967139]"
-              />
-              <button
-                type="button"
-                onClick={addCustomImage}
-                className="bg-[#FAF8F5] hover:bg-[#EDE8E0] text-[#1C1917] px-3.5 py-2 rounded-xl text-xs font-semibold border border-[#D8D0C5] transition-colors"
+            {/* Drag & Drop Upload Zone (shown when fewer than 5 images) */}
+            {imageItems.length < 5 && (
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-all ${
+                  isDragging
+                    ? 'border-[#967139] bg-[#967139]/10 scale-[1.01]'
+                    : 'border-[#D8D0C5] hover:border-[#967139] bg-[#FFFFFF]/70 hover:bg-[#FFFFFF]'
+                }`}
               >
-                Add URL
-              </button>
-            </div>
+                <div className="w-12 h-12 rounded-full bg-[#FAF8F5] border border-[#E5DFD5] flex items-center justify-center mx-auto mb-3 text-[#967139] shadow-xs">
+                  <Upload className="w-5 h-5" />
+                </div>
+                <div className="text-xs font-semibold text-[#1C1917] mb-1">
+                  Drag & drop watch photos here, or <span className="text-[#967139] underline font-bold">browse</span>
+                </div>
+                <div className="text-[11px] text-[#78716C]">
+                  Upload up to {5 - imageItems.length} more {imageItems.length === 0 ? 'photos' : 'photo(s)'} (JPG, PNG, WEBP, GIF, max 10MB each)
+                </div>
+                <div className="text-[10px] text-[#A8A29E] mt-1 italic">
+                  Photos will be stored on Cloudinary upon submission. The first photo acts as the primary cover.
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Description & Provenance */}
@@ -576,11 +680,12 @@ export const AddEditListingModal: React.FC = () => {
           <div className="pt-4 border-t border-[#E5DFD5] flex items-center justify-end gap-3">
             <button
               type="button"
+              disabled={isUploading}
               onClick={() => {
                 setIsAddListingOpen(false);
                 setEditingListing(null);
               }}
-              className="bg-[#FAF8F5] hover:bg-[#EDE8E0] text-[#57534E] font-semibold px-5 py-2.5 rounded-xl text-xs border border-[#D8D0C5] transition-colors"
+              className="bg-[#FAF8F5] hover:bg-[#EDE8E0] text-[#57534E] font-semibold px-5 py-2.5 rounded-xl text-xs border border-[#D8D0C5] transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
@@ -588,10 +693,20 @@ export const AddEditListingModal: React.FC = () => {
             <button
               id="submit-listing-btn"
               type="submit"
-              className="bg-[#1C1917] hover:bg-[#2D2A26] text-[#FAF8F5] font-bold px-6 py-2.5 rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5"
+              disabled={isUploading}
+              className="bg-[#1C1917] hover:bg-[#2D2A26] text-[#FAF8F5] font-bold px-6 py-2.5 rounded-xl text-xs shadow-md transition-all flex items-center gap-2 disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
             >
-              <Check className="w-4 h-4 text-[#C5A880]" />
-              <span>{editingListing ? 'Save Changes' : 'Publish Listing'}</span>
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-[#C5A880]" />
+                  <span>Uploading to Cloudinary...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4 text-[#C5A880]" />
+                  <span>{editingListing ? 'Save Changes' : 'Publish Listing'}</span>
+                </>
+              )}
             </button>
           </div>
         </form>

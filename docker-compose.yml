@@ -37,6 +37,11 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ConnectionStrings__MarketplaceDbConnection=Host=postgres;Port=5432;Database=MarketplaceDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-Pa55w.rd}
+      - CLOUDINARY_URL=cloudinary://936341539214393:B7pys9i22GLSBRgnd8BcmH1Mdjo@jwrzshry
+      - Cloudinary__CloudName=jwrzshry
+      - Cloudinary__ApiKey=936341539214393
+      - Cloudinary__ApiSecret=B7pys9i22GLSBRgnd8BcmH1Mdjo
+      - Cloudinary__Url=cloudinary://936341539214393:B7pys9i22GLSBRgnd8BcmH1Mdjo@jwrzshry
     ports:
       - "5101:8080"
     depends_on:

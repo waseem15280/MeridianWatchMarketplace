@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MyWatchMarketplace.marketplace.Application.Common.Interfaces;
 using MyWatchMarketplace.marketplace.Infrastructure.Persistence;
+using MyWatchMarketplace.marketplace.Infrastructure.Services;
 
 namespace MyWatchMarketplace.marketplace.Infrastructure;
 
@@ -30,6 +31,8 @@ public static class DependencyInjection
             provider.GetRequiredService<MarketplaceDbContext>());
 
         services.AddScoped<MarketplaceDbContextInitialiser>();
+
+        services.AddSingleton<ICloudinaryService, CloudinaryService>();
 
         return services;
     }

@@ -62,6 +62,18 @@ export const marketplaceApi = {
     return request<{ viewsCount: number }>(`/api/marketplace/listings/${id}/view`, {
       method: 'POST'
     });
+  },
+
+  // POST /api/marketplace/images/upload
+  uploadImages: async (files: File[]): Promise<{ urls: string[] }> => {
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('files', file);
+    });
+    return request<{ urls: string[] }>('/api/marketplace/images/upload', {
+      method: 'POST',
+      body: formData
+    });
   }
 };
 

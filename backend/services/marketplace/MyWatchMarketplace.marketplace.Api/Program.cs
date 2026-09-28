@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MyWatchMarketplace.marketplace.Application.Common.Interfaces;
 using MyWatchMarketplace.marketplace.Application.DTOs;
 using MyWatchMarketplace.marketplace.Domain.Entities;
 using MyWatchMarketplace.marketplace.Infrastructure;
@@ -44,6 +46,55 @@ var listingsApi = app.MapGroup("/api/marketplace/listings");
 
 app.MapGet("/api/marketplace/health", () => Results.Ok(new { status = "Healthy", service = "Marketplace" }))
    .WithName("MarketplaceHealth");
+
+// Image Upload Endpoint (Cloudinary)
+app.MapPost("/api/marketplace/images/upload", async (HttpRequest request, [FromServices] ICloudinaryService cloudinaryService, CancellationToken cancellationToken) =>
+{
+    if (!request.HasFormContentType)
+    {
+        return Results.BadRequest(new { message = "Content-Type must be multipart/form-data" });
+    }
+
+    var form = await request.ReadFormAsync(cancellationToken);
+    var files = form.Files;
+
+    if (files.Count == 0)
+    {
+        return Results.BadRequest(new { message = "No files uploaded." });
+    }
+
+    if (files.Count > 5)
+    {
+        return Results.BadRequest(new { message = "Maximum of 5 images allowed per listing." });
+    }
+
+    var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"
+    };
+
+    var uploadedUrls = new List<string>();
+    foreach (var file in files)
+    {
+        if (file.Length == 0) continue;
+        if (file.Length > 10 * 1024 * 1024)
+        {
+            return Results.BadRequest(new { message = $"File '{file.FileName}' exceeds the maximum allowed size of 10MB." });
+        }
+
+        var ext = Path.GetExtension(file.FileName);
+        if (string.IsNullOrEmpty(ext) || !allowedExtensions.Contains(ext))
+        {
+            return Results.BadRequest(new { message = $"File format '{ext}' is not supported. Allowed formats: JPG, JPEG, PNG, WEBP, GIF, AVIF." });
+        }
+
+        using var stream = file.OpenReadStream();
+        var url = await cloudinaryService.UploadImageAsync(stream, file.FileName, cancellationToken: cancellationToken);
+        uploadedUrls.Add(url);
+    }
+
+    return Results.Ok(new { urls = uploadedUrls });
+}).DisableAntiforgery();
 
 // 1. GET /api/marketplace/listings - Query with filtering & search
 listingsApi.MapGet("/", async (
@@ -201,8 +252,26 @@ listingsApi.MapGet("/{id:int}", async (int id, MarketplaceDbContext db) =>
 });
 
 // 3. POST /api/marketplace/listings - Create listing
-listingsApi.MapPost("/", async (CreateWatchListingRequest request, MarketplaceDbContext db) =>
+listingsApi.MapPost("/", async (CreateWatchListingRequest request, MarketplaceDbContext db, [FromServices] ICloudinaryService cloudinaryService, CancellationToken cancellationToken) =>
 {
+    var finalImages = new List<string>();
+    if (request.Images != null)
+    {
+        foreach (var img in request.Images)
+        {
+            if (string.IsNullOrWhiteSpace(img)) continue;
+            if (img.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
+            {
+                var uploadedUrl = await cloudinaryService.UploadImageAsync(img, cancellationToken: cancellationToken);
+                finalImages.Add(uploadedUrl);
+            }
+            else
+            {
+                finalImages.Add(img);
+            }
+        }
+    }
+
     var listing = new WatchListing
     {
         SellerId = request.SellerId ?? "1",
@@ -231,7 +300,7 @@ listingsApi.MapPost("/", async (CreateWatchListingRequest request, MarketplaceDb
         HasOriginalPapers = request.HasOriginalPapers,
         HasServicePapers = request.HasServicePapers,
         WarrantyUntil = request.WarrantyUntil,
-        Images = request.Images ?? new(), // Call Cloudinary API to upload images and get URLs assigned to Images property
+        Images = finalImages,
         Description = request.Description,
         ProvenanceNotes = request.ProvenanceNotes,
         AuthenticityVerified = request.AuthenticityVerified,
@@ -244,15 +313,15 @@ listingsApi.MapPost("/", async (CreateWatchListingRequest request, MarketplaceDb
     };
 
     db.WatchListings.Add(listing);
-    await db.SaveChangesAsync();
+    await db.SaveChangesAsync(cancellationToken);
 
     return Results.Created($"/api/marketplace/listings/{listing.Id}", listing);
 });
 
 // 4. PUT /api/marketplace/listings/{id:int} - Update listing
-listingsApi.MapPut("/{id:int}", async (int id, UpdateWatchListingRequest request, MarketplaceDbContext db) =>
+listingsApi.MapPut("/{id:int}", async (int id, UpdateWatchListingRequest request, MarketplaceDbContext db, [FromServices] ICloudinaryService cloudinaryService, CancellationToken cancellationToken) =>
 {
-    var listing = await db.WatchListings.FirstOrDefaultAsync(w => w.Id == id);
+    var listing = await db.WatchListings.FirstOrDefaultAsync(w => w.Id == id, cancellationToken);
     if (listing is null) return Results.NotFound(new { message = $"Listing {id} not found." });
 
     if (request.Price.HasValue) listing.Price = request.Price.Value;
@@ -260,11 +329,28 @@ listingsApi.MapPut("/{id:int}", async (int id, UpdateWatchListingRequest request
     if (!string.IsNullOrWhiteSpace(request.Condition)) listing.Condition = request.Condition;
     if (!string.IsNullOrWhiteSpace(request.Description)) listing.Description = request.Description;
     if (!string.IsNullOrWhiteSpace(request.ProvenanceNotes)) listing.ProvenanceNotes = request.ProvenanceNotes;
-    if (request.Images is not null) listing.Images = request.Images;
+    if (request.Images is not null)
+    {
+        var finalImages = new List<string>();
+        foreach (var img in request.Images)
+        {
+            if (string.IsNullOrWhiteSpace(img)) continue;
+            if (img.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
+            {
+                var uploadedUrl = await cloudinaryService.UploadImageAsync(img, cancellationToken: cancellationToken);
+                finalImages.Add(uploadedUrl);
+            }
+            else
+            {
+                finalImages.Add(img);
+            }
+        }
+        listing.Images = finalImages;
+    }
     if (!string.IsNullOrWhiteSpace(request.Status)) listing.Status = request.Status;
     if (request.IsFeatured.HasValue) listing.IsFeatured = request.IsFeatured.Value;
 
-    await db.SaveChangesAsync();
+    await db.SaveChangesAsync(cancellationToken);
     return Results.Ok(listing);
 });
 
