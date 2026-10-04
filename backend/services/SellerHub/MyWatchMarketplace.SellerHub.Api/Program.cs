@@ -28,17 +28,22 @@ app.UseCors("AllowAll");
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+}
 
-    using var scope = app.Services.CreateScope();
+using (var scope = app.Services.CreateScope())
+{
     var initialiser = scope.ServiceProvider.GetRequiredService<SellerHubDbContextInitialiser>();
     try
     {
         await initialiser.InitialiseAsync();
+
+        app.Logger.LogInformation(
+            "SellerHub database initialized successfully.");
     }
-    catch (Exception ex)
-    {
-        app.Logger.LogWarning(ex, "Could not initialise SellerHub database. Ensure PostgreSQL Docker is running.");
-    }
+catch (Exception ex)
+{
+    app.Logger.LogWarning(ex, "Could not initialise SellerHub database. Ensure PostgreSQL Docker is running.");
+}
 }
 
 app.UseHttpsRedirection();

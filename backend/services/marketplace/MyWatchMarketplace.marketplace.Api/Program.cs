@@ -28,13 +28,20 @@ app.UseCors("AllowAll");
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+}
 
-    using var scope = app.Services.CreateScope();
-    var initialiser = scope.ServiceProvider.GetRequiredService<MarketplaceDbContextInitialiser>();
+using (var scope = app.Services.CreateScope())
+{
+    var initialiser = scope.ServiceProvider
+    .GetRequiredService<MarketplaceDbContextInitialiser>();
     try
     {
         await initialiser.InitialiseAsync();
+
+        app.Logger.LogInformation(
+            "Marketplace database initialized successfully.");
     }
+
     catch (Exception ex)
     {
         app.Logger.LogWarning(ex, "Could not initialise Marketplace database. Please ensure PostgreSQL Docker is running.");

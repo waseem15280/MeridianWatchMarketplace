@@ -28,12 +28,18 @@ app.UseCors("AllowAll");
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+}
 
-    using var scope = app.Services.CreateScope();
-    var initialiser = scope.ServiceProvider.GetRequiredService<CustomerOrdersDbContextInitialiser>();
+using (var scope = app.Services.CreateScope())
+{ 
+    var initialiser = scope.ServiceProvider
+        .GetRequiredService<CustomerOrdersDbContextInitialiser>();
     try
     {
         await initialiser.InitialiseAsync();
+
+        app.Logger.LogInformation(
+            "CustomerOrders database initialized successfully.");
     }
     catch (Exception ex)
     {

@@ -28,16 +28,28 @@ app.UseCors("AllowAll");
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+}
 
-    using var scope = app.Services.CreateScope();
-    var initialiser = scope.ServiceProvider.GetRequiredService<BuyerWishlistDbContextInitialiser>();
+// Initialize database in Development and Production
+using (var scope = app.Services.CreateScope())
+{
+    var initialiser = scope.ServiceProvider
+        .GetRequiredService<BuyerWishlistDbContextInitialiser>();
+
     try
     {
         await initialiser.InitialiseAsync();
+
+        app.Logger.LogInformation(
+            "BuyerWishlist database initialized successfully.");
     }
     catch (Exception ex)
     {
-        app.Logger.LogWarning(ex, "Could not initialise BuyerWishlist database. Ensure PostgreSQL Docker is running.");
+        app.Logger.LogError(
+            ex,
+            "Could not initialise BuyerWishlist database.");
+
+        throw;
     }
 }
 

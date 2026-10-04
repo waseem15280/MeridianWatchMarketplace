@@ -28,12 +28,18 @@ app.UseCors("AllowAll");
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+}
 
-    using var scope = app.Services.CreateScope();
-    var initialiser = scope.ServiceProvider.GetRequiredService<CollectorVaultDbContextInitialiser>();
+using (var scope = app.Services.CreateScope())
+{ 
+    var initialiser = scope.ServiceProvider
+        .GetRequiredService<CollectorVaultDbContextInitialiser>();
     try
     {
         await initialiser.InitialiseAsync();
+
+        app.Logger.LogInformation(
+            "CollectorVault database initialized successfully.");
     }
     catch (Exception ex)
     {

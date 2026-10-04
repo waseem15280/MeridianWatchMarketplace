@@ -28,10 +28,6 @@ public class BuyerWishlistDbContextInitialiser
                 {
                     await _context.Database.MigrateAsync();
                 }
-                else
-                {
-                    await _context.Database.EnsureCreatedAsync();
-                }
             }
 
             await SeedAsync();
