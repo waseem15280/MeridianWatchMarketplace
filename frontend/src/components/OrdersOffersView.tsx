@@ -9,7 +9,7 @@ import {
   Clock,
   ExternalLink,
   MessageSquare,
-  DollarSign,
+  IndianRupee,
   Box,
   CornerDownRight,
   ArrowRight
@@ -179,7 +179,7 @@ export const OrdersOffersView: React.FC = () => {
                       <div className="md:col-span-4 p-4 rounded-2xl bg-[#FAF8F5] border border-[#E5DFD5] text-right space-y-1">
                         <div className="text-[11px] text-[#78716C]">Total Authenticated Amount</div>
                         <div className="text-xl font-bold font-mono text-[#1C1917]">
-                          ${order.totalAmount.toLocaleString()}
+                          ₹{order.totalAmount.toLocaleString()}
                         </div>
                         <div className="text-[10px] text-[#3D5A45] font-medium">
                           Includes fully insured shipping + Watchmaker Authentication
@@ -199,7 +199,7 @@ export const OrdersOffersView: React.FC = () => {
         <div className="space-y-4">
           {mySubmittedOffers.length === 0 ? (
             <div className="p-16 text-center bg-[#FFFFFF] rounded-3xl border border-[#E5DFD5] space-y-3">
-              <DollarSign className="w-10 h-10 text-[#8C7D70] mx-auto" />
+              <IndianRupee className="w-10 h-10 text-[#8C7D70] mx-auto" />
               <h3 className="text-sm font-serif font-bold text-[#1C1917]">No Offers Submitted</h3>
               <p className="text-xs text-[#78716C] max-w-sm mx-auto">
                 When you make offers on timepieces, you can track seller responses here.
@@ -235,10 +235,10 @@ export const OrdersOffersView: React.FC = () => {
                     <div className="text-left sm:text-right">
                       <div className="text-xs text-[#78716C]">Your Offer</div>
                       <div className="text-xl font-bold text-[#1C1917] font-mono">
-                        ${offer.offerAmount.toLocaleString()}
+                        ₹{offer.offerAmount.toLocaleString()}
                       </div>
                       <div className="text-[10px] text-[#78716C] font-mono">
-                        Listed at ${offer.originalListingPrice.toLocaleString()}
+                        Listed at ₹{offer.originalListingPrice.toLocaleString()}
                       </div>
                     </div>
                   </div>

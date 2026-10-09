@@ -831,7 +831,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       year: watch.year,
       price: price,
       originalPrice: watch.estimatedMarketValue,
-      currency: 'USD',
+      currency: 'INR',
       condition: watch.condition,
       movement: watch.movement,
       caseMaterial: watch.caseMaterial,
@@ -857,7 +857,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       prev.map((cw) => (cw.id === collectionWatchId ? { ...cw, isListedForSale: true, listingId: newListing.id } : cw))
     );
 
-    showToast('Published to Marketplace', `${watch.brand} ${watch.model} is now listed for $${price.toLocaleString()}!`, 'success');
+    showToast('Published to Marketplace', `${watch.brand} ${watch.model} is now listed for ₹${price.toLocaleString()}!`, 'success');
 
     if (isGatewayConnected) {
       // Inter-service orchestration: CollectorVault microservice creates listing via MarketplaceClient
@@ -1203,7 +1203,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     };
 
     setOffers((prev) => [newOffer, ...prev]);
-    showToast('Offer Submitted', `Your offer of $${offerAmount.toLocaleString()} has been sent to ${watch.sellerName}!`, 'success');
+    showToast('Offer Submitted', `Your offer of ₹${offerAmount.toLocaleString()} has been sent to ${watch.sellerName}!`, 'success');
 
     if (isGatewayConnected) {
       customerOrdersApi.createOffer({

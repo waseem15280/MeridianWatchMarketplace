@@ -7,7 +7,7 @@ import {
   Check,
   Package,
   FileText,
-  DollarSign,
+  IndianRupee,
   Compass,
   X
 } from 'lucide-react';
@@ -137,9 +137,9 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({ onCloseMobile }) =
       {/* Price Range */}
       <div>
         <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-[#78716C] mb-2">
-          <span>Price Range (USD)</span>
+          <span>Price Range (INR)</span>
           <span className="text-[#967139] font-mono text-xs font-bold">
-            ${filters.minPrice.toLocaleString()} - ${filters.maxPrice.toLocaleString()}
+            ₹{filters.minPrice.toLocaleString()} - ₹{filters.maxPrice.toLocaleString()}
           </span>
         </div>
 
@@ -159,7 +159,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({ onCloseMobile }) =
 
           <div className="flex items-center gap-2">
             <div className="flex-1 relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8C7D70] text-xs font-mono">$</span>
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8C7D70] text-xs font-mono">₹</span>
               <input
                 id="min-price-input"
                 type="number"
@@ -173,7 +173,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({ onCloseMobile }) =
             </div>
             <span className="text-[#8C7D70] text-xs">-</span>
             <div className="flex-1 relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8C7D70] text-xs font-mono">$</span>
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8C7D70] text-xs font-mono">₹</span>
               <input
                 id="max-price-input"
                 type="number"

@@ -246,11 +246,11 @@ export const WatchDetailModal: React.FC = () => {
                   </div>
                   <div className="flex items-baseline gap-3 mt-1">
                     <span className="text-3xl font-bold font-mono text-[#1C1917]">
-                      ${selectedWatch.price.toLocaleString()}
+                      ₹{selectedWatch.price.toLocaleString()}
                     </span>
                     {selectedWatch.originalPrice && selectedWatch.originalPrice > selectedWatch.price && (
                       <span className="text-sm text-[#78716C] line-through font-mono">
-                        ${selectedWatch.originalPrice.toLocaleString()}
+                        ₹{selectedWatch.originalPrice.toLocaleString()}
                       </span>
                     )}
                     <span className="text-xs text-[#3D5A45] font-semibold">Free Fully Insured Shipping</span>

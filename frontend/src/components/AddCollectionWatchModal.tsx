@@ -229,7 +229,7 @@ export const AddCollectionWatchModal: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-2xl bg-[#FFFFFF] border border-[#E5DFD5] shadow-2xs">
             <div>
               <label className="block text-xs font-semibold text-[#78716C] uppercase tracking-wider mb-1">
-                Purchase Price (USD)
+                Purchase Price (INR)
               </label>
               <input
                 type="number"
@@ -253,7 +253,7 @@ export const AddCollectionWatchModal: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-[#967139] uppercase tracking-wider mb-1">
-                Est. Market Value ($) *
+                Est. Market Value (₹) *
               </label>
               <input
                 type="number"

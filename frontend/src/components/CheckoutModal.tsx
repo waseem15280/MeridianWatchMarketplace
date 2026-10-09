@@ -224,11 +224,11 @@ export const CheckoutModal: React.FC = () => {
               <div className="p-4 rounded-2xl bg-[#FFFFFF] border border-[#E5DFD5] text-xs space-y-2 font-mono shadow-2xs">
                 <div className="flex items-center justify-between text-[#78716C]">
                   <span>Timepiece Price</span>
-                  <span className="text-[#1C1917] font-semibold">${checkoutWatch.price.toLocaleString()}</span>
+                  <span className="text-[#1C1917] font-semibold">₹{checkoutWatch.price.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between text-[#78716C]">
                   <span>Armored Insured Shipping</span>
-                  <span className="text-[#1C1917] font-semibold">${shippingFee.toLocaleString()}</span>
+                  <span className="text-[#1C1917] font-semibold">₹{shippingFee.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between text-[#3D5A45] font-semibold">
                   <span>Watchmaker Authentication & Escrow</span>
@@ -236,7 +236,7 @@ export const CheckoutModal: React.FC = () => {
                 </div>
                 <div className="pt-2 border-t border-[#E5DFD5] flex items-center justify-between text-sm font-bold text-[#1C1917]">
                   <span>Total Amount</span>
-                  <span className="text-base text-[#967139]">${total.toLocaleString()}</span>
+                  <span className="text-base text-[#967139]">₹{total.toLocaleString()}</span>
                 </div>
               </div>
 
@@ -253,7 +253,7 @@ export const CheckoutModal: React.FC = () => {
                   ) : (
                     <>
                       <Lock className="w-4 h-4 text-[#C5A880]" />
-                      <span>Confirm & Deposit into Escrow (${total.toLocaleString()})</span>
+                      <span>Confirm & Deposit into Escrow (₹{total.toLocaleString()})</span>
                     </>
                   )}
                 </button>

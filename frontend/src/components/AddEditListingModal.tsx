@@ -11,7 +11,7 @@ import {
   ShieldCheck,
   Package,
   FileText,
-  DollarSign,
+  IndianRupee,
   Compass,
   Check
 } from 'lucide-react';
@@ -266,7 +266,7 @@ export const AddEditListingModal: React.FC = () => {
           referenceNumber,
           year,
           price,
-          currency: 'USD',
+          currency: 'INR',
           condition,
           movement,
           caseMaterial,
@@ -403,11 +403,11 @@ export const AddEditListingModal: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-[#57534E] uppercase tracking-wider mb-1.5">
-                Asking Price (USD) *
+                Asking Price (INR) *
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#78716C] text-xs font-mono">
-                  $
+                  ₹
                 </span>
                 <input
                   id="listing-price-input"

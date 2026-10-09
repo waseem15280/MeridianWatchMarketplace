@@ -56,7 +56,7 @@ export const CompareDrawer: React.FC = () => {
                   </div>
                   <div className="font-serif font-bold text-[#1C1917] truncate">{w.model}</div>
                   <div className="text-[11px] font-mono text-[#57534E]">
-                    ${w.price.toLocaleString()} • {w.caseDiameter}mm • {w.condition}
+                    ₹{w.price.toLocaleString()} • {w.caseDiameter}mm • {w.condition}
                   </div>
                 </div>
               </div>

@@ -5,7 +5,7 @@ import {
   PlusCircle,
   TrendingUp,
   TrendingDown,
-  DollarSign,
+  IndianRupee,
   Calendar,
   Layers,
   Edit,
@@ -102,7 +102,7 @@ export const CollectionManager: React.FC = () => {
               Total Vault Value
             </div>
             <div className="text-2xl font-bold text-[#1C1917] font-mono mt-1">
-              ${totalValue.toLocaleString()}
+              ₹{totalValue.toLocaleString()}
             </div>
             <div className="text-[10px] text-[#8C7D70] mt-0.5">Estimated market value</div>
           </div>
@@ -117,7 +117,7 @@ export const CollectionManager: React.FC = () => {
               }`}
             >
               {appreciation >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-              <span>{appreciation >= 0 ? '+' : ''}${Math.abs(appreciation).toLocaleString()}</span>
+              <span>{appreciation >= 0 ? '+' : ''}₹{Math.abs(appreciation).toLocaleString()}</span>
             </div>
             <div className="text-[10px] text-[#8C7D70] mt-0.5">
               {appreciationPercent >= 0 ? '+' : ''}{appreciationPercent.toFixed(1)}% total appreciation
@@ -141,7 +141,7 @@ export const CollectionManager: React.FC = () => {
               Acquisition Cost Base
             </div>
             <div className="text-2xl font-bold text-[#57534E] font-mono mt-1">
-              ${totalCost.toLocaleString()}
+              ₹{totalCost.toLocaleString()}
             </div>
             <div className="text-[10px] text-[#8C7D70] mt-0.5">Historical purchase base</div>
           </div>
@@ -257,7 +257,7 @@ export const CollectionManager: React.FC = () => {
                         Est. Market Valuation
                       </div>
                       <div className="text-base font-bold font-mono text-[#1C1917] mt-0.5">
-                        ${watch.estimatedMarketValue.toLocaleString()}
+                        ₹{watch.estimatedMarketValue.toLocaleString()}
                       </div>
                       {watchGain !== 0 && (
                         <div
@@ -265,7 +265,7 @@ export const CollectionManager: React.FC = () => {
                             watchGain > 0 ? 'text-[#3D5A45]' : 'text-[#9E4738]'
                           }`}
                         >
-                          {watchGain > 0 ? '+' : ''}${watchGain.toLocaleString()} ({watchGainPercent.toFixed(1)}%)
+                          {watchGain > 0 ? '+' : ''}₹{watchGain.toLocaleString()} ({watchGainPercent.toFixed(1)}%)
                         </div>
                       )}
                     </div>
@@ -275,7 +275,7 @@ export const CollectionManager: React.FC = () => {
                         Purchase Base
                       </div>
                       <div className="text-base font-bold font-mono text-[#57534E] mt-0.5">
-                        ${(watch.purchasePrice || watch.estimatedMarketValue).toLocaleString()}
+                        ₹{(watch.purchasePrice || watch.estimatedMarketValue).toLocaleString()}
                       </div>
                       {watch.purchaseDate && (
                         <div className="text-[10px] text-[#8C7D70] font-mono mt-0.5">
@@ -379,10 +379,10 @@ export const CollectionManager: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-[#57534E] uppercase tracking-wider mb-1.5">
-                Asking Price (USD) *
+                Asking Price (INR) *
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8C7D70] text-sm font-mono">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8C7D70] text-sm font-mono">₹</span>
                 <input
                   id="vault-publish-price-input"
                   type="number"
@@ -393,7 +393,7 @@ export const CollectionManager: React.FC = () => {
                 />
               </div>
               <p className="text-[11px] text-[#78716C] mt-1">
-                Estimated market value is ${listModalWatch.estimatedMarketValue.toLocaleString()}
+                Estimated market value is ₹{listModalWatch.estimatedMarketValue.toLocaleString()}
               </p>
             </div>
 

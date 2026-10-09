@@ -33,7 +33,7 @@ export const WishlistView: React.FC = () => {
                 Total Wishlist Value
               </div>
               <div className="text-xl font-bold font-mono text-[#1C1917]">
-                ${totalWishlistValue.toLocaleString()}
+                ₹{totalWishlistValue.toLocaleString()}
               </div>
             </div>
 

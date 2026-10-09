@@ -189,11 +189,11 @@ export const WatchCard: React.FC<WatchCardProps> = ({ watch, onSelect }) => {
         <div className="mt-3 pt-2 flex items-center justify-between border-t border-[#F0ECE6]">
           <div>
             <div className="text-base font-bold text-[#1C1917] font-mono tracking-tight">
-              ${watch.price.toLocaleString()}
+              ₹{watch.price.toLocaleString()}
             </div>
             {watch.originalPrice && watch.originalPrice > watch.price && (
               <div className="text-[10px] text-[#A8A29E] line-through font-mono">
-                ${watch.originalPrice.toLocaleString()}
+                ₹{watch.originalPrice.toLocaleString()}
               </div>
             )}
           </div>

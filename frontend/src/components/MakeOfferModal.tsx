@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMarketplace } from '../context/MarketplaceContext';
-import { X, DollarSign, Send, ShieldCheck, Check } from 'lucide-react';
+import { X, IndianRupee, Send, ShieldCheck, Check } from 'lucide-react';
 import { WatchListing } from '../types';
 
 interface MakeOfferModalProps {
@@ -38,7 +38,7 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({ watch, isOpen, o
       >
         <div className="flex items-center justify-between pb-3 border-b border-[#E5DFD5]">
           <h3 className="text-sm font-serif font-bold text-[#1C1917] flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-[#967139]" />
+            <IndianRupee className="w-4 h-4 text-[#967139]" />
             <span>Submit Direct Offer to Seller</span>
           </h3>
           <button onClick={onClose} className="p-1.5 rounded-lg text-[#78716C] hover:text-[#1C1917] hover:bg-[#EDE8E0] transition-colors">
@@ -60,7 +60,7 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({ watch, isOpen, o
             </div>
             <h4 className="text-sm font-serif font-bold text-[#1C1917]">{watch.model}</h4>
             <div className="text-xs text-[#78716C] font-mono">
-              List Price: ${watch.price.toLocaleString()}
+              List Price: ₹{watch.price.toLocaleString()}
             </div>
           </div>
         </div>
@@ -68,10 +68,10 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({ watch, isOpen, o
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-[#57534E] uppercase tracking-wider mb-1.5">
-              Your Offer Amount (USD) *
+              Your Offer Amount (INR) *
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#78716C] text-sm font-bold">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#78716C] text-sm font-bold">₹</span>
               <input
                 id="offer-price-input"
                 type="number"
