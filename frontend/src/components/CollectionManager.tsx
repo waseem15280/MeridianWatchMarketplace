@@ -200,11 +200,16 @@ export const CollectionManager: React.FC = () => {
                   <div className="flex items-start gap-4">
                     <div className="relative w-28 h-28 rounded-2xl overflow-hidden bg-[#EDE8E0] border border-[#D8D0C5] shrink-0">
                       <img
-                        src={watch.images[0]}
+                        src={watch.images?.[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80'}
                         alt={watch.model}
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover"
                       />
+                      {watch.images && watch.images.length > 1 && (
+                        <span className="absolute top-1 left-1 bg-[#1C1917]/85 text-[9px] font-bold px-1.5 py-0.5 rounded text-[#C5A880]">
+                          {watch.images.length} photos
+                        </span>
+                      )}
                       <span className="absolute bottom-1 right-1 bg-[#1C1917]/85 text-[10px] font-mono px-1.5 py-0.5 rounded text-[#FAF8F5]">
                         {watch.year}
                       </span>
