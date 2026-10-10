@@ -91,19 +91,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     };
   }, [isAccountMenuOpen]);
 
-  // Close open modals on Escape key
-  useEffect(() => {
-    const handleModalEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (isAddAccountModalOpen) setIsAddAccountModalOpen(false);
-        if (isLoginModalOpen) setIsLoginModalOpen(false);
-        if (isRegisterModalOpen) setIsRegisterModalOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handleModalEscape);
-    return () => window.removeEventListener('keydown', handleModalEscape);
-  }, [isAddAccountModalOpen, isLoginModalOpen, isRegisterModalOpen]);
-
   const [searchInput, setSearchInput] = useState(filters.searchQuery);
 
   // Persona Creation Modal State
@@ -131,6 +118,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
   const [registerBio, setRegisterBio] = useState('');
   const [registerError, setRegisterError] = useState('');
   const [isSubmittingRegister, setIsSubmittingRegister] = useState(false);
+
+  // Close open modals on Escape key
+  useEffect(() => {
+    const handleModalEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isAddAccountModalOpen) setIsAddAccountModalOpen(false);
+        if (isLoginModalOpen) setIsLoginModalOpen(false);
+        if (isRegisterModalOpen) setIsRegisterModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleModalEscape);
+    return () => window.removeEventListener('keydown', handleModalEscape);
+  }, [isAddAccountModalOpen, isLoginModalOpen, isRegisterModalOpen]);
 
   const getRoleBadge = (role: UserRole) => {
     switch (role) {
