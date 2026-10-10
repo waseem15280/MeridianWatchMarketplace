@@ -173,16 +173,29 @@ export const WatchCard: React.FC<WatchCardProps> = ({ watch, onSelect }) => {
           </button>
 
           {/* Star Rating based on buyer feedback */}
-          <div
-            id={`seller-rating-${watch.id}`}
-            onClick={handleSellerClick}
-            className="flex items-center gap-1 bg-[#C5A880]/20 border border-[#C5A880]/40 px-2 py-0.5 rounded-lg text-[#78592A] text-xs font-semibold hover:bg-[#C5A880]/30 transition-colors cursor-pointer"
-            title={`Seller rating ${watch.sellerRating} / 5.0 from ${watch.sellerReviewCount} verified buyer reviews`}
-          >
-            <Star className="w-3 h-3 fill-[#C5A880] text-[#967139]" />
-            <span>{watch.sellerRating.toFixed(1)}</span>
-            <span className="text-[10px] text-[#8C7D70] font-normal">({watch.sellerReviewCount})</span>
-          </div>
+          {watch.sellerReviewCount > 0 && watch.sellerRating > 0 ? (
+            <div
+              id={`seller-rating-${watch.id}`}
+              onClick={handleSellerClick}
+              className="flex items-center gap-1 bg-[#C5A880]/20 border border-[#C5A880]/40 px-2 py-0.5 rounded-lg text-[#78592A] text-xs font-semibold hover:bg-[#C5A880]/30 transition-colors cursor-pointer"
+              title={`Seller rating ${watch.sellerRating.toFixed(1)} / 5.0 from ${watch.sellerReviewCount} verified buyer reviews`}
+            >
+              <Star className="w-3 h-3 fill-[#C5A880] text-[#967139]" />
+              <span>{watch.sellerRating.toFixed(1)}</span>
+              <span className="text-[10px] text-[#8C7D70] font-normal">({watch.sellerReviewCount})</span>
+            </div>
+          ) : (
+            <div
+              id={`seller-rating-${watch.id}`}
+              onClick={handleSellerClick}
+              className="flex items-center gap-1 bg-[#EDE8E0] border border-[#D8D0C5] px-2 py-0.5 rounded-lg text-[#78716C] text-xs font-medium hover:bg-[#E2DCD2] transition-colors cursor-pointer"
+              title="New seller with no reviews yet"
+            >
+              <Star className="w-3 h-3 text-[#B8AEA3]" />
+              <span>New</span>
+              <span className="text-[10px] text-[#A8A29E] font-normal">(0)</span>
+            </div>
+          )}
         </div>
 
         {/* Price and Action Bar */}

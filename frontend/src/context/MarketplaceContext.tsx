@@ -40,7 +40,7 @@ export const GUEST_ACCOUNT: UserAccount = {
   memberSince: new Date().getFullYear().toString(),
   verifiedDealer: false,
   bio: 'Exploring The Heritage Club as a guest.',
-  rating: 5.0,
+  rating: 0,
   reviewCount: 0,
   totalSalesCount: 0,
   responseRate: '100%',
@@ -48,6 +48,20 @@ export const GUEST_ACCOUNT: UserAccount = {
   isDefault: true
 };
 GUEST_LOGIN.accounts = [GUEST_ACCOUNT];
+
+export const sanitizeAccount = (acc: UserAccount): UserAccount => {
+  if (!acc.reviewCount || acc.reviewCount === 0) {
+    return { ...acc, rating: 0, reviewCount: 0 };
+  }
+  return acc;
+};
+
+export const sanitizeListing = (listing: WatchListing): WatchListing => {
+  if (!listing.sellerReviewCount || listing.sellerReviewCount === 0) {
+    return { ...listing, sellerRating: 0, sellerReviewCount: 0 };
+  }
+  return listing;
+};
 
 const EMPTY_USER = GUEST_ACCOUNT;
 const EMPTY_LOGIN = GUEST_LOGIN;
@@ -223,7 +237,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (savedLoginId && savedLoginId !== 'guest' && saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed.map(sanitizeAccount);
       } catch {
         // fallback
       }
@@ -241,7 +255,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const [listings, setListings] = useState<WatchListing[]>(() => {
     const saved = localStorage.getItem('chronos_listings');
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved).map(sanitizeListing) : [];
   });
 
   const [collection, setCollection] = useState<CollectionWatch[]>(() => {
@@ -383,9 +397,10 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       ]);
 
       if (listingsRes.status === 'fulfilled' && Array.isArray(listingsRes.value)) {
-        setListings(listingsRes.value);
+        const sanitized = listingsRes.value.map(sanitizeListing);
+        setListings(sanitized);
         try {
-          localStorage.setItem('chronos_listings', JSON.stringify(listingsRes.value));
+          localStorage.setItem('chronos_listings', JSON.stringify(sanitized));
         } catch (e) {
           console.warn('Could not cache listings in localStorage', e);
         }
@@ -413,9 +428,10 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         try {
           const userAccounts = await userManagementApi.getLoginAccounts(currentLoginId);
           if (Array.isArray(userAccounts) && userAccounts.length > 0) {
-            setAccounts(userAccounts);
+            const sanitizedAccs = userAccounts.map(sanitizeAccount);
+            setAccounts(sanitizedAccs);
             try {
-              localStorage.setItem('chronos_accounts', JSON.stringify(userAccounts));
+              localStorage.setItem('chronos_accounts', JSON.stringify(sanitizedAccs));
             } catch (e) {
               console.warn('Could not cache accounts in localStorage', e);
             }
@@ -519,9 +535,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const currentUser = useMemo(() => {
     if (!isLoggedIn) return GUEST_ACCOUNT;
     const user = accounts.find((acc) => acc.id === currentUserId);
-    if (user) return user;
-    if (userAccounts.length > 0) return userAccounts[0];
-    return accounts[0] || GUEST_ACCOUNT;
+    const activeAcc = user || (userAccounts.length > 0 ? userAccounts[0] : (accounts[0] || GUEST_ACCOUNT));
+    return sanitizeAccount(activeAcc);
   }, [accounts, currentUserId, userAccounts, isLoggedIn]);
 
   const switchUser = (userId: string) => {
@@ -689,7 +704,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       memberSince: new Date().getFullYear().toString(),
       verifiedDealer: data.role === 'seller',
       bio: data.bio || `${data.role.toUpperCase()} profile persona for ${data.accountName}`,
-      rating: 5.0,
+      rating: 0,
       reviewCount: 0,
       totalSalesCount: 0,
       responseRate: '100%',
@@ -730,7 +745,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       memberSince: new Date().getFullYear().toString(),
       verifiedDealer: role === 'seller',
       bio: bio || `${role.toUpperCase()} profile persona for ${name}`,
-      rating: 5.0,
+      rating: 0,
       reviewCount: 0,
       totalSalesCount: 0,
       responseRate: '100%',
@@ -751,10 +766,11 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
           isDefault: false
         });
         if (created && created.id) {
-          setAccounts((prev) => [...prev, created]);
-          setCurrentUserId(created.id);
-          showToast('New Persona Created', `Switched to ${created.name} (${created.role.toUpperCase()})`, 'success');
-          return created;
+          const sanitizedCreated = sanitizeAccount(created);
+          setAccounts((prev) => [...prev, sanitizedCreated]);
+          setCurrentUserId(sanitizedCreated.id);
+          showToast('New Persona Created', `Switched to ${sanitizedCreated.name} (${sanitizedCreated.role.toUpperCase()})`, 'success');
+          return sanitizedCreated;
         }
       } catch (err) {
         console.warn('Backend create account failed:', err);

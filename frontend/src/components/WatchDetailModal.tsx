@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMarketplace } from '../context/MarketplaceContext';
 import {
   X,
@@ -43,6 +43,18 @@ export const WatchDetailModal: React.FC = () => {
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!selectedWatch) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedWatch(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedWatch, setSelectedWatch]);
+
   if (!selectedWatch) return null;
 
   const isWishlisted = isInWishlist(selectedWatch.id);
@@ -78,9 +90,13 @@ export const WatchDetailModal: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-xs">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-xs"
+        onClick={() => setSelectedWatch(null)}
+      >
         <motion.div
           id="watch-detail-modal"
+          onClick={(e) => e.stopPropagation()}
           initial={{ opacity: 0, scale: 0.96, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 15 }}
@@ -327,11 +343,20 @@ export const WatchDetailModal: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-2 text-xs text-[#78716C] mt-0.5">
-                        <span className="flex items-center gap-1 text-[#967139] font-bold">
-                          <Star className="w-3.5 h-3.5 fill-[#967139]" />
-                          {selectedWatch.sellerRating.toFixed(2)}
-                        </span>
-                        <span>({selectedWatch.sellerReviewCount} verified reviews)</span>
+                        {selectedWatch.sellerReviewCount > 0 && selectedWatch.sellerRating > 0 ? (
+                          <>
+                            <span className="flex items-center gap-1 text-[#967139] font-bold">
+                              <Star className="w-3.5 h-3.5 fill-[#967139]" />
+                              {selectedWatch.sellerRating.toFixed(2)}
+                            </span>
+                            <span>({selectedWatch.sellerReviewCount} verified reviews)</span>
+                          </>
+                        ) : (
+                          <span className="flex items-center gap-1 text-[#78716C] font-medium">
+                            <Star className="w-3.5 h-3.5 text-[#B8AEA3]" />
+                            <span>No ratings yet (0 reviews)</span>
+                          </span>
+                        )}
                       </div>
 
                       <div className="text-[11px] text-[#78716C] mt-1 flex items-center gap-3">

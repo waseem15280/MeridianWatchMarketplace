@@ -71,16 +71,16 @@ export const AddCollectionWatchModal: React.FC = () => {
 
   useEffect(() => {
     if (editingCollectionWatch) {
-      setBrand(editingCollectionWatch.brand || 'HMT');
+      setBrand(editingCollectionWatch.brand || '');
       setModel(editingCollectionWatch.model || '');
       setReferenceNumber(editingCollectionWatch.referenceNumber || '');
-      setYear(editingCollectionWatch.year || 2024);
+      setYear(editingCollectionWatch.year || '');
       setSerialNumber(editingCollectionWatch.serialNumber || '');
-      setCaseDiameter(editingCollectionWatch.caseDiameter || 40);
-      setCaseMaterial(editingCollectionWatch.caseMaterial || 'Stainless Steel');
-      setMovement(editingCollectionWatch.movement || 'Automatic');
-      setDialColor(editingCollectionWatch.dialColor || 'Black');
-      setCondition(editingCollectionWatch.condition || 'Mint');
+      setCaseDiameter(editingCollectionWatch.caseDiameter || '');
+      setCaseMaterial(editingCollectionWatch.caseMaterial || '');
+      setMovement(editingCollectionWatch.movement || '');
+      setDialColor(editingCollectionWatch.dialColor || '');
+      setCondition(editingCollectionWatch.condition || '');
       setPurchasePrice(editingCollectionWatch.purchasePrice ?? '');
       setPurchaseDate(editingCollectionWatch.purchaseDate || '');
       setEstimatedMarketValue(editingCollectionWatch.estimatedMarketValue ?? '');
@@ -94,16 +94,16 @@ export const AddCollectionWatchModal: React.FC = () => {
         }))
       );
     } else {
-      setBrand('HMT');
+      setBrand('');
       setModel('');
       setReferenceNumber('');
       setSerialNumber('');
-      setYear(2024);
-      setCaseDiameter(40);
-      setCaseMaterial('Stainless Steel');
-      setMovement('Automatic');
-      setDialColor('Black');
-      setCondition('Mint');
+      setYear('');
+      setCaseDiameter('');
+      setCaseMaterial('');
+      setMovement('');
+      setDialColor('');
+      setCondition('');
       setPurchasePrice('');
       setPurchaseDate('');
       setEstimatedMarketValue('');
@@ -236,7 +236,7 @@ export const AddCollectionWatchModal: React.FC = () => {
       const parsedPrice = purchasePrice !== '' ? Number(purchasePrice) : undefined;
       const parsedMarketValue = estimatedMarketValue !== '' ? Number(estimatedMarketValue) : (parsedPrice ?? 0);
       const parsedYear = year !== '' ? Number(year) : new Date().getFullYear();
-      const parsedDiameter = caseDiameter !== '' ? Number(caseDiameter) : 40;
+      const parsedDiameter = caseDiameter !== '' ? Number(caseDiameter) : 0;
 
       if (editingCollectionWatch) {
         await updateCollectionWatch(editingCollectionWatch.id, {

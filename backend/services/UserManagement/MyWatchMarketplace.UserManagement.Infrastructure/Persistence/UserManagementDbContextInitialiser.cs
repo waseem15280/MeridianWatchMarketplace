@@ -212,7 +212,7 @@ public class UserManagementDbContextInitialiser
                         MemberSince = "2020",
                         VerifiedDealer = true,
                         Bio = "Global compliance, escrow dispute resolution, and marketplace administration.",
-                        Rating = 5.0,
+                        Rating = 0.0,
                         ReviewCount = 0,
                         TotalSalesCount = 0,
                         ResponseRate = "100%",

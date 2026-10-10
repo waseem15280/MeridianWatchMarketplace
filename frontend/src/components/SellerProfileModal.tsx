@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMarketplace } from '../context/MarketplaceContext';
 import {
   X,
@@ -32,6 +32,18 @@ export const SellerProfileModal: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'listings' | 'reviews'>('listings');
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!selectedSeller) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedSeller(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedSeller, setSelectedSeller]);
+
   if (!selectedSeller) return null;
 
   const sellerReviews = getSellerReviews(selectedSeller.id);
@@ -56,9 +68,13 @@ export const SellerProfileModal: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-xs">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/60 backdrop-blur-xs"
+        onClick={() => setSelectedSeller(null)}
+      >
         <motion.div
           id="seller-profile-modal"
+          onClick={(e) => e.stopPropagation()}
           initial={{ opacity: 0, scale: 0.96, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 15 }}
@@ -137,19 +153,46 @@ export const SellerProfileModal: React.FC = () => {
                   Buyer Trust Rating
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                  <span className="text-4xl font-bold font-mono text-[#967139]">
-                    {selectedSeller.rating.toFixed(2)}
-                  </span>
-                  <div className="text-left">
-                    <div className="flex items-center text-[#967139]">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-3.5 h-3.5 fill-[#967139]" />
-                      ))}
-                    </div>
-                    <span className="text-[11px] text-[#78716C] font-mono">
-                      {selectedSeller.reviewCount} verified reviews
-                    </span>
-                  </div>
+                  {selectedSeller.reviewCount > 0 && selectedSeller.rating > 0 ? (
+                    <>
+                      <span className="text-4xl font-bold font-mono text-[#967139]">
+                        {selectedSeller.rating.toFixed(2)}
+                      </span>
+                      <div className="text-left">
+                        <div className="flex items-center text-[#967139]">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-3.5 h-3.5 ${
+                                i < Math.round(selectedSeller.rating)
+                                  ? 'fill-[#967139] text-[#967139]'
+                                  : 'text-[#D8D0C5]'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-[11px] text-[#78716C] font-mono">
+                          {selectedSeller.reviewCount} verified reviews
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-3xl font-bold font-mono text-[#78716C]">
+                        N/A
+                      </span>
+                      <div className="text-left">
+                        <div className="flex items-center text-[#D8D0C5]">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className="w-3.5 h-3.5 text-[#D8D0C5]" />
+                          ))}
+                        </div>
+                        <span className="text-[11px] text-[#78716C] font-mono">
+                          No ratings yet
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <button

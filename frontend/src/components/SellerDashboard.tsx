@@ -139,12 +139,19 @@ export const SellerDashboard: React.FC = () => {
             <div className="text-[#78716C] text-[11px] uppercase tracking-wider font-semibold">
               Seller Rating
             </div>
-            <div className="text-2xl font-bold text-[#967139] font-mono mt-1 flex items-center gap-1.5">
-              <Star className="w-5 h-5 fill-[#967139] text-[#967139]" />
-              <span>{currentUser.rating.toFixed(2)}</span>
-            </div>
+            {myReviews.length > 0 && currentUser.rating > 0 ? (
+              <div className="text-2xl font-bold text-[#967139] font-mono mt-1 flex items-center gap-1.5">
+                <Star className="w-5 h-5 fill-[#967139] text-[#967139]" />
+                <span>{currentUser.rating.toFixed(2)}</span>
+              </div>
+            ) : (
+              <div className="text-2xl font-bold text-[#78716C] font-mono mt-1 flex items-center gap-1.5">
+                <Star className="w-5 h-5 text-[#B8AEA3]" />
+                <span>N/A</span>
+              </div>
+            )}
             <div className="text-[10px] text-[#78716C] mt-0.5 font-mono">
-              From {myReviews.length} buyer reviews
+              {myReviews.length > 0 ? `From ${myReviews.length} buyer reviews` : 'No reviews received yet'}
             </div>
           </div>
 
@@ -472,10 +479,17 @@ export const SellerDashboard: React.FC = () => {
             <h3 className="text-sm font-serif font-bold text-[#1C1917] uppercase tracking-wider">
               Customer Feedback ({myReviews.length} verified ratings)
             </h3>
-            <div className="flex items-center gap-1.5 text-[#967139] text-xs font-bold bg-[#C5A880]/20 px-3 py-1 rounded-xl border border-[#C5A880]/40">
-              <Star className="w-4 h-4 fill-[#967139]" />
-              <span>Overall Average: {currentUser.rating.toFixed(2)} / 5.0</span>
-            </div>
+            {myReviews.length > 0 && currentUser.rating > 0 ? (
+              <div className="flex items-center gap-1.5 text-[#967139] text-xs font-bold bg-[#C5A880]/20 px-3 py-1 rounded-xl border border-[#C5A880]/40">
+                <Star className="w-4 h-4 fill-[#967139]" />
+                <span>Overall Average: {currentUser.rating.toFixed(2)} / 5.0</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-[#78716C] text-xs font-medium bg-[#EDE8E0] px-3 py-1 rounded-xl border border-[#D8D0C5]">
+                <Star className="w-4 h-4 text-[#B8AEA3]" />
+                <span>No ratings yet</span>
+              </div>
+            )}
           </div>
 
           {myReviews.length === 0 ? (

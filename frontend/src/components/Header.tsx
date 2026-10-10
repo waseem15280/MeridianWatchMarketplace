@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useMarketplace } from '../context/MarketplaceContext';
 import {
   Watch,
@@ -59,6 +59,51 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
   const isAdmin = currentUser?.role === 'admin' || userAccounts.some((acc) => acc.role === 'admin');
 
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close account menu on click outside or escape key
+  useEffect(() => {
+    if (!isAccountMenuOpen) return;
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        accountMenuRef.current &&
+        !accountMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsAccountMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsAccountMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isAccountMenuOpen]);
+
+  // Close open modals on Escape key
+  useEffect(() => {
+    const handleModalEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isAddAccountModalOpen) setIsAddAccountModalOpen(false);
+        if (isLoginModalOpen) setIsLoginModalOpen(false);
+        if (isRegisterModalOpen) setIsRegisterModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleModalEscape);
+    return () => window.removeEventListener('keydown', handleModalEscape);
+  }, [isAddAccountModalOpen, isLoginModalOpen, isRegisterModalOpen]);
+
   const [searchInput, setSearchInput] = useState(filters.searchQuery);
 
   // Persona Creation Modal State
@@ -388,7 +433,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
             </button>
 
             {/* Account Switcher Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={accountMenuRef}>
               <button
                 id="account-switcher-toggle"
                 onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
@@ -413,7 +458,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                     {isLoggedIn && (
                       <>
                         <span>•</span>
-                        <span>★ {currentUser.rating}</span>
+                        <span>
+                          {currentUser.reviewCount > 0 && currentUser.rating > 0
+                            ? `★ ${currentUser.rating.toFixed(1)}`
+                            : '★ New'}
+                        </span>
                       </>
                     )}
                   </div>
@@ -529,10 +578,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                             <p className="text-[11px] text-[#78716C] truncate">{currentUser.email}</p>
                             <div className="mt-0.5">{getRoleBadge(currentUser.role)}</div>
                             <div className="flex items-center gap-2 mt-1 text-[11px] text-[#57534E]">
-                              <span className="flex items-center gap-1 text-[#967139] font-medium">
-                                <Star className="w-3 h-3 fill-[#C5A880] text-[#967139]" />
-                                {currentUser.rating} ({currentUser.reviewCount})
-                              </span>
+                              {currentUser.reviewCount > 0 && currentUser.rating > 0 ? (
+                                <span className="flex items-center gap-1 text-[#967139] font-medium">
+                                  <Star className="w-3 h-3 fill-[#C5A880] text-[#967139]" />
+                                  {currentUser.rating.toFixed(1)} ({currentUser.reviewCount})
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-[#78716C] font-medium">
+                                  <Star className="w-3 h-3 text-[#B8AEA3]" />
+                                  New (0 reviews)
+                                </span>
+                              )}
                               <span className="text-[#C5A880]">•</span>
                               <span className="text-[#78716C]">{currentUser.totalSalesCount} sales</span>
                               <span className="text-[#78716C]">{currentUser.location.split(',')[0]}</span>
@@ -681,8 +737,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
 
     {/* Add Role Persona Modal */}
     {isAddAccountModalOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in overflow-y-auto">
-        <div className="relative bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 my-auto max-h-[90vh] flex flex-col">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in overflow-y-auto"
+        onClick={() => setIsAddAccountModalOpen(false)}
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="relative bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 my-auto max-h-[90vh] flex flex-col"
+        >
             <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-4 mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-[#C5A880]/20 flex items-center justify-center">
@@ -804,8 +866,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
 
       {/* Log In Modal */}
       {isLoginModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in overflow-y-auto">
-          <div className="relative bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 my-auto max-h-[90vh] flex flex-col">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in overflow-y-auto"
+          onClick={() => setIsLoginModalOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 my-auto max-h-[90vh] flex flex-col"
+          >
             <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-4 mb-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-[#C5A880]/20 flex items-center justify-center">
@@ -905,8 +973,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
 
       {/* Register Modal */}
       {isRegisterModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in overflow-y-auto">
-          <div className="relative bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 my-auto max-h-[90vh] flex flex-col">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in overflow-y-auto"
+          onClick={() => setIsRegisterModalOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden p-6 my-auto max-h-[90vh] flex flex-col"
+          >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-4 mb-4 shrink-0">
               <div className="flex items-center gap-2.5">
