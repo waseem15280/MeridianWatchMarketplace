@@ -56,6 +56,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     showToast
   } = useMarketplace();
 
+  const isAdmin = currentUser?.role === 'admin' || userAccounts.some((acc) => acc.role === 'admin');
+
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [searchInput, setSearchInput] = useState(filters.searchQuery);
 
@@ -218,47 +220,48 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
             </span>
           </div>
 
-          <div className="flex items-center gap-3 text-xs">
-            <button
-              id="probe-gateway-btn"
-              onClick={handleProbeGateway}
-              disabled={isSyncing}
-              title={
-                isGatewayConnected
-                  ? "API Gateway (:5000) Active. Click to probe and re-sync microservices."
-                  : "API Gateway is offline. Click to probe connection (:5000)."
-              }
-              className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-medium transition-all ${
-                isSyncing ? 'opacity-75 cursor-wait' : 'cursor-pointer hover:shadow-xs'
-              } ${
-                isGatewayConnected
-                  ? 'bg-[#52B788]/20 text-[#52B788] border border-[#52B788]/40 hover:bg-[#52B788]/30'
-                  : 'bg-[#D4A373]/20 text-[#E8CDA3] border border-[#D4A373]/40 hover:bg-[#D4A373]/30'
-              }`}
-            >
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  isSyncing
-                    ? 'bg-[#E8CDA3] animate-ping'
-                    : isGatewayConnected
-                    ? 'bg-[#52B788] animate-pulse'
-                    : 'bg-[#D4A373]'
+          {isAdmin && (
+            <div className="flex items-center gap-3 text-xs">
+              <button
+                id="probe-gateway-btn"
+                onClick={handleProbeGateway}
+                disabled={isSyncing}
+                title={
+                  isGatewayConnected
+                    ? "API Gateway (:5000) Active. Click to probe and re-sync microservices."
+                    : "API Gateway is offline. Click to probe connection (:5000)."
+                }
+                className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-medium transition-all ${
+                  isSyncing ? 'opacity-75 cursor-wait' : 'cursor-pointer hover:shadow-xs'
+                } ${
+                  isGatewayConnected
+                    ? 'bg-[#52B788]/20 text-[#52B788] border border-[#52B788]/40 hover:bg-[#52B788]/30'
+                    : 'bg-[#D4A373]/20 text-[#E8CDA3] border border-[#D4A373]/40 hover:bg-[#D4A373]/30'
                 }`}
-              ></span>
-              <span>
-                {isSyncing
-                  ? 'Syncing Microservices...'
-                  : isGatewayConnected
-                  ? 'API Gateway (:5000) Active'
-                  : 'Local Cache Mode'}
-              </span>
-              <RefreshCw className={`w-3 h-3 ml-0.5 opacity-70 ${isSyncing ? 'animate-spin' : ''}`} />
-            </button>
-            <div className="hidden sm:flex items-center gap-1.5 text-[#8E867E]">
-              <span>6 Microservices</span>
-              
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    isSyncing
+                      ? 'bg-[#E8CDA3] animate-ping'
+                      : isGatewayConnected
+                      ? 'bg-[#52B788] animate-pulse'
+                      : 'bg-[#D4A373]'
+                  }`}
+                ></span>
+                <span>
+                  {isSyncing
+                    ? 'Syncing Microservices...'
+                    : isGatewayConnected
+                    ? 'API Gateway (:5000) Active'
+                    : 'Local Cache Mode'}
+                </span>
+                <RefreshCw className={`w-3 h-3 ml-0.5 opacity-70 ${isSyncing ? 'animate-spin' : ''}`} />
+              </button>
+              <div className="hidden sm:flex items-center gap-1.5 text-[#8E867E]">
+                <span>6 Microservices</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
