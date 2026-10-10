@@ -22,7 +22,8 @@ import {
   KeyRound,
   CheckCircle,
   Users,
-  ShieldAlert
+  ShieldAlert,
+  RefreshCw
 } from 'lucide-react';
 import { ActiveTab, UserRole } from '../types';
 
@@ -51,7 +52,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     setFilters,
     isGatewayConnected,
     isSyncing,
-    refreshData
+    refreshData,
+    showToast
   } = useMarketplace();
 
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -177,6 +179,20 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     }
   };
 
+  const handleProbeGateway = async () => {
+    if (isSyncing) return;
+    try {
+      const connected = await refreshData();
+      if (connected) {
+        showToast('Gateway Connected', 'Connected to API Gateway (:5000) and synced with microservices.', 'success');
+      } else {
+        showToast('Gateway Unreachable', 'Could not reach API Gateway at :5000. Running in Local Cache Mode.', 'warning');
+      }
+    } catch {
+      showToast('Gateway Unreachable', 'Could not reach API Gateway at :5000. Running in Local Cache Mode.', 'warning');
+    }
+  };
+
   const navItems: { id: ActiveTab; label: string; icon: React.FC<{ className?: string }>; count?: number }[] = [
     { id: 'explore', label: 'Marketplace', icon: Watch },
     { id: 'collection', label: 'My Watch Vault', icon: Box },
@@ -204,9 +220,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
 
           <div className="flex items-center gap-3 text-xs">
             <button
-              onClick={() => refreshData()}
-              title="Click to probe API Gateway and sync data with microservices"
+              id="probe-gateway-btn"
+              onClick={handleProbeGateway}
+              disabled={isSyncing}
+              title={
+                isGatewayConnected
+                  ? "API Gateway (:5000) Active. Click to probe and re-sync microservices."
+                  : "API Gateway is offline. Click to probe connection (:5000)."
+              }
               className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-medium transition-all ${
+                isSyncing ? 'opacity-75 cursor-wait' : 'cursor-pointer hover:shadow-xs'
+              } ${
                 isGatewayConnected
                   ? 'bg-[#52B788]/20 text-[#52B788] border border-[#52B788]/40 hover:bg-[#52B788]/30'
                   : 'bg-[#D4A373]/20 text-[#E8CDA3] border border-[#D4A373]/40 hover:bg-[#D4A373]/30'
@@ -214,7 +238,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
             >
               <span
                 className={`w-2 h-2 rounded-full ${
-                  isGatewayConnected ? 'bg-[#52B788] animate-pulse' : 'bg-[#D4A373]'
+                  isSyncing
+                    ? 'bg-[#E8CDA3] animate-ping'
+                    : isGatewayConnected
+                    ? 'bg-[#52B788] animate-pulse'
+                    : 'bg-[#D4A373]'
                 }`}
               ></span>
               <span>
@@ -224,6 +252,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   ? 'API Gateway (:5000) Active'
                   : 'Local Cache Mode'}
               </span>
+              <RefreshCw className={`w-3 h-3 ml-0.5 opacity-70 ${isSyncing ? 'animate-spin' : ''}`} />
             </button>
             <div className="hidden sm:flex items-center gap-1.5 text-[#8E867E]">
               <span>6 Microservices</span>

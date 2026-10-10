@@ -63,7 +63,7 @@ interface MarketplaceContextType {
   // Backend & Gateway Connectivity
   isGatewayConnected: boolean;
   isSyncing: boolean;
-  refreshData: () => Promise<void>;
+  refreshData: () => Promise<boolean>;
 
   // User & Accounts
   // Authentication & Login (Separated from accounts)
@@ -198,7 +198,7 @@ const MarketplaceContext = createContext<MarketplaceContextType | undefined>(und
 
 export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Load initial local states with localStorage fallback (defaults to GUEST if no saved authenticated session)
-  const [currentLoginId, setCurrentLoginId] = useState<string>(() => {
+  const [currentLoginId, setCurrentLoginId] = useState<string | number>(() => {
     const saved = localStorage.getItem('chronos_current_login_id');
     return saved && saved !== 'guest' ? saved : GUEST_LOGIN.id;
   });
@@ -231,10 +231,10 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return [GUEST_ACCOUNT];
   });
 
-  const [currentUserId, setCurrentUserId] = useState<string>(() => {
+  const [currentUserId, setCurrentUserId] = useState<string | number>(() => {
     const savedLoginId = localStorage.getItem('chronos_current_login_id');
     const saved = localStorage.getItem('chronos_current_user_id');
-    return savedLoginId && savedLoginId !== 'guest' && saved ? saved : GUEST_ACCOUNT.id;
+    return savedLoginId && savedLoginId !== 'guest' ? saved : GUEST_ACCOUNT.id;
   });
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('explore');
@@ -313,7 +313,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [availableLogins]);
 
   useEffect(() => {
-    localStorage.setItem('chronos_current_login_id', currentLoginId);
+    localStorage.setItem('chronos_current_login_id', String(currentLoginId));
   }, [currentLoginId]);
 
   useEffect(() => {
@@ -321,7 +321,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [accounts]);
 
   useEffect(() => {
-    localStorage.setItem('chronos_current_user_id', currentUserId);
+    localStorage.setItem('chronos_current_user_id', String(currentUserId));
   }, [currentUserId]);
 
   useEffect(() => {
@@ -352,14 +352,14 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [isGatewayConnected, setIsGatewayConnected] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
-  const refreshData = async () => {
+  const refreshData = async (): Promise<boolean> => {
     setIsSyncing(true);
     try {
       const isHealthy = await checkGatewayHealth();
       setIsGatewayConnected(isHealthy);
       if (!isHealthy) {
         setIsSyncing(false);
-        return;
+        return false;
       }
 
       // Query catalog and operational microservices in parallel via YARP Gateway (:5000)
@@ -384,16 +384,28 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
       if (listingsRes.status === 'fulfilled' && Array.isArray(listingsRes.value)) {
         setListings(listingsRes.value);
-        localStorage.setItem('chronos_listings', JSON.stringify(listingsRes.value));
+        try {
+          localStorage.setItem('chronos_listings', JSON.stringify(listingsRes.value));
+        } catch (e) {
+          console.warn('Could not cache listings in localStorage', e);
+        }
       }
       if (collectionRes.status === 'fulfilled' && Array.isArray(collectionRes.value)) {
         setCollection(collectionRes.value);
-        localStorage.setItem('chronos_collection', JSON.stringify(collectionRes.value));
+        try {
+          localStorage.setItem('chronos_collection', JSON.stringify(collectionRes.value));
+        } catch (e) {
+          console.warn('Could not cache collection in localStorage', e);
+        }
       }
       if (wishlistRes.status === 'fulfilled' && Array.isArray(wishlistRes.value)) {
-        const ids = wishlistRes.value.map((item) => item.listingId);
+        const ids = wishlistRes.value.map((item) => String(item.listingId));
         setWishlist(ids);
-        localStorage.setItem('chronos_wishlist', JSON.stringify(ids));
+        try {
+          localStorage.setItem('chronos_wishlist', JSON.stringify(ids));
+        } catch (e) {
+          console.warn('Could not cache wishlist in localStorage', e);
+        }
       }
 
       // If user is already authenticated in localStorage, refresh ONLY their accounts
@@ -402,7 +414,11 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
           const userAccounts = await userManagementApi.getLoginAccounts(currentLoginId);
           if (Array.isArray(userAccounts) && userAccounts.length > 0) {
             setAccounts(userAccounts);
-            localStorage.setItem('chronos_accounts', JSON.stringify(userAccounts));
+            try {
+              localStorage.setItem('chronos_accounts', JSON.stringify(userAccounts));
+            } catch (e) {
+              console.warn('Could not cache accounts in localStorage', e);
+            }
           }
         } catch (accErr) {
           console.warn('Could not refresh accounts for active login:', accErr);
@@ -413,19 +429,34 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
       if (reviewsRes.status === 'fulfilled' && Array.isArray(reviewsRes.value)) {
         setReviews(reviewsRes.value);
-        localStorage.setItem('chronos_reviews', JSON.stringify(reviewsRes.value));
+        try {
+          localStorage.setItem('chronos_reviews', JSON.stringify(reviewsRes.value));
+        } catch (e) {
+          console.warn('Could not cache reviews in localStorage', e);
+        }
       }
       if (ordersRes.status === 'fulfilled' && Array.isArray(ordersRes.value)) {
         setOrders(ordersRes.value);
-        localStorage.setItem('chronos_orders', JSON.stringify(ordersRes.value));
+        try {
+          localStorage.setItem('chronos_orders', JSON.stringify(ordersRes.value));
+        } catch (e) {
+          console.warn('Could not cache orders in localStorage', e);
+        }
       }
       if (offersRes.status === 'fulfilled' && Array.isArray(offersRes.value)) {
         setOffers(offersRes.value);
-        localStorage.setItem('chronos_offers', JSON.stringify(offersRes.value));
+        try {
+          localStorage.setItem('chronos_offers', JSON.stringify(offersRes.value));
+        } catch (e) {
+          console.warn('Could not cache offers in localStorage', e);
+        }
       }
+      return true;
     } catch (err) {
       console.warn('Backend microservices sync error:', err);
-      setIsGatewayConnected(false);
+      const recheck = await checkGatewayHealth().catch(() => false);
+      setIsGatewayConnected(recheck);
+      return recheck;
     } finally {
       setIsSyncing(false);
     }
@@ -433,6 +464,37 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   useEffect(() => {
     refreshData();
+
+    // Background health check & auto-reconnect every 15 seconds
+    const intervalId = setInterval(async () => {
+      const isHealthy = await checkGatewayHealth();
+      setIsGatewayConnected((prev) => {
+        if (!prev && isHealthy) {
+          refreshData();
+        }
+        return isHealthy;
+      });
+    }, 15000);
+
+    const handleFocusOrOnline = () => {
+      checkGatewayHealth().then((isHealthy) => {
+        setIsGatewayConnected((prev) => {
+          if (!prev && isHealthy) {
+            refreshData();
+          }
+          return isHealthy;
+        });
+      });
+    };
+
+    window.addEventListener('focus', handleFocusOrOnline);
+    window.addEventListener('online', handleFocusOrOnline);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocusOrOnline);
+      window.removeEventListener('online', handleFocusOrOnline);
+    };
   }, []);
 
   // Authentication state flag
@@ -521,8 +583,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
           setCurrentUserId(activeAccId);
 
           // ONLY on successful login checks, fill localStorage with userlogin and all its associated accounts
-          localStorage.setItem('chronos_current_login_id', res.login.id);
-          localStorage.setItem('chronos_current_user_id', activeAccId);
+          localStorage.setItem('chronos_current_login_id', String(res.login.id));
+          localStorage.setItem('chronos_current_user_id', String(activeAccId));
           localStorage.setItem('chronos_accounts', JSON.stringify(res.accounts));
           localStorage.setItem('chronos_available_logins', JSON.stringify([res.login]));
 
@@ -581,7 +643,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
             return updated;
           });
           setCurrentLoginId(res.login.id);
-          localStorage.setItem('chronos_current_login_id', res.login.id);
+          localStorage.setItem('chronos_current_login_id', String(res.login.id));
 
           setAccounts((prev) => {
             const others = prev.filter((a) => a.userLoginId !== res.login.id);
@@ -593,7 +655,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
           const activeAccId = res.activeAccountId || res.accounts[0]?.id;
           if (activeAccId) {
             setCurrentUserId(activeAccId);
-            localStorage.setItem('chronos_current_user_id', activeAccId);
+            localStorage.setItem('chronos_current_user_id', String(activeAccId));
           }
 
           showToast('Registration Successful', `Welcome to The Heritage Club, @${res.login.username}! Active persona: ${data.role.toUpperCase()}`, 'success');

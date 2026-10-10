@@ -18,7 +18,11 @@ var app = builder.Build();
 
 app.UseCors("AllowAll");
 
-app.MapGet("/health", () => Results.Ok(new { status = "Healthy", gateway = "MyWatchMarketplace.ApiGateway" }));
+app.MapGet("/", () => Results.Ok(new { status = "Healthy", gateway = "MyWatchMarketplace.ApiGateway" }))
+   .RequireCors("AllowAll");
+
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy", gateway = "MyWatchMarketplace.ApiGateway" }))
+   .RequireCors("AllowAll");
 
 app.MapReverseProxy();
 

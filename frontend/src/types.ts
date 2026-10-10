@@ -11,7 +11,7 @@ export interface UserLogin {
 
 export type WatchCondition = 'Unworn' | 'Mint' | 'Very Good' | 'Good' | 'Fair';
 
-export type WatchMovement = 'Automatic' | 'Manual Winding' | 'Quartz' | 'Digital' | 'Solar' | 'Hybrid';
+export type WatchMovement = 'Automatic' | 'Manual Winding' | 'Quartz' | 'Digital' | 'Solar' | 'Hybrid' | 'Spring Drive';
 
 export type WatchCaseMaterial = 
   | 'Stainless Steel' 

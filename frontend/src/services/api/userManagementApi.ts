@@ -69,7 +69,7 @@ export const userManagementApi = {
   getAccounts: async (filters?: { role?: string; loginId?: string | number }): Promise<UserAccount[]> => {
     const params = new URLSearchParams();
     if (filters?.role) params.set('role', filters.role);
-    if (filters?.loginId) params.set('loginId', filters.loginId);
+    if (filters?.loginId !== undefined) params.set('loginId', String(filters.loginId));
     const qs = params.toString();
     return request<UserAccount[]>(qs ? `/api/users/accounts?${qs}` : '/api/users/accounts');
   },
