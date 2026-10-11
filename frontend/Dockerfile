@@ -7,7 +7,7 @@ RUN npm ci
 
 # Copy application source and build bundle
 COPY . .
-ARG VITE_API_GATEWAY_URL=http://localhost:5000
+ARG VITE_API_GATEWAY_URL=
 ENV VITE_API_GATEWAY_URL=$VITE_API_GATEWAY_URL
 
 RUN npm run build

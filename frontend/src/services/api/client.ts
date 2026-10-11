@@ -1,7 +1,15 @@
 /// <reference types="vite/client" />
 // Base HTTP API client for communicating with API Gateway (YARP :5000)
 
-let activeBaseUrl: string = ((import.meta as any).env?.VITE_API_GATEWAY_URL || 'http://localhost:5000').replace(/\/+$/, '');
+//let activeBaseUrl: string = ((import.meta as any).env?.VITE_API_GATEWAY_URL || 'http://localhost:5000').replace(/\/+$/, '');
+const isDevelopment = (import.meta as any).env?.DEV === true;
+
+const configuredBaseUrl = (
+  (import.meta as any).env?.VITE_API_GATEWAY_URL ?? ''
+).trim().replace(/\/+$/, '');
+
+let activeBaseUrl: string = configuredBaseUrl ||
+  (isDevelopment ? 'http://localhost:5000' : '');
 
 export function getApiBaseUrl(): string {
   return activeBaseUrl;
@@ -65,29 +73,15 @@ export async function request<T>(endpoint: string, options: RequestInit = {}): P
 }
 
 export async function checkGatewayHealth(): Promise<boolean> {
-  const envUrl = (((import.meta as any).env?.VITE_API_GATEWAY_URL || '') as string).trim().replace(/\/+$/, '');
-  const candidateUrls: string[] = [];
+  const candidates = isDevelopment
+    ? ['http://localhost:5000', '']
+    : [''];
 
-  // Build candidate probing URLs in order of preference
-  if (activeBaseUrl && !candidateUrls.includes(activeBaseUrl)) {
-    candidateUrls.push(activeBaseUrl);
-  }
-  if (envUrl && !candidateUrls.includes(envUrl)) {
-    candidateUrls.push(envUrl);
-  }
-  if (!candidateUrls.includes('http://localhost:5000')) {
-    candidateUrls.push('http://localhost:5000');
-  }
-  if (!candidateUrls.includes('http://127.0.0.1:5000')) {
-    candidateUrls.push('http://127.0.0.1:5000');
-  }
-  // Also try relative path (covers Vite proxy on localhost:3000 / localhost:5173 or same-origin deployment)
-  if (typeof window !== 'undefined' && !candidateUrls.includes('')) {
-    candidateUrls.push('');
-  }
+  for (const candidate of candidates) {
+    const healthUrl = candidate
+      ? `${candidate}/health`
+      : '/health';
 
-  for (const candidate of candidateUrls) {
-    const healthUrl = candidate ? `${candidate}/health` : '/health';
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4000);
 
@@ -98,28 +92,39 @@ export async function checkGatewayHealth(): Promise<boolean> {
         cache: 'no-store',
         signal: controller.signal
       });
-      clearTimeout(timeoutId);
 
       if (res.ok) {
         const contentType = res.headers.get('content-type') || '';
+
         if (contentType.includes('application/json')) {
           const data = await res.json().catch(() => null);
-          if (data && (data.status?.toLowerCase() === 'healthy' || data.gateway)) {
+
+          if (
+            data &&
+            (
+              data.status?.toLowerCase() === 'healthy' ||
+              data.gateway
+            )
+          ) {
             activeBaseUrl = candidate;
             return true;
           }
         } else {
-          // If response is not JSON (e.g. text/plain), verify keywords and ensure it is not HTML
           const text = await res.text().catch(() => '');
-          if (!text.includes('<!DOCTYPE') && (text.includes('Healthy') || text.includes('ApiGateway'))) {
+
+          if (
+            !text.includes('<!DOCTYPE') &&
+            (text.includes('Healthy') || text.includes('ApiGateway'))
+          ) {
             activeBaseUrl = candidate;
             return true;
           }
         }
       }
     } catch {
+      // Continue to the next candidate.
+    } finally {
       clearTimeout(timeoutId);
-      // Try next candidate
     }
   }
 
