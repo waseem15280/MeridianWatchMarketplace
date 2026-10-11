@@ -110,3 +110,5 @@ $RECYCLE.BIN/
 *.swp
 *.swo
 *~
+production docker/.env
+production docker/docker-compose.yaml.backup
