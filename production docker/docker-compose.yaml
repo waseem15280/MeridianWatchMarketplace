@@ -1,8 +1,7 @@
 services:
-
-  # =========================================================================
-  # 1. PostgreSQL 17
-  # =========================================================================
+  # ============================================================
+  # PostgreSQL
+  # ============================================================
   postgres:
     image: postgres:17
     container_name: thc-marketplace-postgres
@@ -11,42 +10,34 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_MULTIPLE_DATABASES}
+      POSTGRES_DB: MarketplaceDb
 
     volumes:
-      - thc-postgres-data:/var/lib/postgresql/data
+      - thc-marketplace-postgres-data:/var/lib/postgresql/data
       - ./init-db:/docker-entrypoint-initdb.d:ro
 
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+          "pg_isready -U ${POSTGRES_USER} -d MarketplaceDb"
         ]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 10
-      start_period: 20s
-    
+
     ports:
       - "127.0.0.1:5432:5432"
 
     networks:
-      - backend
-
-    # IMPORTANT:
-    # No "ports" section.
-    # PostgreSQL is accessible only inside Docker.
-    expose:
-      - "5432"
+      - thc-marketplace-network
 
 
-  # =========================================================================
-  # 2. Marketplace API
-  # =========================================================================
+  # ============================================================
+  # Marketplace API
+  # ============================================================
   marketplace-api:
-    image: ${REGISTRY}/marketplace-api:${IMAGE_TAG}
+    image: ghcr.io/${GHCR_OWNER}/${GHCR_IMAGE_PREFIX}-marketplace-api:latest
     container_name: thc-marketplace-api
     restart: unless-stopped
 
@@ -61,38 +52,26 @@ services:
         Username=${POSTGRES_USER};
         Password=${POSTGRES_PASSWORD}
 
+      CLOUDINARY_URL: >-
+        cloudinary://${CLOUDINARY_API_KEY}:${CLOUDINARY_API_SECRET}@${CLOUDINARY_CLOUD_NAME}
+
       Cloudinary__CloudName: ${CLOUDINARY_CLOUD_NAME}
       Cloudinary__ApiKey: ${CLOUDINARY_API_KEY}
       Cloudinary__ApiSecret: ${CLOUDINARY_API_SECRET}
-      Cloudinary__Url: ${CLOUDINARY_URL}
-
-    expose:
-      - "8080"
 
     depends_on:
       postgres:
         condition: service_healthy
 
     networks:
-      - backend
-
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1"
-        ]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+      - thc-marketplace-network
 
 
-  # =========================================================================
-  # 3. Collector Vault API
-  # =========================================================================
+  # ============================================================
+  # Collector Vault API
+  # ============================================================
   collector-vault-api:
-    image: ${REGISTRY}/collector-vault-api:${IMAGE_TAG}
+    image: ghcr.io/${GHCR_OWNER}/${GHCR_IMAGE_PREFIX}-collector-vault-api:latest
     container_name: thc-collector-vault-api
     restart: unless-stopped
 
@@ -109,9 +88,6 @@ services:
 
       Services__MarketplaceUrl: http://marketplace-api:8080
 
-    expose:
-      - "8080"
-
     depends_on:
       postgres:
         condition: service_healthy
@@ -119,14 +95,14 @@ services:
         condition: service_started
 
     networks:
-      - backend
+      - thc-marketplace-network
 
 
-  # =========================================================================
-  # 4. Buyer Wishlist API
-  # =========================================================================
+  # ============================================================
+  # Buyer Wishlist API
+  # ============================================================
   buyer-wishlist-api:
-    image: ${REGISTRY}/buyer-wishlist-api:${IMAGE_TAG}
+    image: ghcr.io/${GHCR_OWNER}/${GHCR_IMAGE_PREFIX}-buyer-wishlist-api:latest
     container_name: thc-buyer-wishlist-api
     restart: unless-stopped
 
@@ -143,9 +119,6 @@ services:
 
       Services__MarketplaceUrl: http://marketplace-api:8080
 
-    expose:
-      - "8080"
-
     depends_on:
       postgres:
         condition: service_healthy
@@ -153,14 +126,14 @@ services:
         condition: service_started
 
     networks:
-      - backend
+      - thc-marketplace-network
 
 
-  # =========================================================================
-  # 5. Seller Hub API
-  # =========================================================================
+  # ============================================================
+  # Seller Hub API
+  # ============================================================
   seller-hub-api:
-    image: ${REGISTRY}/seller-hub-api:${IMAGE_TAG}
+    image: ghcr.io/${GHCR_OWNER}/${GHCR_IMAGE_PREFIX}-seller-hub-api:latest
     container_name: thc-seller-hub-api
     restart: unless-stopped
 
@@ -175,22 +148,19 @@ services:
         Username=${POSTGRES_USER};
         Password=${POSTGRES_PASSWORD}
 
-    expose:
-      - "8080"
-
     depends_on:
       postgres:
         condition: service_healthy
 
     networks:
-      - backend
+      - thc-marketplace-network
 
 
-  # =========================================================================
-  # 6. Customer Orders API
-  # =========================================================================
+  # ============================================================
+  # Customer Orders API
+  # ============================================================
   customer-orders-api:
-    image: ${REGISTRY}/customer-orders-api:${IMAGE_TAG}
+    image: ghcr.io/${GHCR_OWNER}/${GHCR_IMAGE_PREFIX}-customer-orders-api:latest
     container_name: thc-customer-orders-api
     restart: unless-stopped
 
@@ -208,9 +178,6 @@ services:
       Services__MarketplaceUrl: http://marketplace-api:8080
       Services__SellerHubUrl: http://seller-hub-api:8080
 
-    expose:
-      - "8080"
-
     depends_on:
       postgres:
         condition: service_healthy
@@ -220,14 +187,14 @@ services:
         condition: service_started
 
     networks:
-      - backend
+      - thc-marketplace-network
 
 
-  # =========================================================================
-  # 7. User Management API
-  # =========================================================================
+  # ============================================================
+  # User Management API
+  # ============================================================
   user-management-api:
-    image: ${REGISTRY}/user-management-api:${IMAGE_TAG}
+    image: ghcr.io/${GHCR_OWNER}/${GHCR_IMAGE_PREFIX}-user-management-api:latest
     container_name: thc-user-management-api
     restart: unless-stopped
 
@@ -242,22 +209,19 @@ services:
         Username=${POSTGRES_USER};
         Password=${POSTGRES_PASSWORD}
 
-    expose:
-      - "8080"
-
     depends_on:
       postgres:
         condition: service_healthy
 
     networks:
-      - backend
+      - thc-marketplace-network
 
 
-  # =========================================================================
-  # 8. YARP API Gateway
-  # =========================================================================
+  # ============================================================
+  # YARP API Gateway
+  # ============================================================
   api-gateway:
-    image: ${REGISTRY}/api-gateway:${IMAGE_TAG}
+    image: ghcr.io/${GHCR_OWNER}/${GHCR_IMAGE_PREFIX}-api-gateway:latest
     container_name: thc-api-gateway
     restart: unless-stopped
 
@@ -277,8 +241,6 @@ services:
 
       ReverseProxy__Clusters__user-management-cluster__Destinations__user-management-destination__Address: http://user-management-api:8080
 
-    expose:
-      - "8080"
 
     depends_on:
       marketplace-api:
@@ -295,51 +257,50 @@ services:
         condition: service_started
 
     networks:
-      - backend
-      - frontend
+      - thc-marketplace-network
 
 
-  # =========================================================================
-  # 9. React Frontend
-  # =========================================================================
+  # ============================================================
+  # React Frontend
+  # ============================================================
   frontend:
-    image: ${REGISTRY}/frontend:${IMAGE_TAG}
+    image: ghcr.io/${GHCR_OWNER}/${GHCR_IMAGE_PREFIX}-frontend:latest
     container_name: thc-marketplace-frontend
     restart: unless-stopped
-
-    expose:
-      - "80"
 
     depends_on:
       api-gateway:
         condition: service_started
 
     networks:
-      - frontend
+      - thc-marketplace-network
 
-    # ONLY public application ports.
+
+  # ======================================================
+  # Nginx
+  # ======================================================
+  nginx:
+    image: nginx:alpine
+    container_name: thc-marketplace-nginx
+    restart: unless-stopped
+
     ports:
-      - "80:80"
+       - "80:80"
 
+    volumes:
+       - /opt/thc-marketplace/nginx/conf.d/marketplace.conf:/etc/nginx/conf.d/default.conf:ro
 
-# ===========================================================================
-# Volumes
-# ===========================================================================
+    depends_on:
+       - frontend
+       - api-gateway
+
+    networks:
+       - thc-marketplace-network
+
 volumes:
-
-  thc-postgres-data:
-    name: thc-marketplace-postgres-data
+  thc-marketplace-postgres-data:
 
 
-# ===========================================================================
-# Networks
-# ===========================================================================
 networks:
-
-  backend:
-    name: thc-marketplace-backend
-    driver: bridge
-
-  frontend:
-    name: thc-marketplace-frontend
+  thc-marketplace-network:
     driver: bridge
