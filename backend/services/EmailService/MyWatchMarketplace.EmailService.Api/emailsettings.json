@@ -1,0 +1,15 @@
+{
+  "EmailSettings": {
+    "SmtpHost": "smtp.gmail.com",
+    "SmtpPort": 587,
+    "SenderName": "Meridian Watch Marketplace",
+    "SenderEmail": "no-reply@meridianwatches.com",
+    "Username": "",
+    "Password": "",
+    "EnableSsl": true,
+    "FrontendBaseUrl": "http://localhost:3000",
+    "TokenExpirationMinutes": 60,
+    "UseMockInDevelopment": true
+  }
+}
+

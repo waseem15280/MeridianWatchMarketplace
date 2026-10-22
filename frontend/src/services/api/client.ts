@@ -55,17 +55,45 @@ export async function request<T>(endpoint: string, options: RequestInit = {}): P
       return {} as T;
     }
 
+    // Read body text once into memory so the stream is never consumed multiple times
+    const rawText = await response.text();
+
     if (!response.ok) {
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch {
-        errorData = await response.text();
+      let errorData: any = null;
+      if (rawText && rawText.trim()) {
+        try {
+          errorData = JSON.parse(rawText);
+        } catch {
+          errorData = rawText;
+        }
       }
-      throw new ApiError(response.status, `HTTP error ${response.status}: ${response.statusText}`, errorData);
+
+      let message = `HTTP error ${response.status}: ${response.statusText}`;
+      if (typeof errorData === 'object' && errorData !== null) {
+        message = errorData.message || errorData.error || errorData.title || message;
+      } else if (typeof errorData === 'string' && errorData.trim()) {
+        const cleanText = errorData.replace(/<[^>]*>?/gm, '').trim();
+        if (cleanText && cleanText.length < 200) {
+          message = cleanText;
+        }
+      }
+
+      if (response.status === 502 || response.status === 503) {
+        message = `Service temporarily unavailable (${response.status} ${response.statusText}). Please ensure all backend microservices (including EmailService on port 5107) are running.`;
+      }
+
+      throw new ApiError(response.status, message, errorData);
     }
 
-    return await response.json() as T;
+    if (!rawText || !rawText.trim()) {
+      return {} as T;
+    }
+
+    try {
+      return JSON.parse(rawText) as T;
+    } catch {
+      return rawText as unknown as T;
+    }
   } catch (error) {
     clearTimeout(timeoutId);
     throw error;

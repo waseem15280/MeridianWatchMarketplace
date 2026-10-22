@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>MyWatchMarketplace.EmailService.Application</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MyWatchMarketplace.EmailService.Domain\MyWatchMarketplace.EmailService.Domain.csproj" />
+    <ProjectReference Include="..\..\UserManagement\MyWatchMarketplace.UserManagement.Domain\MyWatchMarketplace.UserManagement.Domain.csproj" />
+    <ProjectReference Include="..\..\UserManagement\MyWatchMarketplace.UserManagement.Application\MyWatchMarketplace.UserManagement.Application.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\MyWatchMarketplace.SharedKernel\MyWatchMarketplace.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\MyWatchMarketplace.Contracts\MyWatchMarketplace.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>
+

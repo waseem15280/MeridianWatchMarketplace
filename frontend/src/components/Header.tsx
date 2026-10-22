@@ -23,8 +23,11 @@ import {
   CheckCircle,
   Users,
   ShieldAlert,
-  RefreshCw
+  RefreshCw,
+  Mail,
+  ArrowLeft
 } from 'lucide-react';
+import { emailApi } from '../services/api';
 import { ActiveTab, UserRole } from '../types';
 
 interface HeaderProps {
@@ -119,6 +122,67 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
   const [registerError, setRegisterError] = useState('');
   const [isSubmittingRegister, setIsSubmittingRegister] = useState(false);
 
+  // Forgot Password Modal State
+  const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] = useState(false);
+  const [forgotPasswordInput, setForgotPasswordInput] = useState('');
+  const [forgotPasswordError, setForgotPasswordError] = useState('');
+  const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState('');
+  const [isSubmittingForgotPassword, setIsSubmittingForgotPassword] = useState(false);
+  const [simulatedResetUrl, setSimulatedResetUrl] = useState('');
+
+  // Reset Password Modal State
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [resetUserId, setResetUserId] = useState<number | null>(null);
+  const [resetToken, setResetToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetPasswordError, setResetPasswordError] = useState('');
+  const [resetPasswordSuccess, setResetPasswordSuccess] = useState('');
+  const [isSubmittingResetPassword, setIsSubmittingResetPassword] = useState(false);
+  const [isVerifyingResetToken, setIsVerifyingResetToken] = useState(false);
+  const [tokenUsername, setTokenUsername] = useState<string | null>(null);
+
+  // Detect resetToken & userId in URL query on app load
+  useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('resetToken');
+      const uid = urlParams.get('userId');
+      if (token && uid) {
+        const parsedUid = parseInt(uid, 10);
+        if (!isNaN(parsedUid) && parsedUid > 0) {
+          setResetUserId(parsedUid);
+          setResetToken(token);
+          setIsResetPasswordModalOpen(true);
+        }
+      }
+    } catch {
+      // Ignore URL parsing errors
+    }
+  }, []);
+
+  // Verify reset token when modal opens with credentials
+  useEffect(() => {
+    if (isResetPasswordModalOpen && resetUserId && resetToken) {
+      setIsVerifyingResetToken(true);
+      setResetPasswordError('');
+      emailApi.verifyResetToken(resetUserId, resetToken)
+        .then((res) => {
+          if (res.isValid) {
+            setTokenUsername(res.username || null);
+          } else {
+            setResetPasswordError(res.message || 'Invalid or expired reset token.');
+          }
+        })
+        .catch((err: any) => {
+          setResetPasswordError(err?.data?.message || err?.message || 'Unable to verify reset token with server.');
+        })
+        .finally(() => {
+          setIsVerifyingResetToken(false);
+        });
+    }
+  }, [isResetPasswordModalOpen, resetUserId, resetToken]);
+
   // Close open modals on Escape key
   useEffect(() => {
     const handleModalEscape = (e: KeyboardEvent) => {
@@ -126,11 +190,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
         if (isAddAccountModalOpen) setIsAddAccountModalOpen(false);
         if (isLoginModalOpen) setIsLoginModalOpen(false);
         if (isRegisterModalOpen) setIsRegisterModalOpen(false);
+        if (isForgotPasswordModalOpen) setIsForgotPasswordModalOpen(false);
+        if (isResetPasswordModalOpen) setIsResetPasswordModalOpen(false);
       }
     };
     window.addEventListener('keydown', handleModalEscape);
     return () => window.removeEventListener('keydown', handleModalEscape);
-  }, [isAddAccountModalOpen, isLoginModalOpen, isRegisterModalOpen]);
+  }, [isAddAccountModalOpen, isLoginModalOpen, isRegisterModalOpen, isForgotPasswordModalOpen, isResetPasswordModalOpen]);
 
   const getRoleBadge = (role: UserRole) => {
     switch (role) {
@@ -215,6 +281,82 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
       setRegisterError(err?.data?.message || err?.message || 'Registration failed. Please check your information.');
     } finally {
       setIsSubmittingRegister(false);
+    }
+  };
+
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotPasswordError('');
+    setForgotPasswordSuccess('');
+    setSimulatedResetUrl('');
+
+    if (!forgotPasswordInput.trim()) {
+      setForgotPasswordError('Please enter your email address or username.');
+      return;
+    }
+
+    setIsSubmittingForgotPassword(true);
+    try {
+      const res = await emailApi.forgotPassword(forgotPasswordInput.trim());
+      setForgotPasswordSuccess(res.message || 'If an account matches that username or email, a password reset link has been dispatched.');
+      if (res.resetUrl) {
+        setSimulatedResetUrl(res.resetUrl);
+      }
+    } catch (err: any) {
+      const errorMsg = err?.data?.message || err?.message || 'Failed to dispatch reset email. Please try again later.';
+      setForgotPasswordError(errorMsg);
+    } finally {
+      setIsSubmittingForgotPassword(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetPasswordError('');
+    setResetPasswordSuccess('');
+
+    if (!newPassword || newPassword.length < 6) {
+      setResetPasswordError('Password must be at least 6 characters long.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setResetPasswordError('Passwords do not match.');
+      return;
+    }
+
+    if (!resetUserId || !resetToken) {
+      setResetPasswordError('Invalid reset session. Please request a new reset link.');
+      return;
+    }
+
+    setIsSubmittingResetPassword(true);
+    try {
+      const res = await emailApi.resetPassword(resetUserId, resetToken, newPassword);
+      if (res.success) {
+        setResetPasswordSuccess('Password reset successfully!');
+        showToast('Password Updated', 'Your password has been changed. You can now log in.', 'success');
+
+        if (window.location.search.includes('resetToken')) {
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+
+        setTimeout(() => {
+          setIsResetPasswordModalOpen(false);
+          setNewPassword('');
+          setConfirmPassword('');
+          setResetUserId(null);
+          setResetToken('');
+          setIsLoginModalOpen(true);
+        }, 1500);
+      } else {
+        setResetPasswordError(res.message || 'Failed to reset password.');
+      }
+    } catch (err: any) {
+      setResetPasswordError(err?.data?.message || err?.message || 'Failed to reset password.');
+    } finally {
+      setIsSubmittingResetPassword(false);
     }
   };
 
@@ -914,9 +1056,26 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1">
-                  Password
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C]">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    id="forgot-password-link"
+                    onClick={() => {
+                      setIsLoginModalOpen(false);
+                      setIsForgotPasswordModalOpen(true);
+                      setForgotPasswordInput(loginUsername.trim());
+                      setForgotPasswordError('');
+                      setForgotPasswordSuccess('');
+                      setSimulatedResetUrl('');
+                    }}
+                    className="text-xs text-[#85642F] hover:text-[#1C1917] font-semibold hover:underline transition-colors"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
                 <input
                   type="password"
                   required
@@ -1213,6 +1372,243 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   className="text-xs text-[#85642F] hover:text-[#1C1917] font-bold hover:underline"
                 >
                   Log In
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Forgot Password Modal */}
+      {isForgotPasswordModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in overflow-y-auto"
+          onClick={() => setIsForgotPasswordModalOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 my-auto max-h-[90vh] flex flex-col"
+          >
+            <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-4 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#C5A880]/20 flex items-center justify-center">
+                  <Mail className="w-5 h-5 text-[#85642F]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#1C1917]">Forgot Password</h3>
+                  <p className="text-xs text-[#78716C]">Reset your account password via Email</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsForgotPasswordModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-[#EDE8E0] flex items-center justify-center text-[#78716C] hover:text-[#1C1917] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {forgotPasswordError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 shrink-0 text-red-600" />
+                <span>{forgotPasswordError}</span>
+              </div>
+            )}
+
+            {forgotPasswordSuccess && (
+              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs space-y-2">
+                <div className="flex items-center gap-2 font-medium">
+                  <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
+                  <span>{forgotPasswordSuccess}</span>
+                </div>
+                {simulatedResetUrl && (
+                  <div className="pt-2 border-t border-emerald-200/60 mt-2">
+                    <p className="text-[11px] text-emerald-900 font-semibold mb-1">
+                      Direct Email Reset Link (Development Mode):
+                    </p>
+                    <button
+                      type="button"
+                      id="dev-open-reset-btn"
+                      onClick={() => {
+                        try {
+                          const url = new URL(simulatedResetUrl);
+                          const token = url.searchParams.get('resetToken');
+                          const uid = url.searchParams.get('userId');
+                          if (token && uid) {
+                            setResetToken(token);
+                            setResetUserId(parseInt(uid, 10));
+                            setIsForgotPasswordModalOpen(false);
+                            setIsResetPasswordModalOpen(true);
+                          }
+                        } catch {
+                          window.location.href = simulatedResetUrl;
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1C1917] text-[#FAF8F5] text-xs font-bold hover:bg-[#3D3A36] transition-colors"
+                    >
+                      <KeyRound className="w-3.5 h-3.5 text-[#C5A880]" />
+                      <span>Open Reset Password Screen</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1">
+                  Username or Email Address
+                </label>
+                <input
+                  type="text"
+                  required
+                  id="forgot-password-input"
+                  value={forgotPasswordInput}
+                  onChange={(e) => setForgotPasswordInput(e.target.value)}
+                  placeholder="e.g. waseema or waseem15280@gmail.com"
+                  className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
+                />
+                <p className="text-[11px] text-[#A8A29E] mt-1">
+                  We will send a secure time-limited URL to the registered email address.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-[#E5DFD5]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotPasswordModalOpen(false);
+                    setIsLoginModalOpen(true);
+                  }}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold text-[#85642F] hover:text-[#1C1917] hover:bg-[#EDE8E0] transition-colors flex items-center gap-1"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Log In</span>
+                </button>
+                <button
+                  type="submit"
+                  id="submit-forgot-password-btn"
+                  disabled={isSubmittingForgotPassword || !forgotPasswordInput.trim()}
+                  className="px-5 py-2 rounded-xl bg-[#1C1917] text-[#FAF8F5] text-xs font-bold hover:bg-[#3D3A36] disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-md"
+                >
+                  {isSubmittingForgotPassword ? (
+                    <span>Sending Link...</span>
+                  ) : (
+                    <>
+                      <Mail className="w-3.5 h-3.5 text-[#C5A880]" />
+                      <span>Send Reset Link</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {isResetPasswordModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in overflow-y-auto"
+          onClick={() => setIsResetPasswordModalOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 my-auto max-h-[90vh] flex flex-col"
+          >
+            <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-4 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#C5A880]/20 flex items-center justify-center">
+                  <KeyRound className="w-5 h-5 text-[#85642F]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#1C1917]">Reset Password</h3>
+                  <p className="text-xs text-[#78716C]">
+                    {tokenUsername ? `Establishing new credentials for @${tokenUsername}` : 'Enter your new account password'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsResetPasswordModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-[#EDE8E0] flex items-center justify-center text-[#78716C] hover:text-[#1C1917] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {isVerifyingResetToken && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs flex items-center gap-2 animate-pulse">
+                <RefreshCw className="w-4 h-4 animate-spin text-[#85642F]" />
+                <span>Verifying reset security token with server...</span>
+              </div>
+            )}
+
+            {resetPasswordError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 shrink-0 text-red-600" />
+                <span>{resetPasswordError}</span>
+              </div>
+            )}
+
+            {resetPasswordSuccess && (
+              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
+                <span>{resetPasswordSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  id="new-password-input"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  id="confirm-password-input"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter your new password"
+                  className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E5DFD5]">
+                <button
+                  type="button"
+                  onClick={() => setIsResetPasswordModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-[#D8D0C5] text-xs font-medium text-[#57534E] hover:bg-[#EDE8E0] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  id="submit-reset-password-btn"
+                  disabled={isSubmittingResetPassword || !newPassword || !confirmPassword || isVerifyingResetToken}
+                  className="px-5 py-2 rounded-xl bg-[#1C1917] text-[#FAF8F5] text-xs font-bold hover:bg-[#3D3A36] disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-md"
+                >
+                  {isSubmittingResetPassword ? (
+                    <span>Updating Password...</span>
+                  ) : (
+                    <>
+                      <KeyRound className="w-3.5 h-3.5 text-[#C5A880]" />
+                      <span>Update Password</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

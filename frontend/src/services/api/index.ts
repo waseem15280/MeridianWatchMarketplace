@@ -5,4 +5,5 @@ export * from './buyerWishlistApi';
 export * from './sellerHubApi';
 export * from './customerOrdersApi';
 export * from './userManagementApi';
+export * from './emailApi';
 
