@@ -218,6 +218,44 @@ services:
 
 
   # ============================================================
+  # Email Service API
+  # ============================================================
+  email-service-api:
+    image: ghcr.io/${GHCR_OWNER}/${GHCR_IMAGE_PREFIX}-email-service-api:latest
+    container_name: thc-email-service-api
+    restart: unless-stopped
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: 8080
+
+      ConnectionStrings__UserAccountDbConnection: >-
+        Host=postgres;
+        Port=5432;
+        Database=UserAccountDb;
+        Username=${POSTGRES_USER};
+        Password=${POSTGRES_PASSWORD}
+
+      EmailSettings__SmtpHost: ${SMTP_HOST:-smtp.gmail.com}
+      EmailSettings__SmtpPort: ${SMTP_PORT:-587}
+      EmailSettings__SenderName: ${SMTP_SENDER_NAME:-THC Watch Marketplace}
+      EmailSettings__SenderEmail: ${SMTP_SENDER_EMAIL:-no-reply@thcwatches.com}
+      EmailSettings__Username: ${SMTP_USERNAME:-}
+      EmailSettings__Password: ${SMTP_PASSWORD:-}
+      EmailSettings__EnableSsl: ${SMTP_ENABLE_SSL:-true}
+      EmailSettings__FrontendBaseUrl: ${FRONTEND_BASE_URL:-http://155.248.245.193}
+      EmailSettings__TokenExpirationMinutes: ${TOKEN_EXPIRATION_MINUTES:-60}
+      EmailSettings__UseMockInDevelopment: ${EMAIL_USE_MOCK:-false}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - thc-marketplace-network
+
+
+  # ============================================================
   # YARP API Gateway
   # ============================================================
   api-gateway:
@@ -241,6 +279,8 @@ services:
 
       ReverseProxy__Clusters__user-management-cluster__Destinations__user-management-destination__Address: http://user-management-api:8080
 
+      ReverseProxy__Clusters__email-service-cluster__Destinations__email-service-destination__Address: http://email-service-api:8080
+
 
     depends_on:
       marketplace-api:
@@ -254,6 +294,8 @@ services:
       customer-orders-api:
         condition: service_started
       user-management-api:
+        condition: service_started
+      email-service-api:
         condition: service_started
 
     networks:

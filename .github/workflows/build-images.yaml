@@ -69,6 +69,13 @@ jobs:
             dockerfile: ./backend/services/UserManagement/Dockerfile
 
           # ---------------------------------------------------------------
+          # Email Service
+          # ---------------------------------------------------------------
+          - name: email-service-api
+            context: ./backend
+            dockerfile: ./backend/services/EmailService/Dockerfile
+
+          # ---------------------------------------------------------------
           # YARP API Gateway
           # ---------------------------------------------------------------
           - name: api-gateway
