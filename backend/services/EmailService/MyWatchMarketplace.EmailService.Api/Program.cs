@@ -9,22 +9,25 @@ using MyWatchMarketplace.EmailService.Infrastructure.Email;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Requirement 6: Keep email config in separate appsettings config file
-var emailConfigBaseDir = Path.Combine(AppContext.BaseDirectory, "emailsettings.json");
-var emailConfigContentRoot = Path.Combine(builder.Environment.ContentRootPath, "emailsettings.json");
+// Requirement 6: Dedicated email configuration with environment-specific overrides (Development vs Production)
+var contentRoot = builder.Environment.ContentRootPath;
+var baseDir = AppContext.BaseDirectory;
+var configDir = File.Exists(Path.Combine(contentRoot, "emailsettings.json"))
+    ? contentRoot
+    : baseDir;
 
-if (File.Exists(emailConfigBaseDir))
-{
-    builder.Configuration.AddJsonFile(emailConfigBaseDir, optional: false, reloadOnChange: true);
-}
-else if (File.Exists(emailConfigContentRoot))
-{
-    builder.Configuration.AddJsonFile(emailConfigContentRoot, optional: false, reloadOnChange: true);
-}
-else
-{
-    builder.Configuration.AddJsonFile("emailsettings.json", optional: true, reloadOnChange: true);
-}
+builder.Configuration.AddJsonFile(
+    Path.Combine(configDir, "emailsettings.json"),
+    optional: true,
+    reloadOnChange: true);
+
+builder.Configuration.AddJsonFile(
+    Path.Combine(configDir, $"emailsettings.{builder.Environment.EnvironmentName}.json"),
+    optional: true,
+    reloadOnChange: true);
+
+// Ensure Docker and environment variables override file settings in both dev and prod
+builder.Configuration.AddEnvironmentVariables();
 
 builder.Services.AddOpenApi();
 

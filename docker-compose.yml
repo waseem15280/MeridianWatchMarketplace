@@ -180,6 +180,16 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ConnectionStrings__UserAccountDbConnection=${CONNECTION_STRINGS_USER_ACCOUNT:-Host=postgres;Port=5432;Database=UserAccountDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD}}
+      - EmailSettings__FrontendBaseUrl=${FRONTEND_BASE_URL:-http://localhost:3000}
+      - EmailSettings__UseMockInDevelopment=${EMAIL_USE_MOCK:-true}
+      - EmailSettings__SmtpHost=${SMTP_HOST:-smtp.gmail.com}
+      - EmailSettings__SmtpPort=${SMTP_PORT:-587}
+      - EmailSettings__SenderName=${SMTP_SENDER_NAME:-THC Watch Marketplace}
+      - EmailSettings__SenderEmail=${SMTP_SENDER_EMAIL:-no-reply@thcwatches.com}
+      - EmailSettings__Username=${SMTP_USERNAME:-}
+      - EmailSettings__Password=${SMTP_PASSWORD:-}
+      - EmailSettings__EnableSsl=${SMTP_ENABLE_SSL:-true}
+      - EmailSettings__TokenExpirationMinutes=${TOKEN_EXPIRATION_MINUTES:-60}
     ports:
       - "5107:8080"
     depends_on:

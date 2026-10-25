@@ -86,7 +86,7 @@ public class ForgotPasswordHandler : IForgotPasswordHandler
         return new ForgotPasswordResponse(
             true,
             "If an account is associated with that email or username, a password reset link has been dispatched.",
-            ResetUrl: resetUrl,
+            ResetUrl: _emailSettings.UseMockInDevelopment ? resetUrl : null,
             ExpirationMinutes: expirationMinutes
         );
     }

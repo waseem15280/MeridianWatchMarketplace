@@ -1,0 +1,7 @@
+{
+  "EmailSettings": {
+    "FrontendBaseUrl": "http://localhost:3000",
+    "UseMockInDevelopment": true
+  }
+}
+

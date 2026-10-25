@@ -9,7 +9,6 @@
     "EnableSsl": true,
     "FrontendBaseUrl": "http://localhost:3000",
     "TokenExpirationMinutes": 60,
-    "UseMockInDevelopment": true
+    "UseMockInDevelopment": false
   }
 }
-
