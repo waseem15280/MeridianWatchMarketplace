@@ -79,7 +79,7 @@ export async function request<T>(endpoint: string, options: RequestInit = {}): P
       }
 
       if (response.status === 502 || response.status === 503) {
-        message = `Service temporarily unavailable (${response.status} ${response.statusText}). Please ensure all backend microservices (including EmailService on port 5107) are running.`;
+        message = `Service temporarily unavailable (${response.status} ${response.statusText}). Please ensure all backend microservices (including EmailService) are running.`;
       }
 
       throw new ApiError(response.status, message, errorData);

@@ -221,7 +221,7 @@ services:
   # Email Service API
   # ============================================================
   email-service-api:
-    image: ghcr.io/${GHCR_OWNER}/${GHCR_IMAGE_PREFIX}-email-service-api:latest
+    image: ghcr.io/${GHCR_OWNER:-waseem15280}/${GHCR_IMAGE_PREFIX:-mywatchmarketplace}-email-service-api:latest
     container_name: thc-email-service-api
     restart: unless-stopped
 
@@ -259,7 +259,7 @@ services:
   # YARP API Gateway
   # ============================================================
   api-gateway:
-    image: ghcr.io/${GHCR_OWNER}/${GHCR_IMAGE_PREFIX}-api-gateway:latest
+    image: ghcr.io/${GHCR_OWNER:-waseem15280}/${GHCR_IMAGE_PREFIX:-mywatchmarketplace}-api-gateway:latest
     container_name: thc-api-gateway
     restart: unless-stopped
 
