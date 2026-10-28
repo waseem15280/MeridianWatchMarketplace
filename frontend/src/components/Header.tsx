@@ -444,7 +444,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
   const navItems: { id: ActiveTab; label: string; icon: React.FC<{ className?: string }>; count?: number }[] = [
     { id: 'explore', label: 'Marketplace', icon: Watch },
     { id: 'collection', label: 'My Watch Vault', icon: Box },
-    { id: 'wishlist', label: 'Wishlist', icon: Heart, count: wishlist.length },
+    { id: 'wishlist', label: 'Wishlist', icon: Heart, count: isLoggedIn ? wishlist.length : 0 },
     { id: 'seller-hub', label: 'Seller Hub', icon: Store },
     { id: 'orders', label: 'Orders & Offers', icon: ShoppingBag }
   ];

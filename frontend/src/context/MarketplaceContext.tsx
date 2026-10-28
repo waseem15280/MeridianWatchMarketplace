@@ -284,8 +284,27 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   });
 
   const [wishlist, setWishlist] = useState<string[]>(() => {
-    const saved = localStorage.getItem('chronos_wishlist');
-    return saved ? JSON.parse(saved) : [];
+    // Clean up deprecated global key to avoid cross-user leakage
+    try {
+      localStorage.removeItem('chronos_wishlist');
+    } catch {
+      // ignore
+    }
+
+    const savedLoginId = localStorage.getItem('chronos_current_login_id');
+    const savedUserId = localStorage.getItem('chronos_current_user_id');
+    if (savedLoginId && savedLoginId !== 'guest' && savedUserId && savedUserId !== 'guest' && savedUserId !== 'guest-buyer') {
+      const saved = localStorage.getItem(`chronos_wishlist_${savedUserId}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) return parsed;
+        } catch {
+          // fallback
+        }
+      }
+    }
+    return [];
   });
 
   const [reviews, setReviews] = useState<SellerReview[]>(() => {
@@ -379,8 +398,14 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [collection]);
 
   useEffect(() => {
-    localStorage.setItem('chronos_wishlist', JSON.stringify(wishlist));
-  }, [wishlist]);
+    if (currentUserId && currentUserId !== 'guest' && currentUserId !== 'guest-buyer') {
+      try {
+        localStorage.setItem(`chronos_wishlist_${currentUserId}`, JSON.stringify(wishlist));
+      } catch (e) {
+        console.warn('Could not cache user wishlist in localStorage', e);
+      }
+    }
+  }, [wishlist, currentUserId]);
 
   useEffect(() => {
     localStorage.setItem('chronos_reviews', JSON.stringify(reviews));
@@ -410,6 +435,15 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
       // Query catalog and operational microservices in parallel via YARP Gateway (:5000)
       // Note: User logins are NOT retrieved in bulk on startup or guest mode.
+      // Wishlist is only queried if a real authenticated user persona is active.
+      const shouldFetchWishlist = Boolean(
+        currentLoginId &&
+        currentLoginId !== 'guest' &&
+        currentUserId &&
+        currentUserId !== 'guest' &&
+        currentUserId !== 'guest-buyer'
+      );
+
       const [
         listingsRes,
         collectionRes,
@@ -421,7 +455,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       ] = await Promise.allSettled([
         marketplaceApi.getListings(),
         collectorVaultApi.getWatches(),
-        buyerWishlistApi.getWishlist(),
+        shouldFetchWishlist ? buyerWishlistApi.getWishlist(String(currentUserId)) : Promise.resolve([]),
         sellerHubApi.getProfiles(),
         sellerHubApi.getReviews(),
         customerOrdersApi.getOrders(),
@@ -445,14 +479,16 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
           console.warn('Could not cache collection in localStorage', e);
         }
       }
-      if (wishlistRes.status === 'fulfilled' && Array.isArray(wishlistRes.value)) {
+      if (shouldFetchWishlist && wishlistRes.status === 'fulfilled' && Array.isArray(wishlistRes.value)) {
         const ids = wishlistRes.value.map((item) => String(item.listingId));
         setWishlist(ids);
         try {
-          localStorage.setItem('chronos_wishlist', JSON.stringify(ids));
+          localStorage.setItem(`chronos_wishlist_${currentUserId}`, JSON.stringify(ids));
         } catch (e) {
           console.warn('Could not cache wishlist in localStorage', e);
         }
+      } else if (!shouldFetchWishlist) {
+        setWishlist([]);
       }
 
       // If user is already authenticated in localStorage, refresh ONLY their accounts
@@ -601,6 +637,49 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, [activeTab, isAdmin, isGuest]);
 
+  // Load and sync wishlist when current user / login state changes
+  useEffect(() => {
+    if (!isLoggedIn || !currentUserId || currentUserId === 'guest' || currentUserId === 'guest-buyer') {
+      setWishlist([]);
+      return;
+    }
+
+    const scopedKey = `chronos_wishlist_${currentUserId}`;
+    const cached = localStorage.getItem(scopedKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          setWishlist(parsed);
+        } else {
+          setWishlist([]);
+        }
+      } catch {
+        setWishlist([]);
+      }
+    } else {
+      setWishlist([]);
+    }
+
+    if (isGatewayConnected) {
+      buyerWishlistApi.getWishlist(String(currentUserId))
+        .then((items) => {
+          if (Array.isArray(items)) {
+            const ids = items.map((item) => String(item.listingId));
+            setWishlist(ids);
+            try {
+              localStorage.setItem(scopedKey, JSON.stringify(ids));
+            } catch (e) {
+              console.warn('Could not cache wishlist in localStorage', e);
+            }
+          }
+        })
+        .catch((err) => {
+          console.warn('Failed to load wishlist for user from microservice', err);
+        });
+    }
+  }, [isLoggedIn, currentUserId, isGatewayConnected]);
+
   const switchUser = (userId: string) => {
     const target = accounts.find((a) => a.id === userId);
     if (target) {
@@ -671,11 +750,15 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
             setPendingWishlistId(null);
             setWishlist((prev) => {
               if (!prev.includes(targetWatchId)) {
+                const updated = [...prev, targetWatchId];
+                try {
+                  localStorage.setItem(`chronos_wishlist_${activeAccId}`, JSON.stringify(updated));
+                } catch (e) {}
                 buyerWishlistApi.addToWishlist({
                   listingId: targetWatchId,
-                  buyerId: activeAccId
+                  buyerId: String(activeAccId)
                 }).catch((e) => console.warn('Could not sync pending wishlist item to backend', e));
-                return [...prev, targetWatchId];
+                return updated;
               }
               return prev;
             });
@@ -704,7 +787,13 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       if (pendingWishlistId) {
         const targetWatchId = pendingWishlistId;
         setPendingWishlistId(null);
-        setWishlist((prev) => (prev.includes(targetWatchId) ? prev : [...prev, targetWatchId]));
+        setWishlist((prev) => {
+          const updated = prev.includes(targetWatchId) ? prev : [...prev, targetWatchId];
+          try {
+            localStorage.setItem(`chronos_wishlist_${matched.id}`, JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
         showToast('Saved to Wishlist', 'The timepiece has been saved to your personal wishlist.', 'success');
       }
       setIsLoginModalOpen(false);
@@ -727,6 +816,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setAvailableLogins([GUEST_LOGIN]);
     setAccounts([GUEST_ACCOUNT]);
     setCurrentUserId(GUEST_ACCOUNT.id);
+    setWishlist([]);
 
     showToast('Signed Out', 'You have been signed out. Returned to Guest mode.', 'info');
   };
@@ -1192,10 +1282,17 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const clearWishlist = () => {
     setWishlist([]);
+    if (currentUser?.id && currentUser.id !== 'guest-buyer') {
+      try {
+        localStorage.removeItem(`chronos_wishlist_${currentUser.id}`);
+      } catch (e) {
+        console.warn('Could not clear cached wishlist', e);
+      }
+    }
     showToast('Wishlist Cleared', 'All saved items have been cleared', 'info');
 
-    if (isGatewayConnected) {
-      buyerWishlistApi.clearWishlist(currentUser.id).catch((err) => {
+    if (isGatewayConnected && currentUser?.id && currentUser.id !== 'guest-buyer') {
+      buyerWishlistApi.clearWishlist(String(currentUser.id)).catch((err) => {
         console.warn('Failed to clear BuyerWishlist microservice', err);
       });
     }

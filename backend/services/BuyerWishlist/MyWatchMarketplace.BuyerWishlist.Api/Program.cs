@@ -62,9 +62,13 @@ app.MapGet("/api/buyer-wishlist/health", () => Results.Ok(new { status = "Health
 // 1. GET /api/buyer-wishlist?buyerId={buyerId}
 wishlistApi.MapGet("/", async (string? buyerId, BuyerWishlistDbContext db) =>
 {
-    var bId = buyerId ?? "1";
+    if (string.IsNullOrWhiteSpace(buyerId))
+    {
+        return Results.Ok(new List<WishlistItemDto>());
+    }
+
     var items = await db.WishlistItems.AsNoTracking()
-        .Where(w => w.BuyerId == bId)
+        .Where(w => w.BuyerId == buyerId)
         .OrderByDescending(w => w.AddedAt)
         .Select(w => new WishlistItemDto(
             w.Id,
@@ -82,8 +86,13 @@ wishlistApi.MapGet("/", async (string? buyerId, BuyerWishlistDbContext db) =>
 });
 
 // 2. GET /api/buyer-wishlist/check?buyerId={buyerId}&listingId={listingId}
-wishlistApi.MapGet("/check", async (string buyerId, int listingId, BuyerWishlistDbContext db) =>
+wishlistApi.MapGet("/check", async (string? buyerId, int listingId, BuyerWishlistDbContext db) =>
 {
+    if (string.IsNullOrWhiteSpace(buyerId))
+    {
+        return Results.Ok(new { inWishlist = false });
+    }
+
     var exists = await db.WishlistItems.AsNoTracking()
         .AnyAsync(w => w.BuyerId == buyerId && w.ListingId == listingId);
 
@@ -96,7 +105,11 @@ wishlistApi.MapPost("/", async (
     BuyerWishlistDbContext db,
     IMarketplaceClient marketplaceClient) =>
 {
-    var buyerId = request.BuyerId ?? "1";
+    var buyerId = request.BuyerId;
+    if (string.IsNullOrWhiteSpace(buyerId))
+    {
+        return Results.BadRequest(new { message = "BuyerId is required." });
+    }
 
     var existing = await db.WishlistItems
         .FirstOrDefaultAsync(w => w.BuyerId == buyerId && w.ListingId == request.ListingId);
@@ -158,9 +171,13 @@ wishlistApi.MapDelete("/{listingId:int}", async (
     BuyerWishlistDbContext db,
     IMarketplaceClient marketplaceClient) =>
 {
-    var bId = buyerId ?? "1";
+    if (string.IsNullOrWhiteSpace(buyerId))
+    {
+        return Results.BadRequest(new { message = "BuyerId is required." });
+    }
+
     var item = await db.WishlistItems
-        .FirstOrDefaultAsync(w => w.BuyerId == bId && w.ListingId == listingId);
+        .FirstOrDefaultAsync(w => w.BuyerId == buyerId && w.ListingId == listingId);
 
     if (item is null) return Results.NotFound();
 
@@ -176,8 +193,12 @@ wishlistApi.MapDelete("/{listingId:int}", async (
 // 5. DELETE /api/buyer-wishlist/clear?buyerId={buyerId}
 wishlistApi.MapDelete("/clear", async (string? buyerId, BuyerWishlistDbContext db) =>
 {
-    var bId = buyerId ?? "1";
-    var items = await db.WishlistItems.Where(w => w.BuyerId == bId).ToListAsync();
+    if (string.IsNullOrWhiteSpace(buyerId))
+    {
+        return Results.BadRequest(new { message = "BuyerId is required." });
+    }
+
+    var items = await db.WishlistItems.Where(w => w.BuyerId == buyerId).ToListAsync();
 
     db.WishlistItems.RemoveRange(items);
     await db.SaveChangesAsync();
