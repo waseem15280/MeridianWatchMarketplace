@@ -29,6 +29,7 @@ export const SellerDashboard: React.FC = () => {
     currentUser,
     listings,
     collection,
+    isFeatureEnabled,
     updateListing,
     deleteListing,
     toggleListingStatus,
@@ -182,18 +183,20 @@ export const SellerDashboard: React.FC = () => {
           <span>My Listings ({myListings.length})</span>
         </button>
 
-        <button
-          id="seller-tab-from-collection"
-          onClick={() => setActiveSubTab('from-collection')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-            activeSubTab === 'from-collection'
-              ? 'bg-[#1C1917] text-[#FAF8F5] shadow-sm'
-              : 'bg-[#FAF8F5] text-[#57534E] border border-[#D8D0C5] hover:bg-[#EDE8E0]'
-          }`}
-        >
-          <Box className="w-3.5 h-3.5 text-[#967139]" />
-          <span>Publish from Vault ({unlistedCollection.length})</span>
-        </button>
+        {isFeatureEnabled('collectorVault') && (
+          <button
+            id="seller-tab-from-collection"
+            onClick={() => setActiveSubTab('from-collection')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              activeSubTab === 'from-collection'
+                ? 'bg-[#1C1917] text-[#FAF8F5] shadow-sm'
+                : 'bg-[#FAF8F5] text-[#57534E] border border-[#D8D0C5] hover:bg-[#EDE8E0]'
+            }`}
+          >
+            <Box className="w-3.5 h-3.5 text-[#967139]" />
+            <span>Publish from Vault ({unlistedCollection.length})</span>
+          </button>
+        )}
 
         <button
           id="seller-tab-received-reviews"
@@ -208,18 +211,20 @@ export const SellerDashboard: React.FC = () => {
           <span>Buyer Reviews & Ratings ({myReviews.length})</span>
         </button>
 
-        <button
-          id="seller-tab-offers"
-          onClick={() => setActiveSubTab('offers')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-            activeSubTab === 'offers'
-              ? 'bg-[#1C1917] text-[#FAF8F5] shadow-sm'
-              : 'bg-[#FAF8F5] text-[#57534E] border border-[#D8D0C5] hover:bg-[#EDE8E0]'
-          }`}
-        >
-          <IndianRupee className="w-3.5 h-3.5" />
-          <span>Buyer Offers ({myReceivedOffers.length})</span>
-        </button>
+        {isFeatureEnabled('ordersAndOffers') && (
+          <button
+            id="seller-tab-offers"
+            onClick={() => setActiveSubTab('offers')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              activeSubTab === 'offers'
+                ? 'bg-[#1C1917] text-[#FAF8F5] shadow-sm'
+                : 'bg-[#FAF8F5] text-[#57534E] border border-[#D8D0C5] hover:bg-[#EDE8E0]'
+            }`}
+          >
+            <IndianRupee className="w-3.5 h-3.5" />
+            <span>Buyer Offers ({myReceivedOffers.length})</span>
+          </button>
+        )}
       </div>
 
       {/* Tab 1: My Listings Manager */}
@@ -374,7 +379,7 @@ export const SellerDashboard: React.FC = () => {
       )}
 
       {/* Tab 2: Publish from Personal Collection Vault */}
-      {activeSubTab === 'from-collection' && (
+      {activeSubTab === 'from-collection' && isFeatureEnabled('collectorVault') && (
         <div className="space-y-4">
           <div className="p-4 rounded-2xl bg-[#C5A880]/20 border border-[#C5A880]/40 text-xs text-[#78592A] flex items-center gap-2">
             <Sparkles className="w-4 h-4 shrink-0 text-[#967139]" />
@@ -587,7 +592,7 @@ export const SellerDashboard: React.FC = () => {
       )}
 
       {/* Tab 4: Received Buyer Offers */}
-      {activeSubTab === 'offers' && (
+      {activeSubTab === 'offers' && isFeatureEnabled('ordersAndOffers') && (
         <div className="space-y-4">
           <h3 className="text-sm font-serif font-bold text-[#1C1917] uppercase tracking-wider">
             Incoming Buyer Offers ({myReceivedOffers.length})

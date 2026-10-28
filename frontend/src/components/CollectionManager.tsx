@@ -24,6 +24,7 @@ export const CollectionManager: React.FC = () => {
   const {
     currentUser,
     collection,
+    isFeatureEnabled,
     setIsAddCollectionOpen,
     setEditingCollectionWatch,
     deleteFromCollection,
@@ -322,22 +323,26 @@ export const CollectionManager: React.FC = () => {
 
                     {/* Listing Action */}
                     {watch.isListedForSale && linkedListing ? (
-                      <button
-                        onClick={() => setSelectedWatch(linkedListing)}
-                        className="flex items-center gap-1.5 bg-[#EDE8E0] hover:bg-[#E2DCD2] text-[#1C1917] px-3 py-2 rounded-xl text-xs font-semibold transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5 text-[#967139]" />
-                        <span>View Live Listing</span>
-                      </button>
+                      isFeatureEnabled('marketplace') && (
+                        <button
+                          onClick={() => setSelectedWatch(linkedListing)}
+                          className="flex items-center gap-1.5 bg-[#EDE8E0] hover:bg-[#E2DCD2] text-[#1C1917] px-3 py-2 rounded-xl text-xs font-semibold transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-[#967139]" />
+                          <span>View Live Listing</span>
+                        </button>
+                      )
                     ) : (
-                      <button
-                        id={`list-from-vault-btn-${watch.id}`}
-                        onClick={() => handleOpenListModal(watch)}
-                        className="flex items-center gap-1.5 bg-[#C5A880] hover:bg-[#B3936A] text-[#1C1917] font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition-all"
-                      >
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                        <span>List on Marketplace</span>
-                      </button>
+                      isFeatureEnabled('sellerHub') && (
+                        <button
+                          id={`list-from-vault-btn-${watch.id}`}
+                          onClick={() => handleOpenListModal(watch)}
+                          className="flex items-center gap-1.5 bg-[#C5A880] hover:bg-[#B3936A] text-[#1C1917] font-bold px-3.5 py-2 rounded-xl text-xs shadow-xs transition-all"
+                        >
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                          <span>List on Marketplace</span>
+                        </button>
+                      )
                     )}
                   </div>
                 </div>

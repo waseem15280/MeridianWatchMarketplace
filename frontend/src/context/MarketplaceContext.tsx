@@ -12,6 +12,12 @@ import {
   UserRole
 } from '../types';
 import {
+  FeatureFlags,
+  isFeatureAccessible,
+  isTabAccessible,
+  getFirstAccessibleTab
+} from '../config/featureFlags';
+import {
   marketplaceApi,
   collectorVaultApi,
   buyerWishlistApi,
@@ -98,6 +104,11 @@ interface MarketplaceContextType {
   updateUserProfile: (updates: Partial<UserAccount>) => void;
   createUserAccount: (role: UserRole, name: string, bio?: string) => Promise<UserAccount>;
   
+  // Feature Flags & Admin Role Access
+  isAdmin: boolean;
+  isFeatureEnabled: (featureKey: keyof FeatureFlags) => boolean;
+  isTabEnabled: (tab: ActiveTab) => boolean;
+
   // Navigation
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
@@ -538,6 +549,29 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const activeAcc = user || (userAccounts.length > 0 ? userAccounts[0] : (accounts[0] || GUEST_ACCOUNT));
     return sanitizeAccount(activeAcc);
   }, [accounts, currentUserId, userAccounts, isLoggedIn]);
+
+  // Admin access check: user is admin if their active account or any account has admin role
+  const isAdmin = useMemo(() => {
+    if (!isLoggedIn) return false;
+    return currentUser?.role === 'admin' || userAccounts.some((acc) => acc.role === 'admin');
+  }, [currentUser?.role, userAccounts, isLoggedIn]);
+
+  // Check if a feature is enabled for current session
+  const isFeatureEnabled = useMemo(() => {
+    return (featureKey: keyof FeatureFlags) => isFeatureAccessible(featureKey, isAdmin);
+  }, [isAdmin]);
+
+  // Check if a navigation tab is enabled for current session
+  const isTabEnabled = useMemo(() => {
+    return (tab: ActiveTab) => isTabAccessible(tab, isAdmin);
+  }, [isAdmin]);
+
+  // Auto-fallback: if the current active tab is disabled, switch to the first accessible tab
+  useEffect(() => {
+    if (!isTabAccessible(activeTab, isAdmin)) {
+      setActiveTab(getFirstAccessibleTab(isAdmin));
+    }
+  }, [activeTab, isAdmin]);
 
   const switchUser = (userId: string) => {
     const target = accounts.find((a) => a.id === userId);
@@ -1426,6 +1460,9 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         currentUser,
         userAccounts,
         accounts,
+        isAdmin,
+        isFeatureEnabled,
+        isTabEnabled,
         switchUser,
         setUserRole,
         updateUserProfile,

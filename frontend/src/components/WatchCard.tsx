@@ -24,6 +24,7 @@ export const WatchCard: React.FC<WatchCardProps> = ({ watch, onSelect }) => {
   const {
     isInWishlist,
     toggleWishlist,
+    isFeatureEnabled,
     setSelectedWatch,
     setSelectedSeller,
     getSellerById,
@@ -88,21 +89,23 @@ export const WatchCard: React.FC<WatchCardProps> = ({ watch, onSelect }) => {
         </div>
 
         {/* Wishlist Button */}
-        <button
-          id={`wishlist-btn-${watch.id}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleWishlist(watch.id);
-          }}
-          className={`absolute top-3 right-3 p-2 rounded-xl backdrop-blur-md transition-all z-10 ${
-            isWishlisted
-              ? 'bg-[#9E4738]/20 text-[#9E4738] border border-[#9E4738]/40 shadow-sm'
-              : 'bg-[#FFFFFF]/85 text-[#57534E] border border-[#D8D0C5] hover:text-[#9E4738] hover:bg-[#FFFFFF]'
-          }`}
-          title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-        >
-          <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-[#9E4738] text-[#9E4738]' : ''}`} />
-        </button>
+        {isFeatureEnabled('buyerWishlist') && (
+          <button
+            id={`wishlist-btn-${watch.id}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleWishlist(watch.id);
+            }}
+            className={`absolute top-3 right-3 p-2 rounded-xl backdrop-blur-md transition-all z-10 ${
+              isWishlisted
+                ? 'bg-[#9E4738]/20 text-[#9E4738] border border-[#9E4738]/40 shadow-sm'
+                : 'bg-[#FFFFFF]/85 text-[#57534E] border border-[#D8D0C5] hover:text-[#9E4738] hover:bg-[#FFFFFF]'
+            }`}
+            title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          >
+            <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-[#9E4738] text-[#9E4738]' : ''}`} />
+          </button>
+        )}
 
         {/* Quick specs pill bottom overlay */}
         <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-[11px] text-[#FAF8F5] z-10 pointer-events-none">

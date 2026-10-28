@@ -29,6 +29,7 @@ export const WatchDetailModal: React.FC = () => {
     setSelectedWatch,
     isInWishlist,
     toggleWishlist,
+    isFeatureEnabled,
     setSelectedSeller,
     getSellerById,
     setCheckoutWatch,
@@ -127,18 +128,20 @@ export const WatchDetailModal: React.FC = () => {
                 <span className="hidden sm:inline">{isCompared ? 'Compared' : 'Compare'}</span>
               </button>
 
-              <button
-                id="modal-wishlist-btn"
-                onClick={() => toggleWishlist(selectedWatch.id)}
-                className={`p-2 rounded-xl text-xs transition-colors flex items-center gap-1.5 ${
-                  isWishlisted
-                    ? 'bg-[#9E4738]/15 text-[#9E4738] border border-[#9E4738]/30'
-                    : 'bg-[#FAF8F5] text-[#57534E] hover:bg-[#EDE8E0] border border-[#D8D0C5]'
-                }`}
-              >
-                <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-[#9E4738] text-[#9E4738]' : ''}`} />
-                <span className="hidden sm:inline">{isWishlisted ? 'Saved' : 'Wishlist'}</span>
-              </button>
+              {isFeatureEnabled('buyerWishlist') && (
+                <button
+                  id="modal-wishlist-btn"
+                  onClick={() => toggleWishlist(selectedWatch.id)}
+                  className={`p-2 rounded-xl text-xs transition-colors flex items-center gap-1.5 ${
+                    isWishlisted
+                      ? 'bg-[#9E4738]/15 text-[#9E4738] border border-[#9E4738]/30'
+                      : 'bg-[#FAF8F5] text-[#57534E] hover:bg-[#EDE8E0] border border-[#D8D0C5]'
+                  }`}
+                >
+                  <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-[#9E4738] text-[#9E4738]' : ''}`} />
+                  <span className="hidden sm:inline">{isWishlisted ? 'Saved' : 'Wishlist'}</span>
+                </button>
+              )}
 
               <button
                 id="modal-close-btn"
@@ -274,36 +277,42 @@ export const WatchDetailModal: React.FC = () => {
                 </div>
 
                 {/* Main Action CTAs */}
-                <div className="space-y-2.5">
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      id="detail-buy-now-btn"
-                      onClick={handleBuyNow}
-                      className="w-full bg-[#1C1917] hover:bg-[#2D2A26] text-[#FAF8F5] font-bold py-3 px-4 rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2"
-                    >
-                      <Lock className="w-4 h-4 text-[#C5A880]" />
-                      <span>Buy with Escrow</span>
-                    </button>
+                {(isFeatureEnabled('ordersAndOffers') || isFeatureEnabled('collectorVault')) && (
+                  <div className="space-y-2.5">
+                    {isFeatureEnabled('ordersAndOffers') && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          id="detail-buy-now-btn"
+                          onClick={handleBuyNow}
+                          className="w-full bg-[#1C1917] hover:bg-[#2D2A26] text-[#FAF8F5] font-bold py-3 px-4 rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                        >
+                          <Lock className="w-4 h-4 text-[#C5A880]" />
+                          <span>Buy with Escrow</span>
+                        </button>
 
-                    <button
-                      id="detail-make-offer-btn"
-                      onClick={handleMakeOffer}
-                      className="w-full bg-[#FFFFFF] hover:bg-[#EDE8E0] text-[#1C1917] font-semibold py-3 px-4 rounded-xl text-sm border border-[#D8D0C5] transition-all flex items-center justify-center gap-2 shadow-2xs"
-                    >
-                      <MessageSquare className="w-4 h-4 text-[#967139]" />
-                      <span>Make an Offer</span>
-                    </button>
+                        <button
+                          id="detail-make-offer-btn"
+                          onClick={handleMakeOffer}
+                          className="w-full bg-[#FFFFFF] hover:bg-[#EDE8E0] text-[#1C1917] font-semibold py-3 px-4 rounded-xl text-sm border border-[#D8D0C5] transition-all flex items-center justify-center gap-2 shadow-2xs"
+                        >
+                          <MessageSquare className="w-4 h-4 text-[#967139]" />
+                          <span>Make an Offer</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {isFeatureEnabled('collectorVault') && (
+                      <button
+                        id="detail-save-to-vault-btn"
+                        onClick={handleSaveToVault}
+                        className="w-full bg-[#FAF8F5] hover:bg-[#EDE8E0] text-[#57534E] hover:text-[#1C1917] font-medium py-2.5 px-4 rounded-xl text-xs border border-[#D8D0C5] transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Box className="w-3.5 h-3.5 text-[#967139]" />
+                        <span>Save to My Private Watch Box / Vault</span>
+                      </button>
+                    )}
                   </div>
-
-                  <button
-                    id="detail-save-to-vault-btn"
-                    onClick={handleSaveToVault}
-                    className="w-full bg-[#FAF8F5] hover:bg-[#EDE8E0] text-[#57534E] hover:text-[#1C1917] font-medium py-2.5 px-4 rounded-xl text-xs border border-[#D8D0C5] transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Box className="w-3.5 h-3.5 text-[#967139]" />
-                    <span>Save to My Private Watch Box / Vault</span>
-                  </button>
-                </div>
+                )}
 
                 {/* Seller Trust & Ratings Card */}
                 <div className="p-4 rounded-2xl bg-[#FFFFFF] border border-[#E5DFD5] space-y-3 shadow-2xs">

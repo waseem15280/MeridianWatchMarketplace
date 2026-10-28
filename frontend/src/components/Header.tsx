@@ -40,6 +40,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     userAccounts,
     currentUser,
     accounts,
+    isAdmin,
+    isFeatureEnabled,
+    isTabEnabled,
     switchUser,
     createUserAccount,
     loginUser,
@@ -58,8 +61,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     refreshData,
     showToast
   } = useMarketplace();
-
-  const isAdmin = currentUser?.role === 'admin' || userAccounts.some((acc) => acc.role === 'admin');
 
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
@@ -363,7 +364,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFilters((prev) => ({ ...prev, searchQuery: searchInput }));
-    if (activeTab !== 'explore') {
+    if (isTabEnabled('explore') && activeTab !== 'explore') {
       setActiveTab('explore');
     }
   };
@@ -389,6 +390,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     { id: 'seller-hub', label: 'Seller Hub', icon: Store },
     { id: 'orders', label: 'Orders & Offers', icon: ShoppingBag }
   ];
+
+  const visibleNavItems = navItems.filter((item) => isTabEnabled(item.id));
 
   return (
     <>
@@ -460,7 +463,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
           <div className="flex items-center gap-6">
             <button
               id="brand-logo-btn"
-              onClick={() => setActiveTab('explore')}
+              onClick={() => {
+                if (isTabEnabled('explore')) {
+                  setActiveTab('explore');
+                }
+              }}
               className="flex items-center gap-2.5 text-left group focus:outline-none"
             >
               <div className="w-9 h-9 rounded-lg bg-[#1C1917] text-[#FAF8F5] border border-[#3D3A36] flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
@@ -477,81 +484,85 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
             </button>
 
             {/* Navigation Tabs Desktop */}
-            <nav className="hidden lg:flex items-center gap-1 ml-4 bg-[#EDE8E0] p-1 rounded-xl border border-[#DDD6CB]">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    id={`nav-tab-${item.id}`}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`relative flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      isActive
-                        ? 'bg-[#1C1917] text-[#FAF8F5] font-semibold shadow-sm'
-                        : 'text-[#57534E] hover:text-[#1C1917] hover:bg-[#E2DCD2]'
-                    }`}
-                  >
-                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#C5A880]' : 'text-[#78716C]'}`} />
-                    <span>{item.label}</span>
-                    {typeof item.count === 'number' && item.count > 0 && (
-                      <span
-                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                          isActive
-                            ? 'bg-[#C5A880] text-[#1C1917]'
-                            : 'bg-[#DDD6CB] text-[#1C1917]'
-                        }`}
-                      >
-                        {item.count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
+            {visibleNavItems.length > 0 && (
+              <nav className="hidden lg:flex items-center gap-1 ml-4 bg-[#EDE8E0] p-1 rounded-xl border border-[#DDD6CB]">
+                {visibleNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      id={`nav-tab-${item.id}`}
+                      onClick={() => setActiveTab(item.id)}
+                      className={`relative flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        isActive
+                          ? 'bg-[#1C1917] text-[#FAF8F5] font-semibold shadow-sm'
+                          : 'text-[#57534E] hover:text-[#1C1917] hover:bg-[#E2DCD2]'
+                      }`}
+                    >
+                      <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#C5A880]' : 'text-[#78716C]'}`} />
+                      <span>{item.label}</span>
+                      {typeof item.count === 'number' && item.count > 0 && (
+                        <span
+                          className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                            isActive
+                              ? 'bg-[#C5A880] text-[#1C1917]'
+                              : 'bg-[#DDD6CB] text-[#1C1917]'
+                          }`}
+                        >
+                          {item.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            )}
           </div>
 
           {/* Search Bar */}
-          <form
-            onSubmit={handleSearchSubmit}
-            className="hidden md:flex flex-1 max-w-md relative items-center"
-          >
-            <div className="relative w-full">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#78716C] pointer-events-none" />
-              <input
-                id="global-search-input"
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search Rolex, Daytona, Nautilus, Omega..."
-                className="w-full bg-[#FFFFFF] border border-[#D8D0C5] rounded-xl pl-9 pr-20 py-2 text-xs text-[#1C1917] placeholder:text-[#8C7D70] focus:outline-none focus:border-[#967139] focus:ring-1 focus:ring-[#967139]/30 transition-all shadow-2xs"
-              />
-              {searchInput && (
+          {isFeatureEnabled('marketplace') && (
+            <form
+              onSubmit={handleSearchSubmit}
+              className="hidden md:flex flex-1 max-w-md relative items-center"
+            >
+              <div className="relative w-full">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#78716C] pointer-events-none" />
+                <input
+                  id="global-search-input"
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Search Rolex, Daytona, Nautilus, Omega..."
+                  className="w-full bg-[#FFFFFF] border border-[#D8D0C5] rounded-xl pl-9 pr-20 py-2 text-xs text-[#1C1917] placeholder:text-[#8C7D70] focus:outline-none focus:border-[#967139] focus:ring-1 focus:ring-[#967139]/30 transition-all shadow-2xs"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchInput('');
+                      setFilters((prev) => ({ ...prev, searchQuery: '' }));
+                    }}
+                    className="absolute right-14 top-1/2 -translate-y-1/2 text-[11px] text-[#78716C] hover:text-[#1C1917]"
+                  >
+                    Clear
+                  </button>
+                )}
                 <button
-                  type="button"
-                  onClick={() => {
-                    setSearchInput('');
-                    setFilters((prev) => ({ ...prev, searchQuery: '' }));
-                  }}
-                  className="absolute right-14 top-1/2 -translate-y-1/2 text-[11px] text-[#78716C] hover:text-[#1C1917]"
+                  type="submit"
+                  id="global-search-btn"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-[#1C1917] hover:bg-[#2D2A26] text-[#FAF8F5] px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shadow-xs"
                 >
-                  Clear
+                  Search
                 </button>
-              )}
-              <button
-                type="submit"
-                id="global-search-btn"
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-[#1C1917] hover:bg-[#2D2A26] text-[#FAF8F5] px-2.5 py-1 rounded-lg text-xs font-medium transition-colors shadow-xs"
-              >
-                Search
-              </button>
-            </div>
-          </form>
+              </div>
+            </form>
+          )}
 
           {/* Right Action Icons & Account Switcher */}
           <div className="flex items-center gap-2.5">
             {/* Mobile Filter Button */}
-            {onOpenFiltersMobile && (
+            {isFeatureEnabled('marketplace') && onOpenFiltersMobile && (
               <button
                 id="mobile-filter-toggle-btn"
                 onClick={onOpenFiltersMobile}
@@ -562,17 +573,19 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
             )}
 
             {/* List Watch CTA */}
-            <button
-              id="header-list-watch-btn"
-              onClick={() => {
-                setIsAddListingOpen(true);
-              }}
-              className="flex items-center gap-1.5 bg-[#C5A880] hover:bg-[#B3936A] text-[#1C1917] font-bold px-3.5 py-2 rounded-xl text-xs shadow-sm hover:shadow-md transition-all"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">Create Listing</span>
-              <span className="sm:hidden">List</span>
-            </button>
+            {isFeatureEnabled('sellerHub') && (
+              <button
+                id="header-list-watch-btn"
+                onClick={() => {
+                  setIsAddListingOpen(true);
+                }}
+                className="flex items-center gap-1.5 bg-[#C5A880] hover:bg-[#B3936A] text-[#1C1917] font-bold px-3.5 py-2 rounded-xl text-xs shadow-sm hover:shadow-md transition-all"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span className="hidden sm:inline">Create Listing</span>
+                <span className="sm:hidden">List</span>
+              </button>
+            )}
 
             {/* Account Switcher Dropdown */}
             <div className="relative" ref={accountMenuRef}>
@@ -810,32 +823,38 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   )}
 
                   {/* Quick Hub Navigation */}
-                  <div className="mt-3 pt-2 border-t border-[#E5DFD5] grid grid-cols-2 gap-1.5">
-                    <button
-                      type="button"
-                      id="account-menu-vault-btn"
-                      onClick={() => {
-                        setActiveTab('collection');
-                        setIsAccountMenuOpen(false);
-                      }}
-                      className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-[#EDE8E0] hover:bg-[#E2DCD2] text-xs text-[#1C1917] font-medium transition-colors"
-                    >
-                      <Box className="w-3.5 h-3.5 text-[#967139]" />
-                      <span>Watch Vault</span>
-                    </button>
-                    <button
-                      type="button"
-                      id="account-menu-seller-hub-btn"
-                      onClick={() => {
-                        setActiveTab('seller-hub');
-                        setIsAccountMenuOpen(false);
-                      }}
-                      className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-[#EDE8E0] hover:bg-[#E2DCD2] text-xs text-[#1C1917] font-medium transition-colors"
-                    >
-                      <Store className="w-3.5 h-3.5 text-[#967139]" />
-                      <span>Seller Hub</span>
-                    </button>
-                  </div>
+                  {(isFeatureEnabled('collectorVault') || isFeatureEnabled('sellerHub')) && (
+                    <div className="mt-3 pt-2 border-t border-[#E5DFD5] grid grid-cols-2 gap-1.5">
+                      {isFeatureEnabled('collectorVault') && (
+                        <button
+                          type="button"
+                          id="account-menu-vault-btn"
+                          onClick={() => {
+                            setActiveTab('collection');
+                            setIsAccountMenuOpen(false);
+                          }}
+                          className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-[#EDE8E0] hover:bg-[#E2DCD2] text-xs text-[#1C1917] font-medium transition-colors"
+                        >
+                          <Box className="w-3.5 h-3.5 text-[#967139]" />
+                          <span>Watch Vault</span>
+                        </button>
+                      )}
+                      {isFeatureEnabled('sellerHub') && (
+                        <button
+                          type="button"
+                          id="account-menu-seller-hub-btn"
+                          onClick={() => {
+                            setActiveTab('seller-hub');
+                            setIsAccountMenuOpen(false);
+                          }}
+                          className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-[#EDE8E0] hover:bg-[#E2DCD2] text-xs text-[#1C1917] font-medium transition-colors"
+                        >
+                          <Store className="w-3.5 h-3.5 text-[#967139]" />
+                          <span>Seller Hub</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -844,36 +863,38 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
         </div>
 
         {/* Mobile Navigation Tabs */}
-        <div className="flex lg:hidden items-center justify-between gap-1 mt-3 pt-2.5 border-t border-[#E5DFD5] overflow-x-auto no-scrollbar">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                id={`mobile-nav-tab-${item.id}`}
-                onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                  isActive
-                    ? 'bg-[#1C1917] text-[#FAF8F5] font-semibold'
-                    : 'text-[#57534E] hover:text-[#1C1917]'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{item.label}</span>
-                {typeof item.count === 'number' && item.count > 0 && (
-                  <span
-                    className={`text-[9px] px-1 rounded-full font-bold ${
-                      isActive ? 'bg-[#C5A880] text-[#1C1917]' : 'bg-[#DDD6CB] text-[#1C1917]'
-                    }`}
-                  >
-                    {item.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+        {visibleNavItems.length > 0 && (
+          <div className="flex lg:hidden items-center justify-between gap-1 mt-3 pt-2.5 border-t border-[#E5DFD5] overflow-x-auto no-scrollbar">
+            {visibleNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  id={`mobile-nav-tab-${item.id}`}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                    isActive
+                      ? 'bg-[#1C1917] text-[#FAF8F5] font-semibold'
+                      : 'text-[#57534E] hover:text-[#1C1917]'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{item.label}</span>
+                  {typeof item.count === 'number' && item.count > 0 && (
+                    <span
+                      className={`text-[9px] px-1 rounded-full font-bold ${
+                        isActive ? 'bg-[#C5A880] text-[#1C1917]' : 'bg-[#DDD6CB] text-[#1C1917]'
+                      }`}
+                    >
+                      {item.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </header>
 

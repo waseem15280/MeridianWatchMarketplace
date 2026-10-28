@@ -29,7 +29,8 @@ export const ExploreView: React.FC = () => {
     setIsAddListingOpen,
     setEditingListing,
     setActiveTab,
-    currentUser
+    currentUser,
+    isFeatureEnabled
   } = useMarketplace();
 
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
@@ -61,27 +62,33 @@ export const ExploreView: React.FC = () => {
           </p>
 
           {/* Quick action buttons */}
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <button
-              id="hero-sell-watch-btn"
-              onClick={() => {
-                setEditingListing(null);
-                setIsAddListingOpen(true);
-              }}
-              className="bg-[#1C1917] hover:bg-[#2D2A26] text-[#FAF8F5] px-5 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 shadow-sm"
-            >
-              <Store className="w-4 h-4 text-[#C5A880]" />
-              <span>List a Timepiece</span>
-            </button>
+          {(isFeatureEnabled('sellerHub') || isFeatureEnabled('collectorVault')) && (
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              {isFeatureEnabled('sellerHub') && (
+                <button
+                  id="hero-sell-watch-btn"
+                  onClick={() => {
+                    setEditingListing(null);
+                    setIsAddListingOpen(true);
+                  }}
+                  className="bg-[#1C1917] hover:bg-[#2D2A26] text-[#FAF8F5] px-5 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 shadow-sm"
+                >
+                  <Store className="w-4 h-4 text-[#C5A880]" />
+                  <span>List a Timepiece</span>
+                </button>
+              )}
 
-            <button
-              onClick={() => setActiveTab('collection')}
-              className="bg-[#FAF8F5] hover:bg-[#FFFFFF] text-[#1C1917] border border-[#D8D0C5] px-5 py-2.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-2 shadow-2xs"
-            >
-              <Box className="w-4 h-4 text-[#967139]" />
-              <span>Manage Personal Vault</span>
-            </button>
-          </div>
+              {isFeatureEnabled('collectorVault') && (
+                <button
+                  onClick={() => setActiveTab('collection')}
+                  className="bg-[#FAF8F5] hover:bg-[#FFFFFF] text-[#1C1917] border border-[#D8D0C5] px-5 py-2.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-2 shadow-2xs"
+                >
+                  <Box className="w-4 h-4 text-[#967139]" />
+                  <span>Manage Personal Vault</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Feature Badges Ticker */}

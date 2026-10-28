@@ -17,7 +17,7 @@ import { CompareDrawer } from './components/CompareDrawer';
 import { ShieldCheck, Lock, Award, Heart } from 'lucide-react';
 
 const MarketplaceApp: React.FC = () => {
-  const { activeTab } = useMarketplace();
+  const { activeTab, isTabEnabled, isFeatureEnabled } = useMarketplace();
 
   return (
     <div className="min-h-screen bg-[#F5F2ED] text-[#1C1917] flex flex-col font-sans selection:bg-[#C5A880]/30 selection:text-[#1C1917]">
@@ -29,11 +29,17 @@ const MarketplaceApp: React.FC = () => {
 
       {/* Main Content View Switcher */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        {activeTab === 'explore' && <ExploreView />}
-        {activeTab === 'seller-hub' && <SellerDashboard />}
-        {activeTab === 'collection' && <CollectionManager />}
-        {activeTab === 'wishlist' && <WishlistView />}
-        {activeTab === 'orders' && <OrdersOffersView />}
+        {activeTab === 'explore' && isTabEnabled('explore') && <ExploreView />}
+        {activeTab === 'seller-hub' && isTabEnabled('seller-hub') && <SellerDashboard />}
+        {activeTab === 'collection' && isTabEnabled('collection') && <CollectionManager />}
+        {activeTab === 'wishlist' && isTabEnabled('wishlist') && <WishlistView />}
+        {activeTab === 'orders' && isTabEnabled('orders') && <OrdersOffersView />}
+        {!isTabEnabled(activeTab) && (
+          <div className="py-20 text-center">
+            <h3 className="text-lg font-bold text-[#1C1917]">Feature Unavailable</h3>
+            <p className="text-sm text-[#78716C] mt-2">This feature is currently undergoing scheduled rollout.</p>
+          </div>
+        )}
       </main>
 
       {/* Footer */}
@@ -73,10 +79,10 @@ const MarketplaceApp: React.FC = () => {
       {/* Global Modals & Drawers */}
       <WatchDetailModal />
       <SellerProfileModal />
-      <AddEditListingModal />
-      <AddCollectionWatchModal />
-      <CheckoutModal />
-      <LeaveReviewModal />
+      {isFeatureEnabled('sellerHub') && <AddEditListingModal />}
+      {isFeatureEnabled('collectorVault') && <AddCollectionWatchModal />}
+      {isFeatureEnabled('ordersAndOffers') && <CheckoutModal />}
+      {isFeatureEnabled('ordersAndOffers') && <LeaveReviewModal />}
       <CompareDrawer />
     </div>
   );

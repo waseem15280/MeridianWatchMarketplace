@@ -4,7 +4,7 @@ import { Heart, Trash2, ArrowRight, ShieldCheck, ShoppingBag, Eye, Layers } from
 import { WatchCard } from './WatchCard';
 
 export const WishlistView: React.FC = () => {
-  const { wishlist, listings, clearWishlist, setActiveTab, setSelectedWatch } = useMarketplace();
+  const { wishlist, listings, clearWishlist, setActiveTab, setSelectedWatch, isFeatureEnabled } = useMarketplace();
 
   const wishlistedWatches = listings.filter((l) => wishlist.includes(l.id));
   const totalWishlistValue = wishlistedWatches.reduce((sum, w) => sum + w.price, 0);
@@ -59,13 +59,15 @@ export const WishlistView: React.FC = () => {
           <p className="text-xs text-[#78716C] max-w-sm mx-auto">
             Browse the luxury marketplace and click the heart icon on any timepiece to save it here.
           </p>
-          <button
-            onClick={() => setActiveTab('explore')}
-            className="bg-[#1C1917] text-[#FAF8F5] font-bold px-5 py-2.5 rounded-xl text-xs hover:bg-[#2D2A26] transition-colors inline-flex items-center gap-2 shadow-sm"
-          >
-            <ShoppingBag className="w-4 h-4 text-[#C5A880]" />
-            <span>Explore Marketplace</span>
-          </button>
+          {isFeatureEnabled('marketplace') && (
+            <button
+              onClick={() => setActiveTab('explore')}
+              className="bg-[#1C1917] text-[#FAF8F5] font-bold px-5 py-2.5 rounded-xl text-xs hover:bg-[#2D2A26] transition-colors inline-flex items-center gap-2 shadow-sm"
+            >
+              <ShoppingBag className="w-4 h-4 text-[#C5A880]" />
+              <span>Explore Marketplace</span>
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
