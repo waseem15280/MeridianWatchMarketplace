@@ -30,6 +30,18 @@ export interface CreateAccountRequest {
   isDefault?: boolean;
 }
 
+export interface ChangePasswordPayload {
+  usernameOrEmail?: string;
+  loginId?: number | string;
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  success: boolean;
+  message: string;
+}
+
 export const userManagementApi = {
   // POST /api/users/validate (Explicit credential verification)
   validate: async (usernameOrEmail: string, password: string): Promise<LoginResponse> => {
@@ -106,6 +118,19 @@ export const userManagementApi = {
   deleteAccount: async (id: string | number): Promise<void> => {
     return request<void>(`/api/users/accounts/${encodeURIComponent(id)}`, {
       method: 'DELETE'
+    });
+  },
+
+  // POST /api/users/change-password
+  changePassword: async (payload: ChangePasswordPayload): Promise<ChangePasswordResponse> => {
+    return request<ChangePasswordResponse>('/api/users/change-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        usernameOrEmail: payload.usernameOrEmail,
+        loginId: payload.loginId ? Number(payload.loginId) : undefined,
+        currentPassword: payload.currentPassword,
+        newPassword: payload.newPassword
+      })
     });
   }
 };

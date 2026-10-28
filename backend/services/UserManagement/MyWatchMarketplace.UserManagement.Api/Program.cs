@@ -363,6 +363,44 @@ userApi.MapDelete("/accounts/{id:int}", async (int id, UserManagementDbContext d
     return Results.NoContent();
 });
 
+// 11. POST /api/users/change-password
+userApi.MapPost("/change-password", async (ChangePasswordRequest request, UserManagementDbContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+    {
+        return Results.BadRequest(new { success = false, message = "Current password and new password are required." });
+    }
+
+    if (request.NewPassword.Length < 6)
+    {
+        return Results.BadRequest(new { success = false, message = "New password must be at least 6 characters long." });
+    }
+
+    var login = await db.Logins.FirstOrDefaultAsync(l =>
+        (request.LoginId.HasValue && l.Id == request.LoginId.Value) ||
+        (!string.IsNullOrWhiteSpace(request.UsernameOrEmail) && (
+            l.Username.ToLower() == request.UsernameOrEmail.ToLower() ||
+            l.Email.ToLower() == request.UsernameOrEmail.ToLower()
+        ))
+    );
+
+    if (login is null)
+    {
+        return Results.NotFound(new { success = false, message = "User not found." });
+    }
+
+    if (!PasswordHasher.VerifyPassword(request.CurrentPassword, login.PasswordHash))
+    {
+        return Results.BadRequest(new { success = false, message = "Current password is incorrect." });
+    }
+
+    login.PasswordHash = PasswordHasher.HashPassword(request.NewPassword);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { success = true, message = "Password changed successfully." });
+})
+.WithName("ChangePassword");
+
 static UserAccountDto ToAccountDto(UserAccount a) => new(
     a.Id,
     a.UserLoginId,

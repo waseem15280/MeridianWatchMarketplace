@@ -50,6 +50,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     loginUser,
     logoutUser,
     registerUser,
+    changeUserPassword,
     isLoggedIn,
     activeTab,
     setActiveTab,
@@ -143,6 +144,15 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
   const [isSubmittingResetPassword, setIsSubmittingResetPassword] = useState(false);
   const [isVerifyingResetToken, setIsVerifyingResetToken] = useState(false);
   const [tokenUsername, setTokenUsername] = useState<string | null>(null);
+
+  // Change Password Modal State
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [currentPasswordInput, setCurrentPasswordInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [changePasswordError, setChangePasswordError] = useState('');
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState('');
+  const [isSubmittingChangePassword, setIsSubmittingChangePassword] = useState(false);
 
   // Detect resetToken & userId in URL query on app load
   useEffect(() => {
@@ -359,6 +369,53 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
       setResetPasswordError(err?.data?.message || err?.message || 'Failed to reset password.');
     } finally {
       setIsSubmittingResetPassword(false);
+    }
+  };
+
+  const handleChangePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChangePasswordError('');
+    setChangePasswordSuccess('');
+
+    if (!currentPasswordInput) {
+      setChangePasswordError('Please enter your current password.');
+      return;
+    }
+
+    if (!newPasswordInput || newPasswordInput.length < 6) {
+      setChangePasswordError('New password must be at least 6 characters long.');
+      return;
+    }
+
+    if (newPasswordInput !== confirmPasswordInput) {
+      setChangePasswordError('New passwords do not match.');
+      return;
+    }
+
+    if (newPasswordInput === currentPasswordInput) {
+      setChangePasswordError('New password must be different from current password.');
+      return;
+    }
+
+    setIsSubmittingChangePassword(true);
+    try {
+      const res = await changeUserPassword(currentPasswordInput, newPasswordInput);
+      if (res.success) {
+        setChangePasswordSuccess(res.message || 'Password updated successfully!');
+        setTimeout(() => {
+          setIsChangePasswordModalOpen(false);
+          setCurrentPasswordInput('');
+          setNewPasswordInput('');
+          setConfirmPasswordInput('');
+          setChangePasswordSuccess('');
+        }, 1400);
+      } else {
+        setChangePasswordError(res.message || 'Failed to update password.');
+      }
+    } catch (err: any) {
+      setChangePasswordError(err?.data?.message || err?.message || 'Failed to update password.');
+    } finally {
+      setIsSubmittingChangePassword(false);
     }
   };
 
@@ -648,18 +705,37 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         {isLoggedIn ? (
-                          <button
-                            type="button"
-                            id="account-menu-logout-btn"
-                            onClick={() => {
-                              logoutUser();
-                              setIsAccountMenuOpen(false);
-                            }}
-                            className="text-[10px] text-rose-700 hover:text-rose-800 font-semibold flex items-center gap-1 bg-[#FFFFFF] px-2 py-0.5 rounded-lg border border-rose-200 hover:border-rose-300 transition-colors"
-                          >
-                            <LogOut className="w-3 h-3" />
-                            <span>Log Out</span>
-                          </button>
+                          <div className="flex flex-col items-end gap-1.5">
+                            <button
+                              type="button"
+                              id="account-menu-logout-btn"
+                              onClick={() => {
+                                logoutUser();
+                                setIsAccountMenuOpen(false);
+                              }}
+                              className="text-[10px] text-rose-700 hover:text-rose-800 font-semibold flex items-center gap-1 bg-[#FFFFFF] px-2 py-0.5 rounded-lg border border-rose-200 hover:border-rose-300 transition-colors shadow-2xs"
+                            >
+                              <LogOut className="w-3 h-3" />
+                              <span>Log Out</span>
+                            </button>
+                            <button
+                              type="button"
+                              id="account-menu-change-password-btn"
+                              onClick={() => {
+                                setIsAccountMenuOpen(false);
+                                setIsChangePasswordModalOpen(true);
+                                setCurrentPasswordInput('');
+                                setNewPasswordInput('');
+                                setConfirmPasswordInput('');
+                                setChangePasswordError('');
+                                setChangePasswordSuccess('');
+                              }}
+                              className="text-[10px] text-[#85642F] hover:text-[#1C1917] font-semibold flex items-center gap-1 bg-[#FFFFFF] px-2 py-0.5 rounded-lg border border-[#D8D0C5] hover:border-[#85642F] transition-colors shadow-2xs"
+                            >
+                              <KeyRound className="w-3 h-3 text-[#C5A880]" />
+                              <span>Change Password</span>
+                            </button>
+                          </div>
                         ) : (
                           <>
                             <button
@@ -1624,6 +1700,131 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   className="px-5 py-2 rounded-xl bg-[#1C1917] text-[#FAF8F5] text-xs font-bold hover:bg-[#3D3A36] disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-md"
                 >
                   {isSubmittingResetPassword ? (
+                    <span>Updating Password...</span>
+                  ) : (
+                    <>
+                      <KeyRound className="w-3.5 h-3.5 text-[#C5A880]" />
+                      <span>Update Password</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {isChangePasswordModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in overflow-y-auto"
+          onClick={() => setIsChangePasswordModalOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl w-full max-w-md shadow-2xl overflow-hidden p-6 my-auto max-h-[90vh] flex flex-col"
+          >
+            <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-4 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#C5A880]/20 flex items-center justify-center">
+                  <KeyRound className="w-5 h-5 text-[#85642F]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#1C1917]">Change Password</h3>
+                  <p className="text-xs text-[#78716C]">
+                    Update credentials for <strong className="font-mono text-[#85642F]">@{currentLogin.username}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsChangePasswordModalOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-[#EDE8E0] flex items-center justify-center text-[#78716C] hover:text-[#1C1917] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {changePasswordError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 shrink-0 text-red-600" />
+                <span>{changePasswordError}</span>
+              </div>
+            )}
+
+            {changePasswordSuccess && (
+              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
+                <span>{changePasswordSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleChangePasswordSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  id="current-password-input"
+                  value={currentPasswordInput}
+                  onChange={(e) => setCurrentPasswordInput(e.target.value)}
+                  placeholder="Enter your current password"
+                  className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  id="change-new-password-input"
+                  value={newPasswordInput}
+                  onChange={(e) => setNewPasswordInput(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  id="change-confirm-password-input"
+                  value={confirmPasswordInput}
+                  onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                  placeholder="Re-enter your new password"
+                  className="w-full px-3 py-2 rounded-xl border border-[#D8D0C5] bg-[#FFFFFF] text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#85642F]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E5DFD5]">
+                <button
+                  type="button"
+                  onClick={() => setIsChangePasswordModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-[#D8D0C5] text-xs font-medium text-[#57534E] hover:bg-[#EDE8E0] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  id="submit-change-password-btn"
+                  disabled={
+                    isSubmittingChangePassword ||
+                    !currentPasswordInput ||
+                    !newPasswordInput ||
+                    !confirmPasswordInput ||
+                    Boolean(changePasswordSuccess)
+                  }
+                  className="px-5 py-2 rounded-xl bg-[#1C1917] text-[#FAF8F5] text-xs font-bold hover:bg-[#3D3A36] disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-md"
+                >
+                  {isSubmittingChangePassword ? (
                     <span>Updating Password...</span>
                   ) : (
                     <>

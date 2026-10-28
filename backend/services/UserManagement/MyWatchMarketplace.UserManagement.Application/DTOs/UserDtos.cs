@@ -73,3 +73,15 @@ public record UpdateUserAccountRequest(
     string? Phone,
     bool? VerifiedDealer
 );
+
+public record ChangePasswordRequest(
+    string? UsernameOrEmail,
+    int? LoginId,
+    string CurrentPassword,
+    string NewPassword
+);
+
+public record ChangePasswordResponse(
+    bool Success,
+    string Message
+);

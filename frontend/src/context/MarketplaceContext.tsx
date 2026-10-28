@@ -94,6 +94,7 @@ interface MarketplaceContextType {
   loginUser: (usernameOrEmail: string, password: string) => Promise<boolean>;
   logoutUser: () => void;
   registerUser: (data: RegisterRequest) => Promise<boolean>;
+  changeUserPassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   switchLogin: (loginId: string) => Promise<void>;
 
   // User & Accounts (1 Login -> N Accounts, 1 role per Account)
@@ -819,6 +820,36 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return true;
   };
 
+  const changeUserPassword = async (
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message: string }> => {
+    if (!isLoggedIn) {
+      return { success: false, message: 'You must be logged in to change your password.' };
+    }
+
+    if (isGatewayConnected) {
+      try {
+        const res = await userManagementApi.changePassword({
+          usernameOrEmail: currentLogin.username,
+          loginId: currentLogin.id,
+          currentPassword,
+          newPassword
+        });
+        showToast('Password Updated', res.message || 'Your password was changed successfully.', 'success');
+        return res;
+      } catch (err: any) {
+        const msg = err?.data?.message || err?.message || 'Failed to change password. Please verify your current password.';
+        showToast('Change Password Failed', msg, 'error');
+        return { success: false, message: msg };
+      }
+    }
+
+    // Local / Offline demo mode fallback
+    showToast('Password Updated', 'Your password was changed successfully (Offline Mode).', 'success');
+    return { success: true, message: 'Password changed successfully.' };
+  };
+
   const createUserAccount = async (role: UserRole, name: string, bio?: string): Promise<UserAccount> => {
     const newAccount: UserAccount = {
       id: 'account-' + Date.now().toString(36),
@@ -1513,6 +1544,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         loginUser,
         logoutUser,
         registerUser,
+        changeUserPassword,
         switchLogin,
         currentUser,
         userAccounts,
