@@ -30,6 +30,9 @@ export const WatchDetailModal: React.FC = () => {
     isInWishlist,
     toggleWishlist,
     isFeatureEnabled,
+    isFeatureActive,
+    isLoggedIn,
+    promptLogin,
     setSelectedSeller,
     getSellerById,
     setCheckoutWatch,
@@ -128,10 +131,16 @@ export const WatchDetailModal: React.FC = () => {
                 <span className="hidden sm:inline">{isCompared ? 'Compared' : 'Compare'}</span>
               </button>
 
-              {isFeatureEnabled('buyerWishlist') && (
+              {isFeatureActive('buyerWishlist') && (
                 <button
                   id="modal-wishlist-btn"
-                  onClick={() => toggleWishlist(selectedWatch.id)}
+                  onClick={() => {
+                    if (!isLoggedIn) {
+                      promptLogin('Please log in to add timepieces to your wishlist.', selectedWatch.id);
+                      return;
+                    }
+                    toggleWishlist(selectedWatch.id);
+                  }}
                   className={`p-2 rounded-xl text-xs transition-colors flex items-center gap-1.5 ${
                     isWishlisted
                       ? 'bg-[#9E4738]/15 text-[#9E4738] border border-[#9E4738]/30'

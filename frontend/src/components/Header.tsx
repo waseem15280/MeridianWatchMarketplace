@@ -43,6 +43,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     isAdmin,
     isFeatureEnabled,
     isTabEnabled,
+    isLoginModalOpen,
+    setIsLoginModalOpen,
     switchUser,
     createUserAccount,
     loginUser,
@@ -105,7 +107,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
   const [isSubmittingAccount, setIsSubmittingAccount] = useState(false);
 
   // Login Modal State
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');

@@ -25,6 +25,9 @@ export const WatchCard: React.FC<WatchCardProps> = ({ watch, onSelect }) => {
     isInWishlist,
     toggleWishlist,
     isFeatureEnabled,
+    isFeatureActive,
+    isLoggedIn,
+    promptLogin,
     setSelectedWatch,
     setSelectedSeller,
     getSellerById,
@@ -89,11 +92,15 @@ export const WatchCard: React.FC<WatchCardProps> = ({ watch, onSelect }) => {
         </div>
 
         {/* Wishlist Button */}
-        {isFeatureEnabled('buyerWishlist') && (
+        {isFeatureActive('buyerWishlist') && (
           <button
             id={`wishlist-btn-${watch.id}`}
             onClick={(e) => {
               e.stopPropagation();
+              if (!isLoggedIn) {
+                promptLogin('Please log in to add timepieces to your wishlist.', watch.id);
+                return;
+              }
               toggleWishlist(watch.id);
             }}
             className={`absolute top-3 right-3 p-2 rounded-xl backdrop-blur-md transition-all z-10 ${

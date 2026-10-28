@@ -14,6 +14,7 @@ import {
 import {
   FeatureFlags,
   isFeatureAccessible,
+  isFeatureActiveInApp,
   isTabAccessible,
   getFirstAccessibleTab
 } from '../config/featureFlags';
@@ -106,8 +107,15 @@ interface MarketplaceContextType {
   
   // Feature Flags & Admin Role Access
   isAdmin: boolean;
+  isGuest: boolean;
   isFeatureEnabled: (featureKey: keyof FeatureFlags) => boolean;
+  isFeatureActive: (featureKey: keyof FeatureFlags) => boolean;
   isTabEnabled: (tab: ActiveTab) => boolean;
+
+  // Global Authentication & Login Modal
+  isLoginModalOpen: boolean;
+  setIsLoginModalOpen: (open: boolean) => void;
+  promptLogin: (message?: string, watchIdToWishlist?: string) => void;
 
   // Navigation
   activeTab: ActiveTab;
@@ -297,6 +305,10 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [compareList, setCompareList] = useState<string[]>([]);
   const [filters, setFilters] = useState<FilterOptions>(DEFAULT_FILTERS);
 
+  // Global Authentication & Login Modal State
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
+  const [pendingWishlistId, setPendingWishlistId] = useState<string | null>(null);
+
   // Modals & UI States
   const [selectedWatch, setSelectedWatch] = useState<WatchListing | null>(null);
   const [selectedSeller, setSelectedSeller] = useState<UserAccount | null>(null);
@@ -330,6 +342,14 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const removeToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const promptLogin = (message?: string, watchIdToWishlist?: string) => {
+    if (watchIdToWishlist) {
+      setPendingWishlistId(watchIdToWishlist);
+    }
+    setIsLoginModalOpen(true);
+    showToast('Authentication Required', message || 'Please log in to continue.', 'info');
   };
 
   // Sync to LocalStorage
@@ -556,22 +576,29 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return currentUser?.role === 'admin' || userAccounts.some((acc) => acc.role === 'admin');
   }, [currentUser?.role, userAccounts, isLoggedIn]);
 
-  // Check if a feature is enabled for current session
+  const isGuest = !isLoggedIn;
+
+  // Check if a feature is enabled for current session (incorporating admin & guest status)
   const isFeatureEnabled = useMemo(() => {
-    return (featureKey: keyof FeatureFlags) => isFeatureAccessible(featureKey, isAdmin);
+    return (featureKey: keyof FeatureFlags) => isFeatureAccessible(featureKey, isAdmin, isGuest);
+  }, [isAdmin, isGuest]);
+
+  // Check if a feature is active in the application overall (ignoring guest restrictions)
+  const isFeatureActive = useMemo(() => {
+    return (featureKey: keyof FeatureFlags) => isFeatureActiveInApp(featureKey, isAdmin);
   }, [isAdmin]);
 
   // Check if a navigation tab is enabled for current session
   const isTabEnabled = useMemo(() => {
-    return (tab: ActiveTab) => isTabAccessible(tab, isAdmin);
-  }, [isAdmin]);
+    return (tab: ActiveTab) => isTabAccessible(tab, isAdmin, isGuest);
+  }, [isAdmin, isGuest]);
 
   // Auto-fallback: if the current active tab is disabled, switch to the first accessible tab
   useEffect(() => {
-    if (!isTabAccessible(activeTab, isAdmin)) {
-      setActiveTab(getFirstAccessibleTab(isAdmin));
+    if (!isTabAccessible(activeTab, isAdmin, isGuest)) {
+      setActiveTab(getFirstAccessibleTab(isAdmin, isGuest));
     }
-  }, [activeTab, isAdmin]);
+  }, [activeTab, isAdmin, isGuest]);
 
   const switchUser = (userId: string) => {
     const target = accounts.find((a) => a.id === userId);
@@ -637,6 +664,24 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
           localStorage.setItem('chronos_accounts', JSON.stringify(res.accounts));
           localStorage.setItem('chronos_available_logins', JSON.stringify([res.login]));
 
+          // If there was a pending watch to add to wishlist before logging in, add it now
+          if (pendingWishlistId) {
+            const targetWatchId = pendingWishlistId;
+            setPendingWishlistId(null);
+            setWishlist((prev) => {
+              if (!prev.includes(targetWatchId)) {
+                buyerWishlistApi.addToWishlist({
+                  listingId: targetWatchId,
+                  buyerId: activeAccId
+                }).catch((e) => console.warn('Could not sync pending wishlist item to backend', e));
+                return [...prev, targetWatchId];
+              }
+              return prev;
+            });
+            showToast('Saved to Wishlist', 'The timepiece has been saved to your personal wishlist.', 'success');
+          }
+
+          setIsLoginModalOpen(false);
           showToast('Authentication Successful', `Welcome back, @${res.login.username}!`, 'success');
           return true;
         }
@@ -655,6 +700,13 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     );
     if (matched) {
       await switchLogin(matched.id);
+      if (pendingWishlistId) {
+        const targetWatchId = pendingWishlistId;
+        setPendingWishlistId(null);
+        setWishlist((prev) => (prev.includes(targetWatchId) ? prev : [...prev, targetWatchId]));
+        showToast('Saved to Wishlist', 'The timepiece has been saved to your personal wishlist.', 'success');
+      }
+      setIsLoginModalOpen(false);
       return true;
     }
 
@@ -1054,6 +1106,11 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Wishlist
   const toggleWishlist = (watchId: string) => {
+    if (!isLoggedIn) {
+      promptLogin('Please log in to add timepieces to your wishlist.', watchId);
+      return;
+    }
+
     const isCurrentlyWishlisted = wishlist.includes(watchId);
     const watch = listings.find((l) => l.id === watchId);
 
@@ -1461,8 +1518,13 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         userAccounts,
         accounts,
         isAdmin,
+        isGuest,
         isFeatureEnabled,
+        isFeatureActive,
         isTabEnabled,
+        isLoginModalOpen,
+        setIsLoginModalOpen,
+        promptLogin,
         switchUser,
         setUserRole,
         updateUserProfile,
