@@ -256,6 +256,33 @@ services:
 
 
   # ============================================================
+  # Service Center API
+  # ============================================================
+  service-center-api:
+    image: ghcr.io/${GHCR_OWNER:-waseem15280}/${GHCR_IMAGE_PREFIX:-mywatchmarketplace}-service-center-api:latest
+    container_name: thc-service-center-api
+    restart: unless-stopped
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: 8080
+
+      ConnectionStrings__ServiceCenterDbConnection: >-
+        Host=postgres;
+        Port=5432;
+        Database=ServiceCenterDb;
+        Username=${POSTGRES_USER};
+        Password=${POSTGRES_PASSWORD}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - thc-marketplace-network
+
+
+  # ============================================================
   # YARP API Gateway
   # ============================================================
   api-gateway:
@@ -281,6 +308,8 @@ services:
 
       ReverseProxy__Clusters__email-service-cluster__Destinations__email-service-destination__Address: http://email-service-api:8080
 
+      ReverseProxy__Clusters__service-center-cluster__Destinations__service-center-destination__Address: http://service-center-api:8080
+
 
     depends_on:
       marketplace-api:
@@ -296,6 +325,8 @@ services:
       user-management-api:
         condition: service_started
       email-service-api:
+        condition: service_started
+      service-center-api:
         condition: service_started
 
     networks:

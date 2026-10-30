@@ -25,7 +25,8 @@ import {
   ShieldAlert,
   RefreshCw,
   Mail,
-  ArrowLeft
+  ArrowLeft,
+  Wrench
 } from 'lucide-react';
 import { emailApi } from '../services/api';
 import { ActiveTab, UserRole } from '../types';
@@ -55,6 +56,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     activeTab,
     setActiveTab,
     wishlist,
+    serviceRequests,
     compareList,
     setIsAddListingOpen,
     filters,
@@ -220,6 +222,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
         return <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">Collector</span>;
       case 'admin':
         return <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">Admin</span>;
+      case 'service_executive':
+        return <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">Service Executive</span>;
     }
   };
 
@@ -441,10 +445,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     }
   };
 
+  const activeServiceRequestsCount = (serviceRequests || []).filter((r) => {
+    if (currentUser?.role === 'service_executive' || isAdmin) {
+      return r.currentState !== 'TransitBack' && r.currentState !== 'ServiceRequestRejected';
+    }
+    return String(r.userId) === String(currentUser?.id) && r.currentState !== 'TransitBack' && r.currentState !== 'ServiceRequestRejected';
+  }).length;
+
   const navItems: { id: ActiveTab; label: string; icon: React.FC<{ className?: string }>; count?: number }[] = [
     { id: 'explore', label: 'Marketplace', icon: Watch },
     { id: 'collection', label: 'My Watch Vault', icon: Box },
     { id: 'wishlist', label: 'Wishlist', icon: Heart, count: isLoggedIn ? wishlist.length : 0 },
+    { id: 'service-center', label: 'Service Center', icon: Wrench, count: isLoggedIn ? activeServiceRequestsCount : 0 },
     { id: 'seller-hub', label: 'Seller Hub', icon: Store },
     { id: 'orders', label: 'Orders & Offers', icon: ShoppingBag }
   ];
@@ -1021,6 +1033,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                       { role: 'buyer' as UserRole, label: 'Buyer', desc: 'Browse catalog, buy watches, wishlists', color: 'blue' },
                       { role: 'seller' as UserRole, label: 'Seller', desc: 'List timepieces, seller hub, manage offers', color: 'amber' },
                       { role: 'collector' as UserRole, label: 'Collector', desc: 'Private vault, market valuation tracking', color: 'purple' },
+                      { role: 'service_executive' as UserRole, label: 'Service Executive', desc: 'Watch repairs, diagnostics & testing', color: 'emerald' },
                       { role: 'admin' as UserRole, label: 'Admin', desc: 'Escrow oversight, compliance & admin', color: 'rose' }
                     ] as const
                   ).map((item) => {

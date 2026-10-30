@@ -6,4 +6,5 @@ export * from './sellerHubApi';
 export * from './customerOrdersApi';
 export * from './userManagementApi';
 export * from './emailApi';
+export * from './serviceCenterApi';
 

@@ -6,6 +6,7 @@ export interface FeatureFlags {
   buyerWishlist: boolean;    // 3) Buyer Wishlist
   sellerHub: boolean;        // 4) Seller hub to manage seller listings
   ordersAndOffers: boolean;  // 5) Order and offers
+  serviceCenter: boolean;    // 6) Watch repair service center
 }
 
 export interface FeatureFlagConfig {
@@ -54,14 +55,16 @@ export const FEATURE_FLAGS: FeatureFlagConfig = {
     collectorVault: parseEnvBool((import.meta as any).env?.VITE_FEATURE_COLLECTOR_VAULT, true),
     buyerWishlist: parseEnvBool((import.meta as any).env?.VITE_FEATURE_BUYER_WISHLIST, true),
     sellerHub: parseEnvBool((import.meta as any).env?.VITE_FEATURE_SELLER_HUB, true),
-    ordersAndOffers: parseEnvBool((import.meta as any).env?.VITE_FEATURE_ORDERS_AND_OFFERS, true)
+    ordersAndOffers: parseEnvBool((import.meta as any).env?.VITE_FEATURE_ORDERS_AND_OFFERS, true),
+    serviceCenter: parseEnvBool((import.meta as any).env?.VITE_FEATURE_SERVICE_CENTER, true)
   },
   guestFeatures: {
     marketplace: parseEnvBool((import.meta as any).env?.VITE_GUEST_FEATURE_MARKETPLACE, true),
     collectorVault: parseEnvBool((import.meta as any).env?.VITE_GUEST_FEATURE_COLLECTOR_VAULT, false), // OFF for Guest
     buyerWishlist: parseEnvBool((import.meta as any).env?.VITE_GUEST_FEATURE_BUYER_WISHLIST, false),   // OFF for Guest
     sellerHub: parseEnvBool((import.meta as any).env?.VITE_GUEST_FEATURE_SELLER_HUB, false),           // OFF for Guest
-    ordersAndOffers: parseEnvBool((import.meta as any).env?.VITE_GUEST_FEATURE_ORDERS_AND_OFFERS, false) // OFF for Guest
+    ordersAndOffers: parseEnvBool((import.meta as any).env?.VITE_GUEST_FEATURE_ORDERS_AND_OFFERS, false), // OFF for Guest
+    serviceCenter: parseEnvBool((import.meta as any).env?.VITE_GUEST_FEATURE_SERVICE_CENTER, false)    // OFF for Guest
   }
 };
 
@@ -73,7 +76,8 @@ export const TAB_TO_FEATURE_MAP: Record<ActiveTab, keyof FeatureFlags> = {
   'collection': 'collectorVault',
   'wishlist': 'buyerWishlist',
   'seller-hub': 'sellerHub',
-  'orders': 'ordersAndOffers'
+  'orders': 'ordersAndOffers',
+  'service-center': 'serviceCenter'
 };
 
 /**
@@ -131,7 +135,7 @@ export function getFirstAccessibleTab(
   isAdmin: boolean,
   isGuest: boolean = false
 ): ActiveTab {
-  const allTabs: ActiveTab[] = ['explore', 'collection', 'wishlist', 'seller-hub', 'orders'];
+  const allTabs: ActiveTab[] = ['explore', 'collection', 'wishlist', 'seller-hub', 'orders', 'service-center'];
   for (const tab of allTabs) {
     if (isTabAccessible(tab, isAdmin, isGuest)) {
       return tab;

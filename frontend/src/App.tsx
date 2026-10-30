@@ -7,6 +7,7 @@ import { SellerDashboard } from './components/SellerDashboard';
 import { CollectionManager } from './components/CollectionManager';
 import { WishlistView } from './components/WishlistView';
 import { OrdersOffersView } from './components/OrdersOffersView';
+import { ServiceCenterView } from './components/ServiceCenterView';
 import { WatchDetailModal } from './components/WatchDetailModal';
 import { SellerProfileModal } from './components/SellerProfileModal';
 import { AddEditListingModal } from './components/AddEditListingModal';
@@ -34,6 +35,7 @@ const MarketplaceApp: React.FC = () => {
         {activeTab === 'collection' && isTabEnabled('collection') && <CollectionManager />}
         {activeTab === 'wishlist' && isTabEnabled('wishlist') && <WishlistView />}
         {activeTab === 'orders' && isTabEnabled('orders') && <OrdersOffersView />}
+        {activeTab === 'service-center' && isTabEnabled('service-center') && <ServiceCenterView />}
         {!isTabEnabled(activeTab) && (
           <div className="py-20 text-center">
             <h3 className="text-lg font-bold text-[#1C1917]">Feature Unavailable</h3>

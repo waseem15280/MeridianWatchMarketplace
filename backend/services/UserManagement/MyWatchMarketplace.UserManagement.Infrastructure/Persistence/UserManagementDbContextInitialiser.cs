@@ -219,6 +219,26 @@ public class UserManagementDbContextInitialiser
                         AvgShipTime = "Instantaneous",
                         Phone = "+44 20 7000 0000",
                         IsDefault = true
+                    },
+                    new()
+                    {
+                        Id = 11,
+                        UserLoginId = 3,
+                        Name = "Jean-Marc Piguet (Service Lead)",
+                        Email = "service@meridianmarket.com",
+                        Role = UserRole.ServiceExecutive,
+                        Avatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
+                        Location = "Geneva Service Atelier, Switzerland",
+                        MemberSince = "2021",
+                        VerifiedDealer = true,
+                        Bio = "Master Horologist & Chief Service Executive. Certified in complex chronograph restorations, hairspring regulation, and quality assurance.",
+                        Rating = 4.9,
+                        ReviewCount = 84,
+                        TotalSalesCount = 0,
+                        ResponseRate = "99%",
+                        AvgShipTime = "24 Hours",
+                        Phone = "+41 22 999 1234",
+                        IsDefault = false
                     }
                 }
             },

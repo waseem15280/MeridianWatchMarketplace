@@ -199,7 +199,28 @@ services:
       - meridian-network
 
   # =========================================================================
-  # 9. YARP API Gateway (:5000)
+  # 9. Service Center API Microservice (:5108)
+  # =========================================================================
+  service-center-api:
+    build:
+      context: ./backend
+      dockerfile: services/ServiceCenter/Dockerfile
+    container_name: meridian-service-center-api
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__ServiceCenterDbConnection=${CONNECTION_STRINGS_SERVICE_CENTER:-Host=postgres;Port=5432;Database=ServiceCenterDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD}}
+    ports:
+      - "5108:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - meridian-network
+
+  # =========================================================================
+  # 10. YARP API Gateway (:5000)
   # =========================================================================
   api-gateway:
     build:
@@ -217,6 +238,7 @@ services:
       - ReverseProxy__Clusters__customer-orders-cluster__Destinations__customer-orders-destination__Address=http://customer-orders-api:8080
       - ReverseProxy__Clusters__user-management-cluster__Destinations__user-management-destination__Address=http://user-management-api:8080
       - ReverseProxy__Clusters__email-service-cluster__Destinations__email-service-destination__Address=http://email-service-api:8080
+      - ReverseProxy__Clusters__service-center-cluster__Destinations__service-center-destination__Address=http://service-center-api:8080
     ports:
       - "5000:8080"
     depends_on:
@@ -234,11 +256,13 @@ services:
         condition: service_started
       email-service-api:
         condition: service_started
+      service-center-api:
+        condition: service_started
     networks:
       - meridian-network
 
   # =========================================================================
-  # 10. Frontend: React Vite SPA (:3000)
+  # 11. Frontend: React Vite SPA (:3000)
   # =========================================================================
   frontend:
     build:

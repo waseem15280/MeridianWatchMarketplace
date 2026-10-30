@@ -1,4 +1,4 @@
-export type UserRole = 'buyer' | 'seller' | 'collector' | 'admin';
+export type UserRole = 'buyer' | 'seller' | 'collector' | 'admin' | 'service_executive';
 
 export interface UserLogin {
   id: string | number;
@@ -185,4 +185,51 @@ export interface FilterOptions {
   caseDiameterRange: [number, number];
 }
 
-export type ActiveTab = 'explore' | 'seller-hub' | 'collection' | 'wishlist' | 'orders' | 'offers';
+export type ServiceWorkflowState =
+  | 'ServiceRequestCreated'
+  | 'ServiceRequestAccepted'
+  | 'ServiceRequestRejected'
+  | 'InTransit'
+  | 'UnderRepair'
+  | 'InTesting'
+  | 'TransitBack';
+
+export interface ServiceRequestAuditLog {
+  id: number;
+  serviceRequestId: number | string;
+  fromState: string;
+  toState: string;
+  action: string;
+  triggeredByUserId: string;
+  triggeredByName: string;
+  triggeredByRole: string;
+  timestamp: string;
+  notes?: string;
+}
+
+export interface ServiceRequest {
+  id: number | string;
+  userId: string;
+  customerName: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  watchBrand: string;
+  watchModel: string;
+  movementType: WatchMovement | string;
+  isWorking: boolean;
+  glassChangeRequired: boolean;
+  issueDescription: string;
+  currentState: ServiceWorkflowState;
+  estimatedPrice?: number;
+  rejectionReason?: string;
+  courierCompany?: string;
+  trackingNumber?: string;
+  returnCourierCompany?: string;
+  returnTrackingNumber?: string;
+  serviceNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+  auditLogs?: ServiceRequestAuditLog[];
+}
+
+export type ActiveTab = 'explore' | 'seller-hub' | 'collection' | 'wishlist' | 'orders' | 'offers' | 'service-center';

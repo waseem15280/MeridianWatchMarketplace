@@ -9,7 +9,10 @@ import {
   WatchOffer,
   FilterOptions,
   ActiveTab,
-  UserRole
+  UserRole,
+  ServiceRequest,
+  ServiceWorkflowState,
+  ServiceRequestAuditLog
 } from '../types';
 import {
   FeatureFlags,
@@ -25,6 +28,8 @@ import {
   sellerHubApi,
   customerOrdersApi,
   userManagementApi,
+  serviceCenterApi,
+  TransitionRequestPayload,
   checkGatewayHealth,
   RegisterRequest
 } from '../services/api';
@@ -161,6 +166,11 @@ interface MarketplaceContextType {
   createOffer: (listingId: string, offerAmount: number, message: string) => WatchOffer;
   respondToOffer: (offerId: string, action: 'accepted' | 'declined' | 'countered', counterAmount?: number) => void;
   
+  // Service Center (Watch Repair Service)
+  serviceRequests: ServiceRequest[];
+  createServiceRequest: (data: Omit<ServiceRequest, 'id' | 'currentState' | 'createdAt' | 'updatedAt' | 'auditLogs'>) => Promise<ServiceRequest>;
+  transitionServiceRequest: (id: string | number, payload: TransitionRequestPayload) => Promise<boolean>;
+  
   // Filters & Search
   filters: FilterOptions;
   setFilters: React.Dispatch<React.SetStateAction<FilterOptions>>;
@@ -227,6 +237,209 @@ const DEFAULT_FILTERS: FilterOptions = {
   sortBy: 'newest',
   caseDiameterRange: [30, 48]
 };
+
+export const DEFAULT_SERVICE_REQUESTS: ServiceRequest[] = [
+  {
+    id: 1,
+    userId: '1',
+    customerName: 'Alexander Vance',
+    customerEmail: 'alexander.vance@horology.com',
+    customerPhone: '+1 212 555 0199',
+    watchBrand: 'Patek Philippe',
+    watchModel: 'Calatrava 5196G White Gold',
+    movementType: 'Manual Winding',
+    isWorking: false,
+    glassChangeRequired: true,
+    issueDescription: 'Watch stopped ticking after minor impact. Front sapphire crystal has hairline fracture near 2 o\'clock.',
+    currentState: 'ServiceRequestCreated',
+    createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+    auditLogs: [
+      {
+        id: 1,
+        serviceRequestId: 1,
+        fromState: 'ServiceRequestCreated',
+        toState: 'ServiceRequestCreated',
+        action: 'Service Request Created',
+        triggeredByUserId: '1',
+        triggeredByName: 'Alexander Vance',
+        triggeredByRole: 'buyer',
+        notes: 'Initial request submitted with sapphire glass replacement inquiry.',
+        timestamp: new Date(Date.now() - 2 * 86400000).toISOString()
+      }
+    ]
+  },
+  {
+    id: 2,
+    userId: '2',
+    customerName: 'Julian Sterling',
+    customerEmail: 'j.sterling@collector.io',
+    customerPhone: '+44 20 7946 0912',
+    watchBrand: 'Audemars Piguet',
+    watchModel: 'Royal Oak \'Jumbo\' Extra-Thin 15202ST',
+    movementType: 'Automatic',
+    isWorking: true,
+    glassChangeRequired: false,
+    issueDescription: 'Movement running fast (+28s/day). Needs complete ultrasonic cleaning, gasket refresh, and regulation.',
+    currentState: 'ServiceRequestAccepted',
+    estimatedPrice: 45000,
+    serviceNotes: 'Standard Calibre 2121 complete overhaul and demagnetization required.',
+    createdAt: new Date(Date.now() - 4 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 3 * 86400000).toISOString(),
+    auditLogs: [
+      {
+        id: 2,
+        serviceRequestId: 2,
+        fromState: 'ServiceRequestCreated',
+        toState: 'ServiceRequestAccepted',
+        action: 'Accept Request',
+        triggeredByUserId: '11',
+        triggeredByName: 'Jean-Marc Piguet (Service Lead)',
+        triggeredByRole: 'service_executive',
+        notes: 'Approved diagnostic inspection. Estimated cost quoted at ₹45,000.',
+        timestamp: new Date(Date.now() - 3 * 86400000).toISOString()
+      }
+    ]
+  },
+  {
+    id: 3,
+    userId: '1',
+    customerName: 'Alexander Vance',
+    customerEmail: 'alexander.vance@horology.com',
+    customerPhone: '+1 212 555 0199',
+    watchBrand: 'Rolex',
+    watchModel: 'Submariner Date 126610LN',
+    movementType: 'Automatic',
+    isWorking: true,
+    glassChangeRequired: false,
+    issueDescription: 'Periodic bezel stiffness and periodic amplitude drop on Calibre 3235.',
+    currentState: 'InTransit',
+    estimatedPrice: 32000,
+    courierCompany: 'Blue Dart Express',
+    trackingNumber: 'BD-882910394IN',
+    serviceNotes: 'Customer dispatched via insured express parcel.',
+    createdAt: new Date(Date.now() - 6 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 1 * 86400000).toISOString(),
+    auditLogs: [
+      {
+        id: 3,
+        serviceRequestId: 3,
+        fromState: 'ServiceRequestAccepted',
+        toState: 'InTransit',
+        action: 'Dispatch Watch',
+        triggeredByUserId: '1',
+        triggeredByName: 'Alexander Vance',
+        triggeredByRole: 'buyer',
+        notes: 'Shipped via Blue Dart Express, tracking #BD-882910394IN',
+        timestamp: new Date(Date.now() - 1 * 86400000).toISOString()
+      }
+    ]
+  },
+  {
+    id: 4,
+    userId: '4',
+    customerName: 'Geneva Horology Gallery',
+    customerEmail: 'contact@genevahorology.ch',
+    customerPhone: '+41 22 731 0022',
+    watchBrand: 'Omega',
+    watchModel: 'Speedmaster Professional \'Moonwatch\' Sapphire',
+    movementType: 'Manual Winding',
+    isWorking: false,
+    glassChangeRequired: false,
+    issueDescription: 'Chronograph reset pusher unresponsive; Calibre 1861 balance assembly replacement required.',
+    currentState: 'UnderRepair',
+    estimatedPrice: 38500,
+    courierCompany: 'DHL International',
+    trackingNumber: 'DHL-554499118',
+    serviceNotes: 'Disassembly complete. Escapement cleaned; waiting on authentic Omega 1861 reset hammer.',
+    createdAt: new Date(Date.now() - 9 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+    auditLogs: [
+      {
+        id: 4,
+        serviceRequestId: 4,
+        fromState: 'InTransit',
+        toState: 'UnderRepair',
+        action: 'Begin Repair',
+        triggeredByUserId: '11',
+        triggeredByName: 'Jean-Marc Piguet (Service Lead)',
+        triggeredByRole: 'service_executive',
+        notes: 'Package received in good order. Transferred to master watchmaker bench #3.',
+        timestamp: new Date(Date.now() - 2 * 86400000).toISOString()
+      }
+    ]
+  },
+  {
+    id: 5,
+    userId: '1',
+    customerName: 'Alexander Vance',
+    customerEmail: 'alexander.vance@horology.com',
+    customerPhone: '+1 212 555 0199',
+    watchBrand: 'Cartier',
+    watchModel: 'Santos de Cartier Medium Steel',
+    movementType: 'Automatic',
+    isWorking: true,
+    glassChangeRequired: true,
+    issueDescription: 'Glass scratched, routine 5-year overhaul of Calibre 1847 MC.',
+    currentState: 'InTesting',
+    estimatedPrice: 28000,
+    courierCompany: 'FedEx Express',
+    trackingNumber: 'FDX-771122334',
+    serviceNotes: 'Sapphire crystal replaced with genuine Cartier optic. Calibre 1847 MC re-lubricated. Currently in 5-position chronometer timing machine.',
+    createdAt: new Date(Date.now() - 14 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 12 * 3600000).toISOString(),
+    auditLogs: [
+      {
+        id: 5,
+        serviceRequestId: 5,
+        fromState: 'UnderRepair',
+        toState: 'InTesting',
+        action: 'Move to Testing',
+        triggeredByUserId: '11',
+        triggeredByName: 'Jean-Marc Piguet (Service Lead)',
+        triggeredByRole: 'service_executive',
+        notes: 'Reassembly passed. 48-hour power reserve and 100m ISO 22810 pressure test initiated.',
+        timestamp: new Date(Date.now() - 12 * 3600000).toISOString()
+      }
+    ]
+  },
+  {
+    id: 6,
+    userId: '2',
+    customerName: 'Julian Sterling',
+    customerEmail: 'j.sterling@collector.io',
+    customerPhone: '+44 20 7946 0912',
+    watchBrand: 'Vacheron Constantin',
+    watchModel: 'Overseas Chronograph Blue Dial',
+    movementType: 'Automatic',
+    isWorking: true,
+    glassChangeRequired: false,
+    issueDescription: 'Comprehensive factory service, column-wheel chronograph calibration, case satin refinishing.',
+    currentState: 'TransitBack',
+    estimatedPrice: 62000,
+    courierCompany: 'Blue Dart Express',
+    trackingNumber: 'BD-11223344IN',
+    returnCourierCompany: 'Blue Dart Secure Armored',
+    returnTrackingNumber: 'BD-RET-99002211IN',
+    serviceNotes: 'All Geneva seal performance requirements exceeded (+1.8s/day average). Dispatched in protective Meridian service pod.',
+    createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 4 * 3600000).toISOString(),
+    auditLogs: [
+      {
+        id: 6,
+        serviceRequestId: 6,
+        fromState: 'InTesting',
+        toState: 'TransitBack',
+        action: 'Dispatch Return',
+        triggeredByUserId: '11',
+        triggeredByName: 'Jean-Marc Piguet (Service Lead)',
+        triggeredByRole: 'service_executive',
+        notes: 'Testing passed with honors. Dispatched back to customer via Blue Dart Secure.',
+        timestamp: new Date(Date.now() - 4 * 3600000).toISOString()
+      }
+    ]
+  }
+];
 
 const MarketplaceContext = createContext<MarketplaceContextType | undefined>(undefined);
 
@@ -320,6 +533,17 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [offers, setOffers] = useState<WatchOffer[]>(() => {
     const saved = localStorage.getItem('chronos_offers');
     return saved ? JSON.parse(saved) : [];
+  });
+
+  const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>(() => {
+    const saved = localStorage.getItem('chronos_service_requests');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
+    return DEFAULT_SERVICE_REQUESTS;
   });
 
   const [compareList, setCompareList] = useState<string[]>([]);
@@ -419,6 +643,14 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     localStorage.setItem('chronos_offers', JSON.stringify(offers));
   }, [offers]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('chronos_service_requests', JSON.stringify(serviceRequests));
+    } catch (e) {
+      console.warn('Could not cache service requests in localStorage', e);
+    }
+  }, [serviceRequests]);
+
   // Backend & API Gateway Connectivity
   const [isGatewayConnected, setIsGatewayConnected] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -451,7 +683,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         profilesRes,
         reviewsRes,
         ordersRes,
-        offersRes
+        offersRes,
+        serviceRequestsRes
       ] = await Promise.allSettled([
         marketplaceApi.getListings(),
         collectorVaultApi.getWatches(),
@@ -459,7 +692,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         sellerHubApi.getProfiles(),
         sellerHubApi.getReviews(),
         customerOrdersApi.getOrders(),
-        customerOrdersApi.getBuyerOffers()
+        customerOrdersApi.getBuyerOffers(),
+        serviceCenterApi.getServiceRequests(currentUserId, currentUser?.role)
       ]);
 
       if (listingsRes.status === 'fulfilled' && Array.isArray(listingsRes.value)) {
@@ -489,6 +723,15 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }
       } else if (!shouldFetchWishlist) {
         setWishlist([]);
+      }
+
+      if (serviceRequestsRes.status === 'fulfilled' && Array.isArray(serviceRequestsRes.value) && serviceRequestsRes.value.length > 0) {
+        setServiceRequests(serviceRequestsRes.value);
+        try {
+          localStorage.setItem('chronos_service_requests', JSON.stringify(serviceRequestsRes.value));
+        } catch (e) {
+          console.warn('Could not cache service requests in localStorage', e);
+        }
       }
 
       // If user is already authenticated in localStorage, refresh ONLY their accounts
@@ -1544,6 +1787,124 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
 
+  // Service Center (Watch Repair Service Workflow Engine)
+  const createServiceRequest = async (
+    data: Omit<ServiceRequest, 'id' | 'currentState' | 'createdAt' | 'updatedAt' | 'auditLogs'>
+  ): Promise<ServiceRequest> => {
+    const newRequest: ServiceRequest = {
+      ...data,
+      id: Date.now(),
+      currentState: 'ServiceRequestCreated',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      auditLogs: [
+        {
+          id: Date.now(),
+          serviceRequestId: Date.now(),
+          fromState: 'ServiceRequestCreated',
+          toState: 'ServiceRequestCreated',
+          action: 'Service Request Created',
+          triggeredByUserId: String(currentUser.id),
+          triggeredByName: currentUser.name,
+          triggeredByRole: currentUser.role,
+          notes: 'Initial watch repair service request submitted.',
+          timestamp: new Date().toISOString()
+        }
+      ]
+    };
+
+    setServiceRequests((prev) => [newRequest, ...prev]);
+    showToast('Service Request Created', `Diagnostic request for ${data.watchBrand} ${data.watchModel} initiated.`, 'success');
+
+    if (isGatewayConnected) {
+      try {
+        const res = await serviceCenterApi.createServiceRequest({
+          userId: String(currentUser.id),
+          customerName: currentUser.name,
+          customerEmail: currentUser.email,
+          customerPhone: data.customerPhone || currentUser.phone,
+          watchBrand: data.watchBrand,
+          watchModel: data.watchModel,
+          movementType: data.movementType,
+          isWorking: data.isWorking,
+          glassChangeRequired: data.glassChangeRequired,
+          issueDescription: data.issueDescription
+        });
+        if (res && res.id) {
+          setServiceRequests((prev) => prev.map((r) => (r.id === newRequest.id ? res : r)));
+          return res;
+        }
+      } catch (err) {
+        console.warn('Failed to persist service request to ServiceCenter microservice', err);
+      }
+    }
+
+    return newRequest;
+  };
+
+  const transitionServiceRequest = async (
+    id: string | number,
+    payload: TransitionRequestPayload
+  ): Promise<boolean> => {
+    const targetState = payload.targetState as ServiceWorkflowState;
+    const nowIso = new Date().toISOString();
+
+    setServiceRequests((prev) =>
+      prev.map((r) => {
+        if (r.id === id) {
+          const audit: ServiceRequestAuditLog = {
+            id: Date.now(),
+            serviceRequestId: r.id,
+            fromState: r.currentState,
+            toState: targetState,
+            action: payload.action,
+            triggeredByUserId: payload.userId,
+            triggeredByName: payload.userName,
+            triggeredByRole: payload.userRole,
+            notes: payload.notes || payload.rejectionReason,
+            timestamp: nowIso
+          };
+
+          return {
+            ...r,
+            currentState: targetState,
+            estimatedPrice: payload.estimatedPrice ?? r.estimatedPrice,
+            rejectionReason: payload.rejectionReason ?? r.rejectionReason,
+            courierCompany: payload.courierCompany ?? r.courierCompany,
+            trackingNumber: payload.trackingNumber ?? r.trackingNumber,
+            returnCourierCompany: payload.returnCourierCompany ?? r.returnCourierCompany,
+            returnTrackingNumber: payload.returnTrackingNumber ?? r.returnTrackingNumber,
+            serviceNotes: payload.notes
+              ? (r.serviceNotes ? `${r.serviceNotes}\n[${new Date().toLocaleDateString()}] ${payload.notes}` : payload.notes)
+              : r.serviceNotes,
+            updatedAt: nowIso,
+            auditLogs: [audit, ...(r.auditLogs || [])]
+          };
+        }
+        return r;
+      })
+    );
+
+    showToast('Workflow Updated', `Watch transitioned to '${targetState}'.`, 'success');
+
+    if (isGatewayConnected) {
+      try {
+        const res = await serviceCenterApi.transitionServiceRequest(id, payload);
+        if (res && res.id) {
+          setServiceRequests((prev) => prev.map((r) => (r.id === id ? res : r)));
+          return true;
+        }
+      } catch (err: any) {
+        console.warn('Failed to transition service request in ServiceCenter microservice', err);
+        const errMsg = err?.data?.message || err?.message || 'Workflow transition failed.';
+        showToast('Transition Warning', errMsg, 'warning');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   // Compare
   const toggleCompare = (watchId: string) => {
     setCompareList((prev) => {
@@ -1687,6 +2048,9 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         offers,
         createOffer,
         respondToOffer,
+        serviceRequests,
+        createServiceRequest,
+        transitionServiceRequest,
         filters,
         setFilters,
         resetFilters,

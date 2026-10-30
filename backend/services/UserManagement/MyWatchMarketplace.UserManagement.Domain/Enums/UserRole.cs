@@ -8,5 +8,6 @@ public enum UserRole
     Buyer,
     Seller,
     Collector,
-    Admin
+    Admin,
+    ServiceExecutive
 }
