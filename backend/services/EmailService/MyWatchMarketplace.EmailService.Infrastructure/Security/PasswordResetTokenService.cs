@@ -13,7 +13,7 @@ public class PasswordResetTokenService : IPasswordResetTokenService
     {
         _secretKey = configuration["Security:ResetTokenSecret"]
             ?? configuration["Jwt:Key"]
-            ?? "meridian_luxury_timepiece_super_secure_reset_key_2026";
+            ?? "thc_luxury_timepiece_super_secure_reset_key_2026";
     }
 
     public string GenerateToken(int userId, string passwordHash, DateTimeOffset expiresAt)

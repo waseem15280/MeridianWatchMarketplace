@@ -11,7 +11,7 @@ public class HtmlEmailTemplateService : IEmailTemplateService
 <head>
   <meta charset=""UTF-8"">
   <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-  <title>Reset Your Meridian Password</title>
+  <title>Reset Your Password - The Heritage Club (THC)</title>
   <style>
     body {{
       margin: 0;
@@ -123,13 +123,13 @@ public class HtmlEmailTemplateService : IEmailTemplateService
         <td align=""center"" style=""padding: 24px 12px;"">
           <div class=""main"">
             <div class=""header"">
-              <div class=""brand"">MERIDIAN</div>
+              <div class=""brand"">THE HERITAGE CLUB</div>
               <div class=""subbrand"">HAUTE HORLOGERIE &amp; TIMEPIECES</div>
             </div>
             <div class=""content"">
               <div class=""greeting"">Hello {recipientName},</div>
               <p class=""paragraph"">
-                We received a request to reset the password for your Meridian Watch Marketplace account. Click the button below to establish a new password:
+                We received a request to reset the password for your The Heritage Club (THC) account. Click the button below to establish a new password:
               </p>
               <div class=""button-container"">
                 <a href=""{resetUrl}"" class=""button"" target=""_blank"">Reset Your Password</a>
@@ -145,7 +145,7 @@ public class HtmlEmailTemplateService : IEmailTemplateService
               </div>
             </div>
             <div class=""footer"">
-              &copy; {DateTime.UtcNow.Year} Meridian Watch Marketplace. All rights reserved.<br>
+              &copy; {DateTime.UtcNow.Year} The Heritage Club (THC). All rights reserved.<br>
               Refined Horology Exchange &bull; Certified Authenticity
             </div>
           </div>
@@ -222,20 +222,20 @@ public class HtmlEmailTemplateService : IEmailTemplateService
   <div class=""wrapper"">
     <div class=""main"">
       <div class=""header"">
-        <div class=""brand"">MERIDIAN</div>
+        <div class=""brand"">THE HERITAGE CLUB</div>
       </div>
       <div class=""content"">
         <h2 style=""color: #f8fafc; margin-top: 0;"">Password Updated</h2>
         <p>Hello {recipientName},</p>
         <div class=""alert-box"">
-          Your password for Meridian Watch Marketplace was successfully changed on {DateTime.UtcNow:MMMM dd, yyyy HH:mm} UTC.
+          Your password for The Heritage Club (THC) was successfully changed on {DateTime.UtcNow:MMMM dd, yyyy HH:mm} UTC.
         </div>
         <p style=""color: #94a3b8; font-size: 14px;"">
           If you did not perform this change, please contact our security team immediately.
         </p>
       </div>
       <div class=""footer"">
-        &copy; {DateTime.UtcNow.Year} Meridian Watch Marketplace.
+        &copy; {DateTime.UtcNow.Year} The Heritage Club (THC).
       </div>
     </div>
   </div>

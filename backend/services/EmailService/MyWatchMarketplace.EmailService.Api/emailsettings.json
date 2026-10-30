@@ -2,8 +2,8 @@
   "EmailSettings": {
     "SmtpHost": "smtp.gmail.com",
     "SmtpPort": 587,
-    "SenderName": "Meridian Watch Marketplace",
-    "SenderEmail": "no-reply@meridianwatches.com",
+    "SenderName": "The Heritage Club (THC)",
+    "SenderEmail": "no-reply@thcwatches.com",
     "Username": "",
     "Password": "",
     "EnableSsl": true,

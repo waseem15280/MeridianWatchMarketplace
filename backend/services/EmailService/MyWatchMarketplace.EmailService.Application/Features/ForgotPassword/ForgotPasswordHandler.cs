@@ -73,7 +73,7 @@ public class ForgotPasswordHandler : IForgotPasswordHandler
 
         var emailMessage = new EmailMessage(
             To: user.Email,
-            Subject: "Reset Your Meridian Watch Marketplace Password",
+            Subject: "Reset Your The Heritage Club (THC) Password",
             BodyHtml: emailHtml,
             BodyText: $"Hello {recipientName},\n\nYou requested to reset your password. Use the following link within {expirationMinutes} minutes:\n{resetUrl}\n\nIf you did not request this, please ignore this email.",
             Type: EmailType.PasswordReset

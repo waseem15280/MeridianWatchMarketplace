@@ -83,9 +83,9 @@ public class ResetPasswordHandler : IResetPasswordHandler
 
             var confirmationMessage = new EmailMessage(
                 To: user.Email,
-                Subject: "Your Meridian Password Has Been Changed",
+                Subject: "Your The Heritage Club (THC) Password Has Been Changed",
                 BodyHtml: emailHtml,
-                BodyText: $"Hello {recipientName},\n\nYour password for Meridian Watch Marketplace was successfully updated. If you did not make this change, please contact support immediately.",
+                BodyText: $"Hello {recipientName},\n\nYour password for The Heritage Club (THC) was successfully updated. If you did not make this change, please contact support immediately.",
                 Type: EmailType.PasswordReset
             );
 

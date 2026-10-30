@@ -10,7 +10,7 @@ public class CloudinaryService : ICloudinaryService
 {
     private readonly Cloudinary _cloudinary;
     private readonly ILogger<CloudinaryService> _logger;
-    private const string DefaultFolder = "meridian_listings";
+    private const string DefaultFolder = "thc_listings";
 
     public CloudinaryService(IConfiguration configuration, ILogger<CloudinaryService> logger)
     {

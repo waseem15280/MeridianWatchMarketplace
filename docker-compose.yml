@@ -22,7 +22,7 @@ services:
       timeout: 5s
       retries: 10
     networks:
-      - meridian-network
+      - thc-marketplace-network
 
   # =========================================================================
   # 2. Marketplace API Microservice (:5101)
@@ -31,7 +31,7 @@ services:
     build:
       context: ./backend
       dockerfile: services/marketplace/Dockerfile
-    container_name: meridian-marketplace-api
+    container_name: thc-marketplace-api
     restart: unless-stopped
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -48,7 +48,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - meridian-network
+      - thc-marketplace-network
 
   # =========================================================================
   # 3. Collector Vault API Microservice (:5102)
@@ -57,7 +57,7 @@ services:
     build:
       context: ./backend
       dockerfile: services/CollectorVault/Dockerfile
-    container_name: meridian-collector-vault-api
+    container_name: thc-collector-vault-api
     restart: unless-stopped
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -72,7 +72,7 @@ services:
       marketplace-api:
         condition: service_started
     networks:
-      - meridian-network
+      - thc-marketplace-network
 
   # =========================================================================
   # 4. Buyer Wishlist API Microservice (:5103)
@@ -81,7 +81,7 @@ services:
     build:
       context: ./backend
       dockerfile: services/BuyerWishlist/Dockerfile
-    container_name: meridian-buyer-wishlist-api
+    container_name: thc-buyer-wishlist-api
     restart: unless-stopped
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -96,7 +96,7 @@ services:
       marketplace-api:
         condition: service_started
     networks:
-      - meridian-network
+      - thc-marketplace-network
 
   # =========================================================================
   # 5. Seller Hub API Microservice (:5104)
@@ -105,7 +105,7 @@ services:
     build:
       context: ./backend
       dockerfile: services/SellerHub/Dockerfile
-    container_name: meridian-seller-hub-api
+    container_name: thc-seller-hub-api
     restart: unless-stopped
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -117,7 +117,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - meridian-network
+      - thc-marketplace-network
 
   # =========================================================================
   # 6. Customer Orders API Microservice (:5105)
@@ -126,7 +126,7 @@ services:
     build:
       context: ./backend
       dockerfile: services/CustomerOrders/Dockerfile
-    container_name: meridian-customer-orders-api
+    container_name: thc-customer-orders-api
     restart: unless-stopped
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -144,7 +144,7 @@ services:
       seller-hub-api:
         condition: service_started
     networks:
-      - meridian-network
+      - thc-marketplace-network
 
   # =========================================================================
   # 7. User Management API Microservice (:5106)
@@ -153,7 +153,7 @@ services:
     build:
       context: ./backend
       dockerfile: services/UserManagement/Dockerfile
-    container_name: meridian-user-management-api
+    container_name: thc-user-management-api
     restart: unless-stopped
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -165,7 +165,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - meridian-network
+      - thc-marketplace-network
 
   # =========================================================================
   # 8. Email Service Microservice (:5107)
@@ -174,7 +174,7 @@ services:
     build:
       context: ./backend
       dockerfile: services/EmailService/Dockerfile
-    container_name: meridian-email-service-api
+    container_name: thc-email-service-api
     restart: unless-stopped
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -196,7 +196,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - meridian-network
+      - thc-marketplace-network
 
   # =========================================================================
   # 9. Service Center API Microservice (:5108)
@@ -205,7 +205,7 @@ services:
     build:
       context: ./backend
       dockerfile: services/ServiceCenter/Dockerfile
-    container_name: meridian-service-center-api
+    container_name: thc-service-center-api
     restart: unless-stopped
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -217,7 +217,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - meridian-network
+      - thc-marketplace-network
 
   # =========================================================================
   # 10. YARP API Gateway (:5000)
@@ -226,7 +226,7 @@ services:
     build:
       context: ./backend
       dockerfile: gateway/MyWatchMarketplace.ApiGateway/Dockerfile
-    container_name: meridian-api-gateway
+    container_name: thc-api-gateway
     restart: unless-stopped
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
@@ -259,7 +259,7 @@ services:
       service-center-api:
         condition: service_started
     networks:
-      - meridian-network
+      - thc-marketplace-network
 
   # =========================================================================
   # 11. Frontend: React Vite SPA (:3000)
@@ -270,7 +270,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_GATEWAY_URL: ${VITE_API_GATEWAY_URL:-http://localhost:5000}
-    container_name: meridian-frontend
+    container_name: thc-frontend
     restart: unless-stopped
     ports:
       - "3000:80"
@@ -278,11 +278,11 @@ services:
       api-gateway:
         condition: service_started
     networks:
-      - meridian-network
+      - thc-marketplace-network
 
 volumes:
   MyWatchMarketplace-postgres-data:
 
 networks:
-  meridian-network:
+  thc-marketplace-network:
     driver: bridge

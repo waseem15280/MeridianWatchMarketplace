@@ -261,7 +261,7 @@ public class ServiceCenterDbContextInitialiser
                 TrackingNumber = "BD-11223344IN",
                 ReturnCourierCompany = "Blue Dart Secure Armored",
                 ReturnTrackingNumber = "BD-RET-99002211IN",
-                ServiceNotes = "All Geneva seal performance requirements exceeded (+1.8s/day average). Dispatched in protective Meridian service pod.",
+                ServiceNotes = "All Geneva seal performance requirements exceeded (+1.8s/day average). Dispatched in protective THC service pod.",
                 CreatedAt = now.AddDays(-20),
                 UpdatedAt = now.AddHours(-4),
                 AuditLogs = new List<ServiceRequestAuditLog>

@@ -6,8 +6,8 @@ public class EmailSettings
 
     public string SmtpHost { get; set; } = "localhost";
     public int SmtpPort { get; set; } = 587;
-    public string SenderName { get; set; } = "Meridian Watch Marketplace";
-    public string SenderEmail { get; set; } = "no-reply@meridianwatches.com";
+    public string SenderName { get; set; } = "The Heritage Club (THC)";
+    public string SenderEmail { get; set; } = "no-reply@thcwatches.com";
     public string Username { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
     public bool EnableSsl { get; set; } = true;

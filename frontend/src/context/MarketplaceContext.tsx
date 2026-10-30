@@ -421,7 +421,7 @@ export const DEFAULT_SERVICE_REQUESTS: ServiceRequest[] = [
     trackingNumber: 'BD-11223344IN',
     returnCourierCompany: 'Blue Dart Secure Armored',
     returnTrackingNumber: 'BD-RET-99002211IN',
-    serviceNotes: 'All Geneva seal performance requirements exceeded (+1.8s/day average). Dispatched in protective Meridian service pod.',
+    serviceNotes: 'All Geneva seal performance requirements exceeded (+1.8s/day average). Dispatched in protective THC service pod.',
     createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
     updatedAt: new Date(Date.now() - 4 * 3600000).toISOString(),
     auditLogs: [
