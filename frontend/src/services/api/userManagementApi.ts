@@ -132,5 +132,39 @@ export const userManagementApi = {
         newPassword: payload.newPassword
       })
     });
+  },
+
+  // PUT /api/users/logins/{loginId}/status (Toggle active/inactive)
+  updateUserStatus: async (loginId: string | number, isActive: boolean): Promise<UserLogin> => {
+    return request<UserLogin>(`/api/users/logins/${encodeURIComponent(loginId)}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ isActive })
+    });
+  },
+
+  // PUT /api/users/logins/{loginId}/password (Admin reset user password without current password)
+  resetUserPassword: async (loginId: string | number, newPassword: string): Promise<{ success: boolean; message: string }> => {
+    return request<{ success: boolean; message: string }>(`/api/users/logins/${encodeURIComponent(loginId)}/password`, {
+      method: 'PUT',
+      body: JSON.stringify({ newPassword })
+    });
+  },
+
+  // PUT /api/users/logins/{loginId} (Update user login details)
+  updateUserLogin: async (
+    loginId: string | number,
+    updates: { username?: string; email?: string; isActive?: boolean }
+  ): Promise<UserLogin> => {
+    return request<UserLogin>(`/api/users/logins/${encodeURIComponent(loginId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates)
+    });
+  },
+
+  // DELETE /api/users/logins/{loginId} (Delete user login and all associated personas)
+  deleteUserLogin: async (loginId: string | number): Promise<void> => {
+    return request<void>(`/api/users/logins/${encodeURIComponent(loginId)}`, {
+      method: 'DELETE'
+    });
   }
 };

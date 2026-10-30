@@ -113,10 +113,23 @@ interface MarketplaceContextType {
   
   // Feature Flags & Admin Role Access
   isAdmin: boolean;
+  isServiceExecutive: boolean;
+  canManageUsers: boolean;
   isGuest: boolean;
   isFeatureEnabled: (featureKey: keyof FeatureFlags) => boolean;
   isFeatureActive: (featureKey: keyof FeatureFlags) => boolean;
   isTabEnabled: (tab: ActiveTab) => boolean;
+
+  // User Management Atelier & Directory (Admin & Service Executive only)
+  allLogins: Array<UserLogin & { accounts: UserAccount[]; isActive?: boolean }>;
+  loadAllLogins: () => Promise<void>;
+  updateUserStatus: (loginId: string | number, isActive: boolean) => Promise<boolean>;
+  resetUserPassword: (loginId: string | number, newPassword: string) => Promise<{ success: boolean; message: string }>;
+  updateUserLogin: (loginId: string | number, updates: { username?: string; email?: string; isActive?: boolean }) => Promise<boolean>;
+  deleteUserLogin: (loginId: string | number) => Promise<boolean>;
+  updateUserPersonaRole: (personaId: string | number, role: UserRole) => Promise<boolean>;
+  deleteUserPersona: (personaId: string | number) => Promise<boolean>;
+  createPersonaForUser: (loginId: string | number, role: UserRole, name: string, bio?: string) => Promise<boolean>;
 
   // Global Authentication & Login Modal
   isLoginModalOpen: boolean;
@@ -463,6 +476,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
     return [GUEST_LOGIN];
   });
+
+  const [allLogins, setAllLogins] = useState<Array<UserLogin & { accounts: UserAccount[]; isActive?: boolean }>>([]);
 
   const [accounts, setAccounts] = useState<UserAccount[]>(() => {
     const savedLoginId = localStorage.getItem('chronos_current_login_id');
@@ -856,6 +871,21 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return currentUser?.role === 'admin' || userAccounts.some((acc) => acc.role === 'admin');
   }, [currentUser?.role, userAccounts, isLoggedIn]);
 
+  // Service Executive access check: user is service executive if their active account or any account has service_executive role
+  const isServiceExecutive = useMemo(() => {
+    if (!isLoggedIn) return false;
+    return (
+      currentUser?.role === 'service_executive' ||
+      (currentUser?.role as string) === 'serviceexecutive' ||
+      userAccounts.some((acc) => acc.role === 'service_executive' || (acc.role as string) === 'serviceexecutive')
+    );
+  }, [currentUser?.role, userAccounts, isLoggedIn]);
+
+  // Can manage users: Admin and Service Executive only
+  const canManageUsers = useMemo(() => {
+    return isAdmin || isServiceExecutive;
+  }, [isAdmin, isServiceExecutive]);
+
   const isGuest = !isLoggedIn;
 
   // Check if a feature is enabled for current session (incorporating admin & guest status)
@@ -870,15 +900,20 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Check if a navigation tab is enabled for current session
   const isTabEnabled = useMemo(() => {
-    return (tab: ActiveTab) => isTabAccessible(tab, isAdmin, isGuest);
-  }, [isAdmin, isGuest]);
+    return (tab: ActiveTab) => {
+      if (tab === 'user-management') {
+        return canManageUsers && isFeatureEnabled('userManagement');
+      }
+      return isTabAccessible(tab, isAdmin, isGuest);
+    };
+  }, [isAdmin, isGuest, canManageUsers, isFeatureEnabled]);
 
   // Auto-fallback: if the current active tab is disabled, switch to the first accessible tab
   useEffect(() => {
-    if (!isTabAccessible(activeTab, isAdmin, isGuest)) {
+    if (!isTabEnabled(activeTab)) {
       setActiveTab(getFirstAccessibleTab(isAdmin, isGuest));
     }
-  }, [activeTab, isAdmin, isGuest]);
+  }, [activeTab, isTabEnabled, isAdmin, isGuest]);
 
   // Load and sync wishlist when current user / login state changes
   useEffect(() => {

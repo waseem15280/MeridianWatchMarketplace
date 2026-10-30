@@ -197,7 +197,7 @@ userApi.MapPost("/register", async (RegisterRequest request, UserManagementDbCon
     return Results.Created($"/api/users/accounts/{account.Id}", response);
 });
 
-// 3. GET /api/users/logins - List all logins and their accounts (for demo switcher)
+// 3. GET /api/users/logins - List all logins and their accounts (for demo switcher & user management dashboard)
 userApi.MapGet("/logins", async (UserManagementDbContext db) =>
 {
     var logins = await db.Logins.AsNoTracking()
@@ -205,17 +205,7 @@ userApi.MapGet("/logins", async (UserManagementDbContext db) =>
         .OrderBy(l => l.Username)
         .ToListAsync();
 
-    var result = logins.Select(l => new
-    {
-        Id = l.Id,
-        Username = l.Username,
-        Email = l.Email,
-        Created = l.Created,
-        LastLoginAt = l.LastLoginAt,
-        Accounts = l.Accounts.Select(ToAccountDto).ToList()
-    });
-
-    return Results.Ok(result);
+    return Results.Ok(logins.Select(ToLoginDto));
 });
 
 // 4. GET /api/users/logins/{loginId:int}/accounts
@@ -320,6 +310,7 @@ userApi.MapPut("/accounts/{id:int}", async (int id, UpdateUserAccountRequest req
 
     if (!string.IsNullOrWhiteSpace(request.Name)) account.Name = request.Name.Trim();
     if (!string.IsNullOrWhiteSpace(request.Email)) account.Email = request.Email.Trim();
+    if (request.Role.HasValue) account.Role = request.Role.Value;
     if (request.Bio is not null) account.Bio = request.Bio.Trim();
     if (request.Location is not null) account.Location = request.Location.Trim();
     if (request.Avatar is not null) account.Avatar = request.Avatar.Trim();
@@ -355,7 +346,7 @@ userApi.MapDelete("/accounts/{id:int}", async (int id, UserManagementDbContext d
     var siblingCount = await db.Accounts.CountAsync(a => a.UserLoginId == account.UserLoginId);
     if (siblingCount <= 1)
     {
-        return Results.BadRequest(new { message = "Cannot delete the sole user account for this login. Each login must retain at least one account." });
+        return Results.BadRequest(new { message = "Cannot delete the sole user persona for this login. Each login must retain at least one persona. To delete the user entirely, use Delete User." });
     }
 
     db.Accounts.Remove(account);
@@ -363,7 +354,7 @@ userApi.MapDelete("/accounts/{id:int}", async (int id, UserManagementDbContext d
     return Results.NoContent();
 });
 
-// 11. POST /api/users/change-password
+// 11. POST /api/users/change-password (User self-service)
 userApi.MapPost("/change-password", async (ChangePasswordRequest request, UserManagementDbContext db) =>
 {
     if (string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
@@ -401,12 +392,91 @@ userApi.MapPost("/change-password", async (ChangePasswordRequest request, UserMa
 })
 .WithName("ChangePassword");
 
+// 12. PUT /api/users/logins/{id:int}/status (Admin/Service Executive toggle active/inactive)
+userApi.MapPut("/logins/{id:int}/status", async (int id, UpdateUserStatusRequest request, UserManagementDbContext db) =>
+{
+    var login = await db.Logins.Include(l => l.Accounts).FirstOrDefaultAsync(l => l.Id == id);
+    if (login is null) return Results.NotFound(new { message = $"User {id} not found." });
+
+    login.IsActive = request.IsActive;
+    await db.SaveChangesAsync();
+
+    return Results.Ok(ToLoginDto(login));
+});
+
+// 13. PUT /api/users/logins/{id:int}/password (Admin/Service Executive direct password change)
+userApi.MapPut("/logins/{id:int}/password", async (int id, AdminResetPasswordRequest request, UserManagementDbContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 6)
+    {
+        return Results.BadRequest(new { message = "New password must be at least 6 characters long." });
+    }
+
+    var login = await db.Logins.FirstOrDefaultAsync(l => l.Id == id);
+    if (login is null) return Results.NotFound(new { message = $"User {id} not found." });
+
+    login.PasswordHash = PasswordHasher.HashPassword(request.NewPassword);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { success = true, message = "User password updated successfully." });
+});
+
+// 14. PUT /api/users/logins/{id:int} (Admin/Service Executive edit user login info)
+userApi.MapPut("/logins/{id:int}", async (int id, UpdateUserLoginRequest request, UserManagementDbContext db) =>
+{
+    var login = await db.Logins.Include(l => l.Accounts).FirstOrDefaultAsync(l => l.Id == id);
+    if (login is null) return Results.NotFound(new { message = $"User {id} not found." });
+
+    if (!string.IsNullOrWhiteSpace(request.Username))
+    {
+        var trimmedUsername = request.Username.Trim();
+        var usernameConflict = await db.Logins.AnyAsync(l => l.Id != id && l.Username.ToLower() == trimmedUsername.ToLower());
+        if (usernameConflict)
+        {
+            return Results.Conflict(new { message = $"Username '{trimmedUsername}' is already taken." });
+        }
+        login.Username = trimmedUsername;
+    }
+
+    if (!string.IsNullOrWhiteSpace(request.Email))
+    {
+        var trimmedEmail = request.Email.Trim();
+        var emailConflict = await db.Logins.AnyAsync(l => l.Id != id && l.Email.ToLower() == trimmedEmail.ToLower());
+        if (emailConflict)
+        {
+            return Results.Conflict(new { message = $"Email '{trimmedEmail}' is already in use." });
+        }
+        login.Email = trimmedEmail;
+    }
+
+    if (request.IsActive.HasValue)
+    {
+        login.IsActive = request.IsActive.Value;
+    }
+
+    await db.SaveChangesAsync();
+    return Results.Ok(ToLoginDto(login));
+});
+
+// 15. DELETE /api/users/logins/{id:int} (Admin/Service Executive delete user and all personas entirely)
+userApi.MapDelete("/logins/{id:int}", async (int id, UserManagementDbContext db) =>
+{
+    var login = await db.Logins.Include(l => l.Accounts).FirstOrDefaultAsync(l => l.Id == id);
+    if (login is null) return Results.NotFound(new { message = $"User {id} not found." });
+
+    db.Accounts.RemoveRange(login.Accounts);
+    db.Logins.Remove(login);
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
+
 static UserAccountDto ToAccountDto(UserAccount a) => new(
     a.Id,
     a.UserLoginId,
     a.Name,
     a.Email,
-    a.Role.ToString().ToLowerInvariant(),
+    a.Role == UserRole.ServiceExecutive ? "service_executive" : a.Role.ToString().ToLowerInvariant(),
     a.Avatar,
     a.Location,
     a.MemberSince,
@@ -425,8 +495,10 @@ static UserLoginDto ToLoginDto(UserLogin l) => new(
     l.Id,
     l.Username,
     l.Email,
+    l.IsActive,
     l.Created,
-    l.LastLoginAt
+    l.LastLoginAt,
+    l.Accounts?.Select(ToAccountDto).ToList()
 );
 
 app.Run();

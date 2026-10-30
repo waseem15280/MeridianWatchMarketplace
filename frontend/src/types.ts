@@ -4,6 +4,7 @@ export interface UserLogin {
   id: string | number;
   username: string;
   email: string;
+  isActive?: boolean;
   created?: string;
   lastLoginAt?: string;
   accounts?: UserAccount[];
@@ -232,4 +233,4 @@ export interface ServiceRequest {
   auditLogs?: ServiceRequestAuditLog[];
 }
 
-export type ActiveTab = 'explore' | 'seller-hub' | 'collection' | 'wishlist' | 'orders' | 'offers' | 'service-center';
+export type ActiveTab = 'explore' | 'seller-hub' | 'collection' | 'wishlist' | 'orders' | 'offers' | 'service-center' | 'user-management';

@@ -6,8 +6,10 @@ public record UserLoginDto(
     int Id,
     string Username,
     string Email,
+    bool IsActive,
     DateTimeOffset Created,
-    DateTimeOffset? LastLoginAt
+    DateTimeOffset? LastLoginAt,
+    List<UserAccountDto>? Accounts = null
 );
 
 public record UserAccountDto(
@@ -67,11 +69,26 @@ public record CreateUserAccountRequest(
 public record UpdateUserAccountRequest(
     string? Name,
     string? Email,
+    UserRole? Role,
     string? Bio,
     string? Location,
     string? Avatar,
     string? Phone,
     bool? VerifiedDealer
+);
+
+public record UpdateUserStatusRequest(
+    bool IsActive
+);
+
+public record AdminResetPasswordRequest(
+    string NewPassword
+);
+
+public record UpdateUserLoginRequest(
+    string? Username,
+    string? Email,
+    bool? IsActive
 );
 
 public record ChangePasswordRequest(
