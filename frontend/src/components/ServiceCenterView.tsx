@@ -258,12 +258,12 @@ export const ServiceCenterView: React.FC = () => {
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-[#85642F]/10 text-[#85642F] border border-[#85642F]/20">
                 <Wrench className="w-3.5 h-3.5" />
-                Meridian Certified Atelier
+                THC Certified WatchMaker Service
               </span>
               {isServiceExecutive ? (
                 <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  Service Executive Management
+                  Service Status Dashboard
                 </span>
               ) : (
                 <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
@@ -276,7 +276,7 @@ export const ServiceCenterView: React.FC = () => {
               Watch Service & Restoration Center
             </h1>
             <p className="text-sm text-[#78716C] max-w-2xl">
-              State-machine governed maintenance lifecycle. Every diagnostic quote, courier shipment, mechanical overhaul, and regulation is strictly tracked via certified horological workflow states.
+              Workflow governed maintenance lifecycle. Every diagnostic quote, courier shipment, mechanical overhaul, and regulation is strictly tracked via expert watch makers.
             </p>
           </div>
 
