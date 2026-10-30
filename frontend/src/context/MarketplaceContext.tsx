@@ -1291,6 +1291,209 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
 
+  // User Management Atelier & Directory Handlers (Admin & Service Executive only)
+  const loadAllLogins = useCallback(async () => {
+    if (isGatewayConnected) {
+      try {
+        const logins = await userManagementApi.getLogins();
+        if (Array.isArray(logins)) {
+          setAllLogins(logins);
+          return;
+        }
+      } catch (err) {
+        console.warn('Failed to load logins from microservice:', err);
+      }
+    }
+
+    // Fallback: build from local state
+    const mapped = availableLogins.map((l) => ({
+      ...l,
+      isActive: l.isActive !== false,
+      accounts: accounts.filter((a) => String(a.userLoginId) === String(l.id))
+    }));
+    setAllLogins(mapped);
+  }, [isGatewayConnected, availableLogins, accounts]);
+
+  const updateUserStatus = async (loginId: string | number, isActive: boolean): Promise<boolean> => {
+    try {
+      if (isGatewayConnected) {
+        await userManagementApi.updateUserStatus(loginId, isActive);
+      }
+      setAllLogins((prev) =>
+        prev.map((l) => (String(l.id) === String(loginId) ? { ...l, isActive } : l))
+      );
+      setAvailableLogins((prev) =>
+        prev.map((l) => (String(l.id) === String(loginId) ? { ...l, isActive } : l))
+      );
+      showToast('Status Updated', `User ${isActive ? 'activated' : 'deactivated'} successfully.`, 'success');
+      return true;
+    } catch (err: any) {
+      const msg = err?.data?.message || err?.message || 'Failed to update user status.';
+      showToast('Error', msg, 'error');
+      return false;
+    }
+  };
+
+  const resetUserPassword = async (
+    loginId: string | number,
+    newPassword: string
+  ): Promise<{ success: boolean; message: string }> => {
+    try {
+      if (isGatewayConnected) {
+        const res = await userManagementApi.resetUserPassword(loginId, newPassword);
+        showToast('Password Updated', res.message || 'User password updated successfully.', 'success');
+        return { success: true, message: res.message || 'Password updated successfully.' };
+      }
+      showToast('Password Updated', 'Password updated successfully.', 'success');
+      return { success: true, message: 'Password updated successfully.' };
+    } catch (err: any) {
+      const msg = err?.data?.message || err?.message || 'Failed to update user password.';
+      showToast('Error', msg, 'error');
+      return { success: false, message: msg };
+    }
+  };
+
+  const updateUserLogin = async (
+    loginId: string | number,
+    updates: { username?: string; email?: string; isActive?: boolean }
+  ): Promise<boolean> => {
+    try {
+      if (isGatewayConnected) {
+        await userManagementApi.updateUserLogin(loginId, updates);
+      }
+      setAllLogins((prev) =>
+        prev.map((l) => (String(l.id) === String(loginId) ? { ...l, ...updates } : l))
+      );
+      setAvailableLogins((prev) =>
+        prev.map((l) => (String(l.id) === String(loginId) ? { ...l, ...updates } : l))
+      );
+      showToast('User Updated', 'User login credentials updated.', 'success');
+      return true;
+    } catch (err: any) {
+      const msg = err?.data?.message || err?.message || 'Failed to update user.';
+      showToast('Error', msg, 'error');
+      return false;
+    }
+  };
+
+  const deleteUserLogin = async (loginId: string | number): Promise<boolean> => {
+    if (String(loginId) === String(currentLogin.id)) {
+      showToast('Action Blocked', 'You cannot delete your own active login session.', 'error');
+      return false;
+    }
+    try {
+      if (isGatewayConnected) {
+        await userManagementApi.deleteUserLogin(loginId);
+      }
+      setAllLogins((prev) => prev.filter((l) => String(l.id) !== String(loginId)));
+      setAvailableLogins((prev) => prev.filter((l) => String(l.id) !== String(loginId)));
+      setAccounts((prev) => prev.filter((a) => String(a.userLoginId) !== String(loginId)));
+      showToast('User Deleted', 'User login and all associated personas permanently deleted.', 'success');
+      return true;
+    } catch (err: any) {
+      const msg = err?.data?.message || err?.message || 'Failed to delete user.';
+      showToast('Error', msg, 'error');
+      return false;
+    }
+  };
+
+  const updateUserPersonaRole = async (personaId: string | number, role: UserRole): Promise<boolean> => {
+    try {
+      if (isGatewayConnected) {
+        await userManagementApi.updateAccount(personaId, { role });
+      }
+      setAccounts((prev) =>
+        prev.map((a) => (String(a.id) === String(personaId) ? { ...a, role } : a))
+      );
+      setAllLogins((prev) =>
+        prev.map((l) => ({
+          ...l,
+          accounts: (l.accounts || []).map((a) => (String(a.id) === String(personaId) ? { ...a, role } : a))
+        }))
+      );
+      showToast('Role Updated', `Persona role updated to ${role.replace('_', ' ').toUpperCase()}.`, 'success');
+      return true;
+    } catch (err: any) {
+      const msg = err?.data?.message || err?.message || 'Failed to update persona role.';
+      showToast('Error', msg, 'error');
+      return false;
+    }
+  };
+
+  const deleteUserPersona = async (personaId: string | number): Promise<boolean> => {
+    try {
+      if (isGatewayConnected) {
+        await userManagementApi.deleteAccount(personaId);
+      }
+      setAccounts((prev) => prev.filter((a) => String(a.id) !== String(personaId)));
+      setAllLogins((prev) =>
+        prev.map((l) => ({
+          ...l,
+          accounts: (l.accounts || []).filter((a) => String(a.id) !== String(personaId))
+        }))
+      );
+      showToast('Persona Deleted', 'User persona deleted successfully.', 'success');
+      return true;
+    } catch (err: any) {
+      const msg = err?.data?.message || err?.message || 'Failed to delete persona. Each user must keep at least one persona.';
+      showToast('Error', msg, 'error');
+      return false;
+    }
+  };
+
+  const createPersonaForUser = async (
+    loginId: string | number,
+    role: UserRole,
+    name: string,
+    bio?: string
+  ): Promise<boolean> => {
+    try {
+      let created: UserAccount;
+      if (isGatewayConnected) {
+        created = await userManagementApi.createAccount({
+          userLoginId: Number(loginId),
+          name: name.trim(),
+          email: `${name.toLowerCase().replace(/\s+/g, '.')}@thcwatches.com`,
+          role,
+          bio: bio || `Persona with role ${role}`
+        });
+      } else {
+        created = {
+          id: `acc-${Date.now()}`,
+          userLoginId: loginId,
+          name: name.trim(),
+          email: `${name.toLowerCase().replace(/\s+/g, '.')}@thcwatches.com`,
+          role,
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+          location: 'Global',
+          memberSince: String(new Date().getFullYear()),
+          verifiedDealer: role === 'seller',
+          bio: bio || `Persona with role ${role}`,
+          rating: 5.0,
+          reviewCount: 0,
+          totalSalesCount: 0,
+          responseRate: '100%',
+          avgShipTime: '24 Hours',
+          isDefault: false
+        };
+      }
+      setAccounts((prev) => [...prev, created]);
+      setAllLogins((prev) =>
+        prev.map((l) =>
+          String(l.id) === String(loginId)
+            ? { ...l, accounts: [...(l.accounts || []), created] }
+            : l
+        )
+      );
+      showToast('Persona Created', `Created ${name} (${role.toUpperCase()}) persona.`, 'success');
+      return true;
+    } catch (err: any) {
+      const msg = err?.data?.message || err?.message || 'Failed to create persona.';
+      showToast('Error', msg, 'error');
+      return false;
+    }
+  };
+
   // Listings Management
   const createListing = (
     listingData: Omit<
@@ -2043,10 +2246,21 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         userAccounts,
         accounts,
         isAdmin,
+        isServiceExecutive,
+        canManageUsers,
         isGuest,
         isFeatureEnabled,
         isFeatureActive,
         isTabEnabled,
+        allLogins,
+        loadAllLogins,
+        updateUserStatus,
+        resetUserPassword,
+        updateUserLogin,
+        deleteUserLogin,
+        updateUserPersonaRole,
+        deleteUserPersona,
+        createPersonaForUser,
         isLoginModalOpen,
         setIsLoginModalOpen,
         promptLogin,

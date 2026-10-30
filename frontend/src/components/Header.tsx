@@ -42,6 +42,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     currentUser,
     accounts,
     isAdmin,
+    canManageUsers,
     isFeatureEnabled,
     isTabEnabled,
     isLoginModalOpen,
@@ -457,6 +458,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     { id: 'collection', label: 'My Watch Vault', icon: Box },
     { id: 'wishlist', label: 'Wishlist', icon: Heart, count: isLoggedIn ? wishlist.length : 0 },
     { id: 'service-center', label: 'Service Center', icon: Wrench, count: isLoggedIn ? activeServiceRequestsCount : 0 },
+    ...(canManageUsers ? [{ id: 'user-management' as ActiveTab, label: 'User Management', icon: Users }] : []),
     { id: 'seller-hub', label: 'Seller Hub', icon: Store },
     { id: 'orders', label: 'Orders & Offers', icon: ShoppingBag }
   ];
@@ -912,34 +914,50 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   )}
 
                   {/* Quick Hub Navigation */}
-                  {(isFeatureEnabled('collectorVault') || isFeatureEnabled('sellerHub')) && (
-                    <div className="mt-3 pt-2 border-t border-[#E5DFD5] grid grid-cols-2 gap-1.5">
-                      {isFeatureEnabled('collectorVault') && (
+                  {(isFeatureEnabled('collectorVault') || isFeatureEnabled('sellerHub') || (canManageUsers && isFeatureEnabled('userManagement'))) && (
+                    <div className="mt-3 pt-2 border-t border-[#E5DFD5]">
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {isFeatureEnabled('collectorVault') && (
+                          <button
+                            type="button"
+                            id="account-menu-vault-btn"
+                            onClick={() => {
+                              setActiveTab('collection');
+                              setIsAccountMenuOpen(false);
+                            }}
+                            className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-[#EDE8E0] hover:bg-[#E2DCD2] text-xs text-[#1C1917] font-medium transition-colors"
+                          >
+                            <Box className="w-3.5 h-3.5 text-[#967139]" />
+                            <span>Watch Vault</span>
+                          </button>
+                        )}
+                        {isFeatureEnabled('sellerHub') && (
+                          <button
+                            type="button"
+                            id="account-menu-seller-hub-btn"
+                            onClick={() => {
+                              setActiveTab('seller-hub');
+                              setIsAccountMenuOpen(false);
+                            }}
+                            className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-[#EDE8E0] hover:bg-[#E2DCD2] text-xs text-[#1C1917] font-medium transition-colors"
+                          >
+                            <Store className="w-3.5 h-3.5 text-[#967139]" />
+                            <span>Seller Hub</span>
+                          </button>
+                        )}
+                      </div>
+                      {canManageUsers && isFeatureEnabled('userManagement') && (
                         <button
                           type="button"
-                          id="account-menu-vault-btn"
+                          id="account-menu-user-management-btn"
                           onClick={() => {
-                            setActiveTab('collection');
+                            setActiveTab('user-management');
                             setIsAccountMenuOpen(false);
                           }}
-                          className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-[#EDE8E0] hover:bg-[#E2DCD2] text-xs text-[#1C1917] font-medium transition-colors"
+                          className="w-full mt-2 flex items-center justify-center gap-1.5 p-2 rounded-xl bg-[#2D2A26] hover:bg-[#1C1917] text-xs text-[#FAF8F5] font-medium transition-colors shadow-xs"
                         >
-                          <Box className="w-3.5 h-3.5 text-[#967139]" />
-                          <span>Watch Vault</span>
-                        </button>
-                      )}
-                      {isFeatureEnabled('sellerHub') && (
-                        <button
-                          type="button"
-                          id="account-menu-seller-hub-btn"
-                          onClick={() => {
-                            setActiveTab('seller-hub');
-                            setIsAccountMenuOpen(false);
-                          }}
-                          className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-[#EDE8E0] hover:bg-[#E2DCD2] text-xs text-[#1C1917] font-medium transition-colors"
-                        >
-                          <Store className="w-3.5 h-3.5 text-[#967139]" />
-                          <span>Seller Hub</span>
+                          <Users className="w-3.5 h-3.5 text-[#C5A880]" />
+                          <span>User Management</span>
                         </button>
                       )}
                     </div>
