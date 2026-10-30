@@ -80,6 +80,7 @@ export const TAB_TO_FEATURE_MAP: Record<ActiveTab, keyof FeatureFlags> = {
   'wishlist': 'buyerWishlist',
   'seller-hub': 'sellerHub',
   'orders': 'ordersAndOffers',
+  'offers': 'ordersAndOffers',
   'service-center': 'serviceCenter',
   'user-management': 'userManagement'
 };
