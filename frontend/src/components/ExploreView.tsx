@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useMarketplace } from '../context/MarketplaceContext';
+import editorialHeroBanner from '../assets/images/editorial-hero-banner.jpg';
 import { WatchCard } from './WatchCard';
 import { FilterSidebar } from './FilterSidebar';
 import {
@@ -41,9 +42,9 @@ export const ExploreView: React.FC = () => {
       <div className="relative rounded-3xl overflow-hidden bg-[#EDE8E0] border border-[#DDD6CB] p-6 md:p-10 shadow-sm">
         <div className="absolute inset-0 bg-gradient-to-r from-[#EDE8E0] via-[#EDE8E0]/90 to-transparent z-0 pointer-events-none" />
         <div
-          className="absolute right-0 top-0 bottom-0 w-full md:w-1/2 opacity-25 bg-cover bg-center pointer-events-none"
+          className="absolute right-0 top-0 bottom-0 w-full md:w-1/2 opacity-35 bg-cover bg-center pointer-events-none"
           style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1400&q=80')`
+            backgroundImage: `url(${editorialHeroBanner})`
           }}
         />
 
