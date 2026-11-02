@@ -35,3 +35,13 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #967139;
 }
+
+/* Utility to completely hide scrollbar while preserving scrollability */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
