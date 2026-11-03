@@ -1226,6 +1226,84 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                 )}
               </div>
             )}
+
+            {/* Mobile Admin Dropdown */}
+            {canManageUsers && (
+              <div className="relative shrink-0" ref={mobileAdminDropdownRef}>
+                <button
+                  id="mobile-nav-tab-admin"
+                  type="button"
+                  onClick={() => setIsMobileAdminDropdownOpen((prev) => !prev)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                    isAdminTabActive
+                      ? 'bg-[#1C1917] text-[#FAF8F5] font-semibold'
+                      : 'text-[#57534E] hover:text-[#1C1917]'
+                  }`}
+                >
+                  <ShieldCheck className={`w-3.5 h-3.5 ${isAdminTabActive ? 'text-[#C5A880]' : 'text-[#78716C]'}`} />
+                  <span>Admin</span>
+                  {activeServiceRequestsCount > 0 && (
+                    <span
+                      className={`text-[9px] px-1 rounded-full font-bold ${
+                        isAdminTabActive ? 'bg-[#C5A880] text-[#1C1917]' : 'bg-[#DDD6CB] text-[#1C1917]'
+                      }`}
+                    >
+                      {activeServiceRequestsCount}
+                    </span>
+                  )}
+                  <ChevronDown className={`w-3 h-3 transition-transform ${isMobileAdminDropdownOpen ? 'rotate-180 text-[#C5A880]' : 'opacity-70'}`} />
+                </button>
+
+                {isMobileAdminDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-[#FAF8F5] rounded-2xl shadow-xl border border-[#DDD6CB] p-1.5 z-50 animate-fadeIn space-y-1">
+                    {isTabEnabled('service-center') && (
+                      <button
+                        type="button"
+                        id="mobile-admin-service-center"
+                        onClick={() => {
+                          setActiveTab('service-center');
+                          setIsMobileAdminDropdownOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors ${
+                          activeTab === 'service-center'
+                            ? 'bg-[#1C1917] text-[#FAF8F5] font-semibold'
+                            : 'text-[#1C1917] hover:bg-[#EDE8E0]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Wrench className="w-3.5 h-3.5 text-[#C5A880]" />
+                          <span>Service Center</span>
+                        </div>
+                        {activeServiceRequestsCount > 0 && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#C5A880] text-[#1C1917] font-bold">
+                            {activeServiceRequestsCount}
+                          </span>
+                        )}
+                      </button>
+                    )}
+
+                    {isTabEnabled('user-management') && (
+                      <button
+                        type="button"
+                        id="mobile-admin-user-management"
+                        onClick={() => {
+                          setActiveTab('user-management');
+                          setIsMobileAdminDropdownOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors ${
+                          activeTab === 'user-management'
+                            ? 'bg-[#1C1917] text-[#FAF8F5] font-semibold'
+                            : 'text-[#1C1917] hover:bg-[#EDE8E0]'
+                        }`}
+                      >
+                        <Users className="w-3.5 h-3.5 text-[#C5A880]" />
+                        <span>User Management</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
