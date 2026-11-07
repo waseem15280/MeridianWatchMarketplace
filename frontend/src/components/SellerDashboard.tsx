@@ -20,7 +20,8 @@ import {
   Clock,
   Sparkles,
   Layers,
-  Send
+  Send,
+  Info
 } from 'lucide-react';
 import { WatchListing, CollectionWatch } from '../types';
 
@@ -48,6 +49,9 @@ export const SellerDashboard: React.FC = () => {
   const [collectionImportPrice, setCollectionImportPrice] = useState<{ [id: string]: number }>({});
   const [replyInput, setReplyInput] = useState<{ [reviewId: string]: string }>({});
   const [counterPriceInput, setCounterPriceInput] = useState<{ [offerId: string]: number }>({});
+
+  // Seller role authorization check
+  const isSeller = currentUser?.role === 'seller';
 
   // Filter listings by current user
   const myListings = listings.filter((l) => l.sellerId === currentUser.id);
@@ -103,13 +107,25 @@ export const SellerDashboard: React.FC = () => {
 
           <button
             id="seller-create-new-listing-btn"
+            disabled={!isSeller}
             onClick={() => {
-              setEditingListing(null);
-              setIsAddListingOpen(true);
+              if (isSeller) {
+                setEditingListing(null);
+                setIsAddListingOpen(true);
+              }
             }}
-            className="flex items-center justify-center gap-2 bg-[#1C1917] hover:bg-[#2D2A26] text-[#FAF8F5] px-5 py-3 rounded-xl text-xs font-bold shadow-md transition-all shrink-0"
+            title={
+              !isSeller
+                ? 'Only users with the seller role can create new listings. Switch to a Seller persona in the top right menu.'
+                : 'Create New Listing'
+            }
+            className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all shrink-0 ${
+              isSeller
+                ? 'bg-[#1C1917] hover:bg-[#2D2A26] text-[#FAF8F5] shadow-md cursor-pointer'
+                : 'bg-[#E5DFD5] text-[#8C7D70] cursor-not-allowed opacity-60 shadow-none'
+            }`}
           >
-            <PlusCircle className="w-4 h-4 text-[#C5A880]" />
+            <PlusCircle className={`w-4 h-4 ${isSeller ? 'text-[#C5A880]' : 'text-[#8C7D70]'}`} />
             <span>Create New Listing</span>
           </button>
         </div>
@@ -167,6 +183,21 @@ export const SellerDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Role Notice Banner when not a seller */}
+      {!isSeller && (
+        <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200/80 flex items-start sm:items-center gap-3 text-amber-900 shadow-2xs">
+          <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
+          <div className="text-xs leading-relaxed">
+            <span className="font-semibold">Seller Role Required: </span>
+            You are currently signed in as <strong>{currentUser.name}</strong> with role{' '}
+            <span className="uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px]">
+              {currentUser.role}
+            </span>
+            . The <strong>Create New Listing</strong> action is disabled because only accounts with the <strong>Seller</strong> role can publish timepiece listings. You can switch to a Seller persona in the top header account switcher.
+          </div>
+        </div>
+      )}
 
       {/* Sub-Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-[#E5DFD5] pb-2 overflow-x-auto no-scrollbar">
@@ -240,13 +271,26 @@ export const SellerDashboard: React.FC = () => {
                 You haven't listed any timepieces on the marketplace. Create a new listing or publish an existing piece from your personal watch vault.
               </p>
               <button
+                id="seller-empty-create-listing-btn"
+                disabled={!isSeller}
                 onClick={() => {
-                  setEditingListing(null);
-                  setIsAddListingOpen(true);
+                  if (isSeller) {
+                    setEditingListing(null);
+                    setIsAddListingOpen(true);
+                  }
                 }}
-                className="bg-[#1C1917] text-[#FAF8F5] font-bold px-4 py-2 rounded-xl text-xs hover:bg-[#2D2A26] transition-colors inline-flex items-center gap-2"
+                title={
+                  !isSeller
+                    ? 'Only users with the seller role can create listings.'
+                    : 'Create Your First Listing'
+                }
+                className={`font-bold px-4 py-2 rounded-xl text-xs inline-flex items-center gap-2 transition-colors ${
+                  isSeller
+                    ? 'bg-[#1C1917] text-[#FAF8F5] hover:bg-[#2D2A26] cursor-pointer'
+                    : 'bg-[#E5DFD5] text-[#8C7D70] cursor-not-allowed opacity-60'
+                }`}
               >
-                <PlusCircle className="w-4 h-4 text-[#C5A880]" />
+                <PlusCircle className={`w-4 h-4 ${isSeller ? 'text-[#C5A880]' : 'text-[#8C7D70]'}`} />
                 <span>Create Your First Listing</span>
               </button>
             </div>
@@ -341,12 +385,19 @@ export const SellerDashboard: React.FC = () => {
                       {/* Edit Button */}
                       <button
                         id={`edit-listing-btn-${watch.id}`}
+                        disabled={!isSeller}
                         onClick={() => {
-                          setEditingListing(watch);
-                          setIsAddListingOpen(true);
+                          if (isSeller) {
+                            setEditingListing(watch);
+                            setIsAddListingOpen(true);
+                          }
                         }}
-                        className="p-2 rounded-xl bg-[#FAF8F5] border border-[#D8D0C5] hover:border-[#B8AEA3] text-[#57534E] hover:text-[#1C1917] transition-colors"
-                        title="Edit Details & Price"
+                        className={`p-2 rounded-xl border transition-colors ${
+                          isSeller
+                            ? 'bg-[#FAF8F5] border-[#D8D0C5] hover:border-[#B8AEA3] text-[#57534E] hover:text-[#1C1917] cursor-pointer'
+                            : 'bg-[#FAF8F5] border-[#E5DFD5] text-[#B8AEA3] cursor-not-allowed opacity-50'
+                        }`}
+                        title={isSeller ? 'Edit Details & Price' : 'Only sellers can edit listings'}
                       >
                         <Edit className="w-4 h-4" />
                       </button>
@@ -460,8 +511,18 @@ export const SellerDashboard: React.FC = () => {
                         <div className="self-end">
                           <button
                             id={`publish-vault-btn-${cw.id}`}
-                            onClick={() => handlePublishFromCollection(cw)}
-                            className="bg-[#C5A880] hover:bg-[#B3936A] text-[#1C1917] font-bold px-4 py-2 rounded-xl text-xs transition-colors flex items-center gap-1.5 h-[38px] shadow-2xs"
+                            disabled={!isSeller}
+                            onClick={() => {
+                              if (isSeller) {
+                                handlePublishFromCollection(cw);
+                              }
+                            }}
+                            className={`font-bold px-4 py-2 rounded-xl text-xs transition-colors flex items-center gap-1.5 h-[38px] shadow-2xs ${
+                              isSeller
+                                ? 'bg-[#C5A880] hover:bg-[#B3936A] text-[#1C1917] cursor-pointer'
+                                : 'bg-[#E5DFD5] text-[#8C7D70] cursor-not-allowed opacity-60'
+                            }`}
+                            title={isSeller ? 'Publish to marketplace' : 'Only sellers can publish listings'}
                           >
                             <ArrowUpRight className="w-4 h-4" />
                             <span>Publish</span>

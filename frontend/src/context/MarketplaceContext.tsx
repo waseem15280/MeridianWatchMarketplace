@@ -571,7 +571,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Modals & UI States
   const [selectedWatch, setSelectedWatch] = useState<WatchListing | null>(null);
   const [selectedSeller, setSelectedSeller] = useState<UserAccount | null>(null);
-  const [isAddListingOpen, setIsAddListingOpen] = useState<boolean>(false);
+  const [isAddListingOpen, setIsAddListingOpenState] = useState<boolean>(false);
   const [editingListing, setEditingListing] = useState<WatchListing | null>(null);
   const [isAddCollectionOpen, setIsAddCollectionOpen] = useState<boolean>(false);
   const [editingCollectionWatch, setEditingCollectionWatch] = useState<CollectionWatch | null>(null);
@@ -907,6 +907,26 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return isTabAccessible(tab, isAdmin, isGuest);
     };
   }, [isAdmin, isGuest, canManageUsers, isFeatureEnabled]);
+
+  // Guard setIsAddListingOpen: only users with the 'seller' role can open the create/edit listing modal
+  const setIsAddListingOpen = useCallback(
+    (open: boolean) => {
+      if (open && currentUser?.role !== 'seller') {
+        showToast('Seller Role Required', 'Only users with the Seller role can create listings. Switch persona to Seller.', 'warning');
+        setIsAddListingOpenState(false);
+        return;
+      }
+      setIsAddListingOpenState(open);
+    },
+    [currentUser?.role, showToast]
+  );
+
+  // Automatically close modal if persona changes away from seller
+  useEffect(() => {
+    if (isAddListingOpen && currentUser?.role !== 'seller') {
+      setIsAddListingOpenState(false);
+    }
+  }, [currentUser?.role, isAddListingOpen]);
 
   // Auto-fallback: if the current active tab is disabled, switch to the first accessible tab
   useEffect(() => {
@@ -1579,6 +1599,10 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Convert Collection watch into active Marketplace Listing
   const listFromCollection = (collectionWatchId: string, price: number, description?: string) => {
+    if (currentUser?.role !== 'seller') {
+      showToast('Seller Role Required', 'Only users with the seller role can list timepieces on the marketplace.', 'warning');
+      return;
+    }
     const watch = collection.find((w) => w.id === collectionWatchId);
     if (!watch) return;
 

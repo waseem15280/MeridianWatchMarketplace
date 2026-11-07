@@ -6,7 +6,6 @@ import {
   Store,
   Box,
   ShoppingBag,
-  PlusCircle,
   Search,
   SlidersHorizontal,
   ChevronDown,
@@ -59,7 +58,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     wishlist,
     serviceRequests,
     compareList,
-    setIsAddListingOpen,
     filters,
     setFilters,
     isGatewayConnected,
@@ -780,21 +778,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                 className="lg:hidden p-2 rounded-xl bg-[#FFFFFF] border border-[#D8D0C5] text-[#57534E] hover:text-[#1C1917]"
               >
                 <SlidersHorizontal className="w-4 h-4" />
-              </button>
-            )}
-
-            {/* List Watch CTA */}
-            {isFeatureEnabled('sellerHub') && (
-              <button
-                id="header-list-watch-btn"
-                onClick={() => {
-                  setIsAddListingOpen(true);
-                }}
-                className="flex items-center gap-1.5 bg-[#C5A880] hover:bg-[#B3936A] text-[#1C1917] font-bold px-3.5 py-2 rounded-xl text-xs shadow-sm hover:shadow-md transition-all"
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">Create Listing</span>
-                <span className="sm:hidden">List</span>
               </button>
             )}
 

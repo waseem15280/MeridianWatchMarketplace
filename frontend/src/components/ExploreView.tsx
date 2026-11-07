@@ -27,8 +27,6 @@ export const ExploreView: React.FC = () => {
     sortBy,
     setSortBy,
     resetFilters,
-    setIsAddListingOpen,
-    setEditingListing,
     setActiveTab,
     currentUser,
     isFeatureEnabled
@@ -68,14 +66,11 @@ export const ExploreView: React.FC = () => {
               {isFeatureEnabled('sellerHub') && (
                 <button
                   id="hero-sell-watch-btn"
-                  onClick={() => {
-                    setEditingListing(null);
-                    setIsAddListingOpen(true);
-                  }}
+                  onClick={() => setActiveTab('seller-hub')}
                   className="bg-[#1C1917] hover:bg-[#2D2A26] text-[#FAF8F5] px-5 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 shadow-sm"
                 >
                   <Store className="w-4 h-4 text-[#C5A880]" />
-                  <span>List a Timepiece</span>
+                  <span>Seller Hub</span>
                 </button>
               )}
 

@@ -40,6 +40,9 @@ export const CollectionManager: React.FC = () => {
 
   const myCollection = collection.filter((c) => c.userId === currentUser.id);
 
+  // Seller role authorization check
+  const isSeller = currentUser?.role === 'seller';
+
   // Compute metrics
   const totalValue = myCollection.reduce((sum, w) => sum + (w.estimatedMarketValue || 0), 0);
   const totalCost = myCollection.reduce((sum, w) => sum + (w.purchasePrice || w.estimatedMarketValue || 0), 0);
@@ -47,6 +50,10 @@ export const CollectionManager: React.FC = () => {
   const appreciationPercent = totalCost > 0 ? (appreciation / totalCost) * 100 : 0;
 
   const handleOpenListModal = (watch: CollectionWatch) => {
+    if (!isSeller) {
+      showToast('Seller Role Required', 'Only users with the seller role can list watches on the marketplace.', 'warning');
+      return;
+    }
     setListModalWatch(watch);
     setListingPrice(watch.estimatedMarketValue || 5000);
     setListingDescription(watch.notes || `Collector-owned ${watch.brand} ${watch.model} (Ref. ${watch.referenceNumber}) in ${watch.condition} condition.`);
@@ -54,6 +61,11 @@ export const CollectionManager: React.FC = () => {
 
   const handleConfirmList = () => {
     if (!listModalWatch) return;
+    if (!isSeller) {
+      showToast('Seller Role Required', 'Only users with the seller role can list watches on the marketplace.', 'warning');
+      setListModalWatch(null);
+      return;
+    }
     if (listingPrice <= 0) {
       showToast('Invalid Price', 'Please enter a valid listing price', 'warning');
       return;
@@ -333,7 +345,7 @@ export const CollectionManager: React.FC = () => {
                         </button>
                       )
                     ) : (
-                      isFeatureEnabled('sellerHub') && (
+                      isFeatureEnabled('sellerHub') && isSeller && (
                         <button
                           id={`list-from-vault-btn-${watch.id}`}
                           onClick={() => handleOpenListModal(watch)}
@@ -353,7 +365,7 @@ export const CollectionManager: React.FC = () => {
       </div>
 
       {/* Quick List From Vault Modal */}
-      {listModalWatch && (
+      {listModalWatch && isSeller && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-md bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-3 border-b border-[#E5DFD5]">

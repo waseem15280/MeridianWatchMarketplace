@@ -64,6 +64,7 @@ interface ImageItem {
 
 export const AddEditListingModal: React.FC = () => {
   const {
+    currentUser,
     isAddListingOpen,
     setIsAddListingOpen,
     editingListing,
@@ -133,7 +134,7 @@ export const AddEditListingModal: React.FC = () => {
     }
   }, [editingListing, isAddListingOpen]);
 
-  if (!isAddListingOpen) return null;
+  if (!isAddListingOpen || currentUser?.role !== 'seller') return null;
 
   const handleFilesSelected = (files: FileList | File[]) => {
     const fileArray = Array.from(files);
