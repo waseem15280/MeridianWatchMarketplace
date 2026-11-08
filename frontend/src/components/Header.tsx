@@ -729,7 +729,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   type="text"
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Search Rolex, Daytona, Nautilus, Omega..."
+                  placeholder="Search HMT, Seiko, Titan, Ricoh..."
                   className="w-full bg-[#FFFFFF] border border-[#D8D0C5] rounded-xl pl-9 pr-20 py-2 text-xs text-[#1C1917] placeholder:text-[#8C7D70] focus:outline-none focus:border-[#967139] focus:ring-1 focus:ring-[#967139]/30 transition-all shadow-2xs"
                 />
                 {searchInput && (
@@ -1232,7 +1232,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
 
             <form onSubmit={handleCreateAccountSubmit} className="space-y-4">
               <div className="bg-[#EAE4DC]/60 p-3 rounded-xl border border-[#D8D0C5]/60 text-xs text-[#57534E]">
-                💡 <span className="font-semibold text-[#1C1917]">Microservices Rule:</span> Each user account is strictly mapped to <strong>one single role</strong>. You can create multiple account personas under the same login session.
+                💡 <span className="font-semibold text-[#1C1917]">Rule:</span> Each user account persona is strictly mapped to <strong>one single role</strong>. You can create multiple account personas under the same user login.
               </div>
 
               {/* Role Picker */}

@@ -215,7 +215,7 @@ export const RoleManagementView: React.FC = () => {
           </div>
           <h2 className="text-2xl font-serif font-bold text-[#1C1917]">Administrative Privilege Required</h2>
           <p className="text-xs text-[#78716C] leading-relaxed">
-            The Role & Permission Atelier is restricted to authorized platform administrators with{' '}
+            The Role & Permission screen is restricted to authorized platform administrators with{' '}
             <code className="text-[#C5A059] bg-[#EDE8E0] px-1.5 py-0.5 rounded font-mono">manage_roles</code>{' '}
             privileges.
           </p>
@@ -244,10 +244,10 @@ export const RoleManagementView: React.FC = () => {
                 <span>THC Security Governance</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#1C1917] mt-1">
-                Role & Permission Atelier
+                Roles & Permissions
               </h1>
               <p className="text-xs sm:text-sm text-[#78716C] mt-1 max-w-2xl">
-                Define custom horological roles, grant or revoke granular feature capabilities, and govern access control policies.
+                Define custom user roles, grant or revoke granular feature capabilities, and govern access control policies.
               </p>
             </div>
 
@@ -787,7 +787,7 @@ export const RoleManagementView: React.FC = () => {
             </div>
 
             <p className="text-xs text-[#78716C] leading-relaxed">
-              This action will reset the 5 system roles (Buyer, Collector, Seller, Admin, Service Executive) to their canonical permission sets. Any custom roles created will be preserved or reset.
+              This action will reset the 6 system roles (Guest, Buyer, Collector, Seller, Admin, Service Executive) to their canonical permission sets. Any custom roles created will be preserved or reset.
             </p>
 
             <div className="flex justify-end gap-2.5 pt-3 border-t border-[#DDD6CB]">

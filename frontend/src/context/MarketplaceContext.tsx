@@ -47,11 +47,11 @@ export const GUEST_LOGIN: UserLogin = {
 };
 
 export const GUEST_ACCOUNT: UserAccount = {
-  id: 'guest-buyer',
+  id: 'guest-user',
   userLoginId: 'guest',
-  name: 'Guest Collector',
+  name: 'Guest User',
   email: 'guest@thc.com',
-  role: 'buyer',
+  role: 'guest',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
   location: 'Global',
   memberSince: new Date().getFullYear().toString(),
@@ -62,7 +62,8 @@ export const GUEST_ACCOUNT: UserAccount = {
   totalSalesCount: 0,
   responseRate: '100%',
   avgShipTime: 'N/A',
-  isDefault: true
+  isDefault: true,
+  permissions: ['marketplace_access']
 };
 GUEST_LOGIN.accounts = [GUEST_ACCOUNT];
 
@@ -490,7 +491,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
               const mergedPerms = Array.from(
                 new Set([
                   ...saved.permissions,
-                  ...(defaultRole.id === 'admin' ? (['manage_roles'] as Permission[]) : [])
+                  ...(defaultRole.id === 'admin' ? (['manage_roles'] as Permission[]) : []),
+                  ...(defaultRole.id === 'guest' ? (['marketplace_access'] as Permission[]) : [])
                 ])
               );
               return {
@@ -574,7 +576,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     const savedLoginId = localStorage.getItem('chronos_current_login_id');
     const savedUserId = localStorage.getItem('chronos_current_user_id');
-    if (savedLoginId && savedLoginId !== 'guest' && savedUserId && savedUserId !== 'guest' && savedUserId !== 'guest-buyer') {
+    if (savedLoginId && savedLoginId !== 'guest' && savedUserId && savedUserId !== 'guest' && savedUserId !== 'guest-buyer' && savedUserId !== 'guest-user') {
       const saved = localStorage.getItem(`chronos_wishlist_${savedUserId}`);
       if (saved) {
         try {
@@ -690,7 +692,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [collection]);
 
   useEffect(() => {
-    if (currentUserId && currentUserId !== 'guest' && currentUserId !== 'guest-buyer') {
+    if (currentUserId && currentUserId !== 'guest' && currentUserId !== 'guest-buyer' && currentUserId !== 'guest-user') {
       try {
         localStorage.setItem(`chronos_wishlist_${currentUserId}`, JSON.stringify(wishlist));
       } catch (e) {
@@ -741,7 +743,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         currentLoginId !== 'guest' &&
         currentUserId &&
         currentUserId !== 'guest' &&
-        currentUserId !== 'guest-buyer'
+        currentUserId !== 'guest-buyer' &&
+        currentUserId !== 'guest-user'
       );
 
       const [
@@ -918,34 +921,42 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return sanitizeAccount(activeAcc);
   }, [accounts, currentUserId, userAccounts, isLoggedIn]);
 
-  // Admin access check: user is admin if their active account or any account has admin role
+  // User is admin and isAdmin is true if role is admin role
   const isAdmin = useMemo(() => {
     if (!isLoggedIn) return false;
-    return currentUser?.role === 'admin' || userAccounts.some((acc) => acc.role === 'admin');
-  }, [currentUser?.role, userAccounts, isLoggedIn]);
+    return currentUser?.role === 'admin';
+  }, [currentUser?.role, isLoggedIn]);
 
-  // Service Executive access check: user is service executive if their active account or any account has service_executive role
+  // Service Executive access check: user is service executive if active account has service_executive role
   const isServiceExecutive = useMemo(() => {
     if (!isLoggedIn) return false;
     return (
       currentUser?.role === 'service_executive' ||
-      (currentUser?.role as string) === 'serviceexecutive' ||
-      userAccounts.some((acc) => acc.role === 'service_executive' || (acc.role as string) === 'serviceexecutive')
+      (currentUser?.role as string) === 'serviceexecutive'
     );
-  }, [currentUser?.role, userAccounts, isLoggedIn]);
+  }, [currentUser?.role, isLoggedIn]);
+
+  // User is guest if it is not logged in or active role is guest
+  const isGuest = useMemo(() => {
+    return !isLoggedIn || currentUser?.role === 'guest';
+  }, [isLoggedIn, currentUser?.role]);
 
   // Granular Permission-Based Access Control Engine
   const currentUserPermissions = useMemo<Permission[]>(() => {
-    if (!isLoggedIn) return [];
+    // If user is guest (not logged in or guest role), use 'guest' role permissions by default
+    const activeRole = isGuest ? 'guest' : (currentUser?.role || 'buyer');
+
     if (currentUser?.permissions && currentUser.permissions.length > 0) {
       return currentUser.permissions;
     }
-    const matchedRole = roles.find((r) => r.id.toLowerCase() === currentUser?.role?.toLowerCase());
+
+    const matchedRole = roles.find((r) => r.id.toLowerCase() === activeRole.toLowerCase());
     if (matchedRole) {
       return matchedRole.permissions;
     }
-    return ROLE_PERMISSIONS[currentUser?.role] || [];
-  }, [currentUser?.role, currentUser?.permissions, isLoggedIn, roles]);
+
+    return ROLE_PERMISSIONS[activeRole] || (activeRole === 'guest' ? ['marketplace_access'] : []);
+  }, [currentUser?.role, currentUser?.permissions, isGuest, roles]);
 
   const hasPermission = useCallback(
     (permission: Permission): boolean => {
@@ -977,8 +988,6 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const canAccessServiceCenter = useMemo(() => {
     return hasPermission('service_center_access') || hasPermission('manage_service_center');
   }, [hasPermission]);
-
-  const isGuest = !isLoggedIn;
 
   // Check if a feature is enabled for current session (incorporating admin & guest status)
   const isFeatureEnabled = useMemo(() => {
@@ -1061,7 +1070,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Load and sync wishlist when current user / login state changes
   useEffect(() => {
-    if (!isLoggedIn || !currentUserId || currentUserId === 'guest' || currentUserId === 'guest-buyer') {
+    if (!isLoggedIn || !currentUserId || currentUserId === 'guest' || currentUserId === 'guest-buyer' || currentUserId === 'guest-user') {
       setWishlist([]);
       return;
     }
@@ -2003,7 +2012,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const clearWishlist = () => {
     setWishlist([]);
-    if (currentUser?.id && currentUser.id !== 'guest-buyer') {
+    if (currentUser?.id && currentUser.id !== 'guest-buyer' && currentUser.id !== 'guest-user') {
       try {
         localStorage.removeItem(`chronos_wishlist_${currentUser.id}`);
       } catch (e) {
@@ -2012,7 +2021,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
     showToast('Wishlist Cleared', 'All saved items have been cleared', 'info');
 
-    if (isGatewayConnected && currentUser?.id && currentUser.id !== 'guest-buyer') {
+    if (isGatewayConnected && currentUser?.id && currentUser.id !== 'guest-buyer' && currentUser.id !== 'guest-user') {
       buyerWishlistApi.clearWishlist(String(currentUser.id)).catch((err) => {
         console.warn('Failed to clear BuyerWishlist microservice', err);
       });

@@ -6,6 +6,7 @@ namespace MyWatchMarketplace.UserManagement.Domain.Enums;
 [JsonConverter(typeof(UserRoleJsonConverter))]
 public enum UserRole
 {
+    Guest,
     Buyer,
     Seller,
     Collector,
@@ -52,6 +53,11 @@ public class UserRoleJsonConverter : JsonConverter<UserRole>
         role = UserRole.Buyer;
         if (string.IsNullOrWhiteSpace(str)) return false;
         var normalized = str.Trim().Replace("_", "").Replace("-", "").ToLowerInvariant();
+        if (normalized == "guest")
+        {
+            role = UserRole.Guest;
+            return true;
+        }
         if (normalized == "serviceexecutive")
         {
             role = UserRole.ServiceExecutive;
@@ -65,6 +71,7 @@ public static class RolePermissionHelper
 {
     public static List<string> GetPermissions(UserRole role) => role switch
     {
+        UserRole.Guest => new List<string> { "marketplace_access" },
         UserRole.Buyer => new List<string> { "marketplace_access", "wishlist_access", "orders_access", "offers_access" },
         UserRole.Collector => new List<string> { "marketplace_access", "wishlist_access", "orders_access", "offers_access", "my_vault_access", "service_center_access" },
         UserRole.Seller => new List<string> { "marketplace_access", "orders_access", "offers_access", "service_center_access", "seller_hub_access" },

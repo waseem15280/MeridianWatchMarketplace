@@ -309,6 +309,12 @@ export const UserManagementView: React.FC = () => {
             Collector
           </span>
         );
+      case 'guest':
+        return (
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200">
+            Guest
+          </span>
+        );
       case 'buyer':
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">

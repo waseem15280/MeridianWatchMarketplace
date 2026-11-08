@@ -1,4 +1,5 @@
-export type UserRole = 'buyer' | 'seller' | 'collector' | 'admin' | 'service_executive' | string;
+export type SystemRole = 'guest' | 'buyer' | 'seller' | 'collector' | 'admin' | 'service_executive';
+export type UserRole = SystemRole | string;
 
 export type Permission =
   | 'marketplace_access'
@@ -94,6 +95,16 @@ export const PERMISSION_METADATA: Record<Permission, { label: string; descriptio
 
 export const DEFAULT_ROLES: RoleDefinition[] = [
   {
+    id: 'guest',
+    name: 'Guest / Visitor',
+    description: 'Unauthenticated platform visitor with public browsing and timepiece exploration access.',
+    permissions: [
+      'marketplace_access'
+    ],
+    isSystem: true,
+    color: '#94A3B8'
+  },
+  {
     id: 'buyer',
     name: 'Buyer / Client',
     description: 'Can browse marketplace, curate wishlist, submit purchase orders and offers.',
@@ -170,6 +181,9 @@ export const DEFAULT_ROLES: RoleDefinition[] = [
 ];
 
 export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
+  guest: [
+    'marketplace_access'
+  ],
   buyer: [
     'marketplace_access',
     'wishlist_access',
