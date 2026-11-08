@@ -10,6 +10,8 @@ import {
   FilterOptions,
   ActiveTab,
   UserRole,
+  Permission,
+  ROLE_PERMISSIONS,
   ServiceRequest,
   ServiceWorkflowState,
   ServiceRequestAuditLog
@@ -117,6 +119,10 @@ interface MarketplaceContextType {
   canManageUsers: boolean;
   canAccessServiceCenter: boolean;
   isGuest: boolean;
+  currentUserPermissions: Permission[];
+  hasPermission: (permission: Permission) => boolean;
+  hasAnyPermission: (permissions: Permission[]) => boolean;
+  hasAllPermissions: (permissions: Permission[]) => boolean;
   isFeatureEnabled: (featureKey: keyof FeatureFlags) => boolean;
   isFeatureActive: (featureKey: keyof FeatureFlags) => boolean;
   isTabEnabled: (tab: ActiveTab) => boolean;
@@ -882,24 +888,45 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     );
   }, [currentUser?.role, userAccounts, isLoggedIn]);
 
-  // Can manage users: Admin and Service Executive only
-  const canManageUsers = useMemo(() => {
-    return isAdmin || isServiceExecutive;
-  }, [isAdmin, isServiceExecutive]);
+  // Granular Permission-Based Access Control Engine
+  const currentUserPermissions = useMemo<Permission[]>(() => {
+    if (!isLoggedIn) return [];
+    if (currentUser?.permissions && currentUser.permissions.length > 0) {
+      return currentUser.permissions;
+    }
+    return ROLE_PERMISSIONS[currentUser?.role] || [];
+  }, [currentUser?.role, currentUser?.permissions, isLoggedIn]);
 
-  // Service Center role access check: Admin, Service Executive, Collector
+  const hasPermission = useCallback(
+    (permission: Permission): boolean => {
+      return currentUserPermissions.includes(permission);
+    },
+    [currentUserPermissions]
+  );
+
+  const hasAnyPermission = useCallback(
+    (permissions: Permission[]): boolean => {
+      return permissions.some((p) => currentUserPermissions.includes(p));
+    },
+    [currentUserPermissions]
+  );
+
+  const hasAllPermissions = useCallback(
+    (permissions: Permission[]): boolean => {
+      return permissions.every((p) => currentUserPermissions.includes(p));
+    },
+    [currentUserPermissions]
+  );
+
+  // Can manage users: granted strictly via 'manage_users' permission (Admin only)
+  const canManageUsers = useMemo(() => {
+    return hasPermission('manage_users');
+  }, [hasPermission]);
+
+  // Can access service center: granted via 'service_center_access' or 'manage_service_center'
   const canAccessServiceCenter = useMemo(() => {
-    if (!isLoggedIn) return false;
-    const role = currentUser?.role;
-    return (
-      isAdmin ||
-      isServiceExecutive ||
-      role === 'admin' ||
-      role === 'service_executive' ||
-      (role as string) === 'serviceexecutive' ||
-      role === 'collector'
-    );
-  }, [isLoggedIn, currentUser?.role, isAdmin, isServiceExecutive]);
+    return hasPermission('service_center_access') || hasPermission('manage_service_center');
+  }, [hasPermission]);
 
   const isGuest = !isLoggedIn;
 
@@ -913,38 +940,63 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return (featureKey: keyof FeatureFlags) => isFeatureActiveInApp(featureKey, isAdmin);
   }, [isAdmin]);
 
-  // Check if a navigation tab is enabled for current session
+  // Check if a navigation tab is enabled for current session based on Granular Permissions & Feature Flags
   const isTabEnabled = useMemo(() => {
     return (tab: ActiveTab) => {
-      if (tab === 'user-management') {
-        return canManageUsers && isFeatureEnabled('userManagement');
+      switch (tab) {
+        case 'explore':
+          return hasPermission('marketplace_access') && isTabAccessible('explore', isAdmin, isGuest);
+        case 'service-center':
+          return (
+            (hasPermission('service_center_access') || hasPermission('manage_service_center')) &&
+            isFeatureEnabled('serviceCenter')
+          );
+        case 'collection':
+          return (
+            (hasPermission('my_vault_access') || hasPermission('manage_vault')) &&
+            isTabAccessible('collection', isAdmin, isGuest)
+          );
+        case 'wishlist':
+          return hasPermission('wishlist_access') && isTabAccessible('wishlist', isAdmin, isGuest);
+        case 'seller-hub':
+          return (
+            (hasPermission('seller_hub_access') || hasPermission('manage_seller_hub')) &&
+            isTabAccessible('seller-hub', isAdmin, isGuest)
+          );
+        case 'orders':
+          return (
+            (hasPermission('orders_access') || hasPermission('offers_access') || hasPermission('manage_orders')) &&
+            isTabAccessible('orders', isAdmin, isGuest)
+          );
+        case 'user-management':
+          return hasPermission('manage_users') && isFeatureEnabled('userManagement');
+        default:
+          return isTabAccessible(tab, isAdmin, isGuest);
       }
-      if (tab === 'service-center') {
-        return canAccessServiceCenter && isFeatureEnabled('serviceCenter');
-      }
-      return isTabAccessible(tab, isAdmin, isGuest);
     };
-  }, [isAdmin, isGuest, canManageUsers, canAccessServiceCenter, isFeatureEnabled]);
+  }, [hasPermission, isAdmin, isGuest, isFeatureEnabled]);
 
-  // Guard setIsAddListingOpen: only users with the 'seller' role can open the create/edit listing modal
+  // Guard setIsAddListingOpen: only users with 'seller_hub_access' or 'manage_seller_hub' permission
+  const canCreateListing = hasPermission('seller_hub_access') || hasPermission('manage_seller_hub');
+
   const setIsAddListingOpen = useCallback(
     (open: boolean) => {
-      if (open && currentUser?.role !== 'seller') {
-        showToast('Seller Role Required', 'Only users with the Seller role can create listings. Switch persona to Seller.', 'warning');
+      if (open && !canCreateListing) {
+        showToast('Permission Required', 'You do not have seller permissions to create listings.', 'warning');
         setIsAddListingOpenState(false);
         return;
       }
       setIsAddListingOpenState(open);
     },
-    [currentUser?.role, showToast]
+    [canCreateListing, showToast]
   );
 
-  // Automatically close modal if persona changes away from seller
+  // Automatically close modal if persona changes away from seller permission
   useEffect(() => {
-    if (isAddListingOpen && currentUser?.role !== 'seller') {
+    if (isAddListingOpen && !canCreateListing) {
       setIsAddListingOpenState(false);
     }
-  }, [currentUser?.role, isAddListingOpen]);
+  }, [canCreateListing, isAddListingOpen]);
 
   // Auto-fallback: if the current active tab is disabled, switch to the first accessible tab
   useEffect(() => {
@@ -1619,8 +1671,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Convert Collection watch into active Marketplace Listing
   const listFromCollection = (collectionWatchId: string, price: number, description?: string) => {
-    if (currentUser?.role !== 'seller') {
-      showToast('Seller Role Required', 'Only users with the seller role can list timepieces on the marketplace.', 'warning');
+    if (!hasPermission('seller_hub_access') && !hasPermission('manage_seller_hub')) {
+      showToast('Permission Required', 'You do not have permission to publish listings to the marketplace.', 'warning');
       return;
     }
     const watch = collection.find((w) => w.id === collectionWatchId);
@@ -2294,6 +2346,10 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         canManageUsers,
         canAccessServiceCenter,
         isGuest,
+        currentUserPermissions,
+        hasPermission,
+        hasAnyPermission,
+        hasAllPermissions,
         isFeatureEnabled,
         isFeatureActive,
         isTabEnabled,

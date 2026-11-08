@@ -1001,10 +1001,10 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   )}
 
                   {/* Quick Hub Navigation */}
-                  {(isFeatureEnabled('collectorVault') || isFeatureEnabled('sellerHub') || (canManageUsers && isFeatureEnabled('userManagement'))) && (
+                  {(isTabEnabled('collection') || isTabEnabled('seller-hub') || isTabEnabled('user-management')) && (
                     <div className="mt-3 pt-2 border-t border-[#E5DFD5]">
                       <div className="grid grid-cols-2 gap-1.5">
-                        {isFeatureEnabled('collectorVault') && (
+                        {isTabEnabled('collection') && (
                           <button
                             type="button"
                             id="account-menu-vault-btn"
@@ -1018,7 +1018,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                             <span>Watch Vault</span>
                           </button>
                         )}
-                        {isFeatureEnabled('sellerHub') && (
+                        {isTabEnabled('seller-hub') && (
                           <button
                             type="button"
                             id="account-menu-seller-hub-btn"
@@ -1033,7 +1033,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                           </button>
                         )}
                       </div>
-                      {canManageUsers && isFeatureEnabled('userManagement') && (
+                      {isTabEnabled('user-management') && (
                         <button
                           type="button"
                           id="account-menu-user-management-btn"

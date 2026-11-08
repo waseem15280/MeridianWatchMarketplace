@@ -31,17 +31,24 @@ export const CollectionManager: React.FC = () => {
     listFromCollection,
     listings,
     setSelectedWatch,
-    showToast
+    showToast,
+    hasPermission
   } = useMarketplace();
 
   const [listModalWatch, setListModalWatch] = useState<CollectionWatch | null>(null);
   const [listingPrice, setListingPrice] = useState<number>(0);
   const [listingDescription, setListingDescription] = useState<string>('');
 
-  const myCollection = collection.filter((c) => c.userId === currentUser.id);
+  // Granular Permission checks for Watch Vault
+  const canManageAllVaults = hasPermission('manage_vault');
+  const canListOnMarketplace = hasPermission('seller_hub_access') || hasPermission('manage_seller_hub');
 
-  // Seller role authorization check
-  const isSeller = currentUser?.role === 'seller';
+  const [viewAllVaults, setViewAllVaults] = useState(canManageAllVaults);
+
+  // Scoped collection watches: view all if manage_vault is active, otherwise view user's own watches only
+  const myCollection = (canManageAllVaults && viewAllVaults)
+    ? collection
+    : collection.filter((c) => c.userId === currentUser.id);
 
   // Compute metrics
   const totalValue = myCollection.reduce((sum, w) => sum + (w.estimatedMarketValue || 0), 0);
@@ -50,8 +57,8 @@ export const CollectionManager: React.FC = () => {
   const appreciationPercent = totalCost > 0 ? (appreciation / totalCost) * 100 : 0;
 
   const handleOpenListModal = (watch: CollectionWatch) => {
-    if (!isSeller) {
-      showToast('Seller Role Required', 'Only users with the seller role can list watches on the marketplace.', 'warning');
+    if (!canListOnMarketplace) {
+      showToast('Permission Required', 'You do not have permission to publish listings to the marketplace.', 'warning');
       return;
     }
     setListModalWatch(watch);
@@ -61,8 +68,8 @@ export const CollectionManager: React.FC = () => {
 
   const handleConfirmList = () => {
     if (!listModalWatch) return;
-    if (!isSeller) {
-      showToast('Seller Role Required', 'Only users with the seller role can list watches on the marketplace.', 'warning');
+    if (!canListOnMarketplace) {
+      showToast('Permission Required', 'You do not have permission to publish listings to the marketplace.', 'warning');
       setListModalWatch(null);
       return;
     }
@@ -160,6 +167,23 @@ export const CollectionManager: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Supervisor Toggle for manage_vault */}
+      {canManageAllVaults && (
+        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#EDE8E0] border border-[#DDD6CB] text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-[#1C1917]">Vault Supervisory Mode:</span>
+            <span className="text-[#57534E]">You have <code>manage_vault</code> permission to inspect all collectors' private watch vaults.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setViewAllVaults(!viewAllVaults)}
+            className="px-3 py-1.5 rounded-xl font-bold bg-[#1C1917] text-[#FAF8F5] hover:bg-[#2D2A26] transition-colors shadow-2xs"
+          >
+            {viewAllVaults ? 'Viewing: All Collectors (Click for My Vault)' : 'Viewing: My Vault (Click for All Collectors)'}
+          </button>
+        </div>
+      )}
 
       {/* Watch Box Display Layout */}
       <div>
@@ -345,7 +369,7 @@ export const CollectionManager: React.FC = () => {
                         </button>
                       )
                     ) : (
-                      isFeatureEnabled('sellerHub') && isSeller && (
+                      isFeatureEnabled('sellerHub') && canListOnMarketplace && (
                         <button
                           id={`list-from-vault-btn-${watch.id}`}
                           onClick={() => handleOpenListModal(watch)}
@@ -365,7 +389,7 @@ export const CollectionManager: React.FC = () => {
       </div>
 
       {/* Quick List From Vault Modal */}
-      {listModalWatch && isSeller && (
+      {listModalWatch && canListOnMarketplace && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-md bg-[#FAF8F5] border border-[#D8D0C5] rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-3 border-b border-[#E5DFD5]">

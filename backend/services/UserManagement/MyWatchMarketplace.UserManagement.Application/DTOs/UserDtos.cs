@@ -29,7 +29,8 @@ public record UserAccountDto(
     string ResponseRate,
     string AvgShipTime,
     string? Phone,
-    bool IsDefault
+    bool IsDefault,
+    List<string>? Permissions = null
 );
 
 public record LoginRequest(

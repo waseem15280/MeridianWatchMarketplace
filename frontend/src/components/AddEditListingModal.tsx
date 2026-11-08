@@ -71,7 +71,8 @@ export const AddEditListingModal: React.FC = () => {
     setEditingListing,
     createListing,
     updateListing,
-    showToast
+    showToast,
+    hasPermission
   } = useMarketplace();
 
   const [brand, setBrand] = useState('Rolex');
@@ -134,7 +135,7 @@ export const AddEditListingModal: React.FC = () => {
     }
   }, [editingListing, isAddListingOpen]);
 
-  if (!isAddListingOpen || currentUser?.role !== 'seller') return null;
+  if (!isAddListingOpen || (!hasPermission('seller_hub_access') && !hasPermission('manage_seller_hub'))) return null;
 
   const handleFilesSelected = (files: FileList | File[]) => {
     const fileArray = Array.from(files);

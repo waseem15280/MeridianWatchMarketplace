@@ -25,14 +25,28 @@ export const OrdersOffersView: React.FC = () => {
     setReviewTarget,
     setSelectedSeller,
     getSellerById,
-    updateOrderStatus
+    updateOrderStatus,
+    hasPermission
   } = useMarketplace();
 
-  const [activeTab, setActiveTab] = useState<'orders' | 'offers'>('orders');
+  // Granular Permission checks for Orders & Offers
+  const canManageAllOrders = hasPermission('manage_orders');
+  const hasOrdersAccess = hasPermission('orders_access') || canManageAllOrders;
+  const hasOffersAccess = hasPermission('offers_access') || canManageAllOrders;
 
-  // Filter orders where currentUser is buyer or seller
-  const myBuyerOrders = orders.filter((o) => o.buyerId === currentUser.id);
-  const mySubmittedOffers = offers.filter((o) => o.buyerId === currentUser.id);
+  const [viewAllOrders, setViewAllOrders] = useState(canManageAllOrders);
+
+  const [activeTab, setActiveTab] = useState<'orders' | 'offers'>(() => {
+    return hasOrdersAccess ? 'orders' : 'offers';
+  });
+
+  // Filter orders where currentUser is buyer or seller, or show all if manage_orders is active
+  const myBuyerOrders = (canManageAllOrders && viewAllOrders)
+    ? orders
+    : orders.filter((o) => o.buyerId === currentUser.id || o.sellerId === currentUser.id);
+  const mySubmittedOffers = (canManageAllOrders && viewAllOrders)
+    ? offers
+    : offers.filter((o) => o.buyerId === currentUser.id || o.sellerId === currentUser.id);
 
   const handleOpenReview = (order: OrderTransaction) => {
     setReviewTarget({
@@ -64,28 +78,49 @@ export const OrdersOffersView: React.FC = () => {
 
         {/* Tab switch */}
         <div className="flex items-center gap-2 bg-[#EDE8E0] p-1.5 rounded-2xl border border-[#D8D0C5]">
-          <button
-            onClick={() => setActiveTab('orders')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-              activeTab === 'orders'
-                ? 'bg-[#1C1917] text-[#FAF8F5] shadow-sm'
-                : 'text-[#57534E] hover:text-[#1C1917]'
-            }`}
-          >
-            My Orders ({myBuyerOrders.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('offers')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-              activeTab === 'offers'
-                ? 'bg-[#1C1917] text-[#FAF8F5] shadow-sm'
-                : 'text-[#57534E] hover:text-[#1C1917]'
-            }`}
-          >
-            My Offers ({mySubmittedOffers.length})
-          </button>
+          {hasOrdersAccess && (
+            <button
+              onClick={() => setActiveTab('orders')}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'orders'
+                  ? 'bg-[#1C1917] text-[#FAF8F5] shadow-sm'
+                  : 'text-[#57534E] hover:text-[#1C1917]'
+              }`}
+            >
+              {canManageAllOrders ? 'Orders' : 'My Orders'} ({myBuyerOrders.length})
+            </button>
+          )}
+          {hasOffersAccess && (
+            <button
+              onClick={() => setActiveTab('offers')}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'offers'
+                  ? 'bg-[#1C1917] text-[#FAF8F5] shadow-sm'
+                  : 'text-[#57534E] hover:text-[#1C1917]'
+              }`}
+            >
+              {canManageAllOrders ? 'Offers' : 'My Offers'} ({mySubmittedOffers.length})
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Supervisor Toggle for manage_orders */}
+      {canManageAllOrders && (
+        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#EDE8E0] border border-[#DDD6CB] text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-[#1C1917]">Supervisory Order Mode:</span>
+            <span className="text-[#57534E]">You have <code>manage_orders</code> permission to view and manage all transactions platform-wide.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setViewAllOrders(!viewAllOrders)}
+            className="px-3 py-1.5 rounded-xl font-bold bg-[#1C1917] text-[#FAF8F5] hover:bg-[#2D2A26] transition-colors shadow-2xs"
+          >
+            {viewAllOrders ? 'Viewing: All Platform Orders (Click for Own Orders)' : 'Viewing: Own Orders (Click for All Orders)'}
+          </button>
+        </div>
+      )}
 
       {/* Orders List */}
       {activeTab === 'orders' && (

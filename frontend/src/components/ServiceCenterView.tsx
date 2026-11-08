@@ -31,13 +31,15 @@ export const ServiceCenterView: React.FC = () => {
     serviceRequests,
     createServiceRequest,
     transitionServiceRequest,
-    showToast
+    showToast,
+    hasPermission
   } = useMarketplace();
 
-  // Role check: Service Center accessible to Admin, Service Executive, Collector
-  const isServiceExecutive = currentUser?.role === 'service_executive' || (currentUser?.role as string) === 'serviceexecutive' || isAdmin;
-  const isCollector = currentUser?.role === 'collector';
-  const hasAccess = isAdmin || isServiceExecutive || isCollector;
+  // Permission checks: Service Center access and management
+  const canManageServiceCenter = hasPermission('manage_service_center');
+  const canAccessServiceCenter = hasPermission('service_center_access') || canManageServiceCenter;
+  const isServiceExecutive = canManageServiceCenter;
+  const hasAccess = canAccessServiceCenter;
 
   // Filter states
   const [filterState, setFilterState] = useState<string>('all');
@@ -257,9 +259,9 @@ export const ServiceCenterView: React.FC = () => {
         <div className="w-12 h-12 rounded-2xl bg-amber-50 text-[#967139] mx-auto flex items-center justify-center">
           <Wrench className="w-6 h-6" />
         </div>
-        <h2 className="text-xl font-serif font-bold text-[#1C1917]">Role Permission Required</h2>
+        <h2 className="text-xl font-serif font-bold text-[#1C1917]">Permission Required</h2>
         <p className="text-xs text-[#78716C] leading-relaxed">
-          The Service Center atelier is accessible only to <strong>Admin</strong>, <strong>Service Executive</strong>, and <strong>Collector</strong> accounts.
+          The Service Center atelier requires <strong>service_center_access</strong> or <strong>manage_service_center</strong> permission.
           Your current persona is <strong>{currentUser?.name}</strong> ({currentUser?.role}).
         </p>
       </div>

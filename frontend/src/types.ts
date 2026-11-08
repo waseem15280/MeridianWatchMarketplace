@@ -1,5 +1,60 @@
 export type UserRole = 'buyer' | 'seller' | 'collector' | 'admin' | 'service_executive';
 
+export type Permission =
+  | 'marketplace_access'
+  | 'wishlist_access'
+  | 'orders_access'
+  | 'offers_access'
+  | 'my_vault_access'
+  | 'seller_hub_access'
+  | 'service_center_access'
+  | 'manage_service_center'
+  | 'manage_users'
+  | 'manage_orders'
+  | 'manage_vault'
+  | 'manage_seller_hub';
+
+export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+  buyer: [
+    'marketplace_access',
+    'wishlist_access',
+    'orders_access',
+    'offers_access'
+  ],
+  collector: [
+    'marketplace_access',
+    'wishlist_access',
+    'orders_access',
+    'offers_access',
+    'my_vault_access',
+    'service_center_access'
+  ],
+  seller: [
+    'marketplace_access',
+    'orders_access',
+    'offers_access',
+    'service_center_access',
+    'seller_hub_access'
+  ],
+  admin: [
+    'marketplace_access',
+    'wishlist_access',
+    'orders_access',
+    'offers_access',
+    'my_vault_access',
+    'seller_hub_access',
+    'service_center_access',
+    'manage_service_center',
+    'manage_users',
+    'manage_orders',
+    'manage_vault',
+    'manage_seller_hub'
+  ],
+  service_executive: [
+    'manage_service_center'
+  ]
+};
+
 export interface UserLogin {
   id: string | number;
   username: string;
@@ -61,6 +116,7 @@ export interface UserAccount {
   avgShipTime: string; // e.g. "Within 24 hours"
   phone?: string;
   isDefault?: boolean;
+  permissions?: Permission[];
 }
 
 export interface WatchListing {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useMarketplace } from '../context/MarketplaceContext';
-import { UserLogin, UserAccount, UserRole } from '../types';
+import { UserLogin, UserAccount, UserRole, ROLE_PERMISSIONS } from '../types';
 import {
   Users,
   ShieldCheck,
@@ -817,37 +817,50 @@ export const UserManagementView: React.FC = () => {
                             )}
                           </div>
                           <div className="text-[11px] text-[#78716C]">{acc.email}</div>
+                          {/* Granular Permissions Tag List */}
+                          <div className="flex flex-wrap gap-1 mt-1 max-w-sm">
+                            {(ROLE_PERMISSIONS[acc.role] || []).map((perm) => (
+                              <span key={perm} className="text-[9px] font-mono bg-[#DDD6CB]/60 text-[#57534E] px-1.5 py-0.2 rounded">
+                                {perm}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       </div>
 
                       {/* Role selection & actions */}
                       <div className="flex items-center gap-2 shrink-0">
                         {isEditingThisPersona ? (
-                          <div className="flex items-center gap-2">
-                            <select
-                              value={editPersonaRole}
-                              onChange={(e) => setEditPersonaRole(e.target.value as UserRole)}
-                              className="px-2.5 py-1 bg-white border border-[#DDD6CB] rounded-lg text-xs font-medium text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#C5A880]"
-                            >
-                              <option value="buyer">Buyer</option>
-                              <option value="seller">Seller</option>
-                              <option value="collector">Collector</option>
-                              <option value="service_executive">Service Executive</option>
-                              <option value="admin">Admin</option>
-                            </select>
-                            <button
-                              onClick={() => handleSavePersonaRole(acc.id)}
-                              disabled={isSavingPersonaRole}
-                              className="px-2.5 py-1 rounded-lg bg-emerald-700 text-white text-xs font-semibold hover:bg-emerald-800"
-                            >
-                              {isSavingPersonaRole ? 'Saving...' : 'Apply'}
-                            </button>
-                            <button
-                              onClick={() => setEditingPersonaId(null)}
-                              className="px-2 py-1 rounded-lg bg-gray-200 text-gray-700 text-xs hover:bg-gray-300"
-                            >
-                              Cancel
-                            </button>
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={editPersonaRole}
+                                onChange={(e) => setEditPersonaRole(e.target.value as UserRole)}
+                                className="px-2.5 py-1 bg-white border border-[#DDD6CB] rounded-lg text-xs font-medium text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#C5A880]"
+                              >
+                                <option value="buyer">Buyer</option>
+                                <option value="seller">Seller</option>
+                                <option value="collector">Collector</option>
+                                <option value="service_executive">Service Executive</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                              <button
+                                onClick={() => handleSavePersonaRole(acc.id)}
+                                disabled={isSavingPersonaRole}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-700 text-white text-xs font-semibold hover:bg-emerald-800"
+                              >
+                                {isSavingPersonaRole ? 'Saving...' : 'Apply'}
+                              </button>
+                              <button
+                                onClick={() => setEditingPersonaId(null)}
+                                className="px-2 py-1 rounded-lg bg-gray-200 text-gray-700 text-xs hover:bg-gray-300"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                            <div className="text-[10px] text-[#78716C] font-mono max-w-xs">
+                              Grants: {(ROLE_PERMISSIONS[editPersonaRole] || []).join(', ')}
+                            </div>
                           </div>
                         ) : (
                           <>

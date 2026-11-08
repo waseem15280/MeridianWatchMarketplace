@@ -60,3 +60,21 @@ public class UserRoleJsonConverter : JsonConverter<UserRole>
         return Enum.TryParse<UserRole>(normalized, true, out role);
     }
 }
+
+public static class RolePermissionHelper
+{
+    public static List<string> GetPermissions(UserRole role) => role switch
+    {
+        UserRole.Buyer => new List<string> { "marketplace_access", "wishlist_access", "orders_access", "offers_access" },
+        UserRole.Collector => new List<string> { "marketplace_access", "wishlist_access", "orders_access", "offers_access", "my_vault_access", "service_center_access" },
+        UserRole.Seller => new List<string> { "marketplace_access", "orders_access", "offers_access", "service_center_access", "seller_hub_access" },
+        UserRole.Admin => new List<string>
+        {
+            "marketplace_access", "wishlist_access", "orders_access", "offers_access", "my_vault_access",
+            "seller_hub_access", "service_center_access", "manage_service_center", "manage_users",
+            "manage_orders", "manage_vault", "manage_seller_hub"
+        },
+        UserRole.ServiceExecutive => new List<string> { "manage_service_center" },
+        _ => new List<string>()
+    };
+}

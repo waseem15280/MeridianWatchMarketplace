@@ -488,7 +488,8 @@ static UserAccountDto ToAccountDto(UserAccount a) => new(
     a.ResponseRate,
     a.AvgShipTime,
     a.Phone,
-    a.IsDefault
+    a.IsDefault,
+    RolePermissionHelper.GetPermissions(a.Role)
 );
 
 static UserLoginDto ToLoginDto(UserLogin l) => new(

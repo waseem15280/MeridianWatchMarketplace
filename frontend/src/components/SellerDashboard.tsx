@@ -42,7 +42,8 @@ export const SellerDashboard: React.FC = () => {
     offers,
     respondToOffer,
     setSelectedWatch,
-    showToast
+    showToast,
+    hasPermission
   } = useMarketplace();
 
   const [activeSubTab, setActiveSubTab] = useState<'listings' | 'from-collection' | 'reviews' | 'offers'>('listings');
@@ -50,14 +51,22 @@ export const SellerDashboard: React.FC = () => {
   const [replyInput, setReplyInput] = useState<{ [reviewId: string]: string }>({});
   const [counterPriceInput, setCounterPriceInput] = useState<{ [offerId: string]: number }>({});
 
-  // Seller role authorization check
-  const isSeller = currentUser?.role === 'seller';
+  // Granular Permission checks for Seller Hub
+  const canManageAllSellers = hasPermission('manage_seller_hub');
+  const canAccessSellerHub = hasPermission('seller_hub_access') || canManageAllSellers;
+  const isSeller = canAccessSellerHub;
 
-  // Filter listings by current user
-  const myListings = listings.filter((l) => l.sellerId === currentUser.id);
+  const [viewAllSellers, setViewAllSellers] = useState(canManageAllSellers);
+
+  // Filter listings by current user, or show all platform listings if manage_seller_hub is active
+  const myListings = (canManageAllSellers && viewAllSellers)
+    ? listings
+    : listings.filter((l) => l.sellerId === currentUser.id);
   const myActiveListings = myListings.filter((l) => l.status === 'active');
   const myReviews = getSellerReviews(currentUser.id);
-  const myReceivedOffers = offers.filter((o) => o.sellerId === currentUser.id);
+  const myReceivedOffers = (canManageAllSellers && viewAllSellers)
+    ? offers
+    : offers.filter((o) => o.sellerId === currentUser.id);
 
   // Unlisted collection watches
   const unlistedCollection = collection.filter((c) => c.userId === currentUser.id && !c.isListedForSale);
@@ -189,13 +198,30 @@ export const SellerDashboard: React.FC = () => {
         <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200/80 flex items-start sm:items-center gap-3 text-amber-900 shadow-2xs">
           <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
           <div className="text-xs leading-relaxed">
-            <span className="font-semibold">Seller Role Required: </span>
+            <span className="font-semibold">Seller Permission Required: </span>
             You are currently signed in as <strong>{currentUser.name}</strong> with role{' '}
             <span className="uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px]">
               {currentUser.role}
             </span>
-            . The <strong>Create New Listing</strong> action is disabled because only accounts with the <strong>Seller</strong> role can publish timepiece listings. You can switch to a Seller persona in the top header account switcher.
+            . The <strong>Create New Listing</strong> action is disabled because your role does not include the <strong>seller_hub_access</strong> or <strong>manage_seller_hub</strong> permission. Switch to a Seller persona in the top header account switcher.
           </div>
+        </div>
+      )}
+
+      {/* Supervisor Toggle for manage_seller_hub */}
+      {canManageAllSellers && (
+        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#EDE8E0] border border-[#DDD6CB] text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-[#1C1917]">Supervisory Inventory Mode:</span>
+            <span className="text-[#57534E]">You have <code>manage_seller_hub</code> permission to inspect all platform seller listings.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setViewAllSellers(!viewAllSellers)}
+            className="px-3 py-1.5 rounded-xl font-bold bg-[#1C1917] text-[#FAF8F5] hover:bg-[#2D2A26] transition-colors shadow-2xs"
+          >
+            {viewAllSellers ? 'Viewing: All Sellers (Click for My Listings)' : 'Viewing: My Listings (Click for All Sellers)'}
+          </button>
         </div>
       )}
 
