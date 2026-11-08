@@ -115,6 +115,7 @@ interface MarketplaceContextType {
   isAdmin: boolean;
   isServiceExecutive: boolean;
   canManageUsers: boolean;
+  canAccessServiceCenter: boolean;
   isGuest: boolean;
   isFeatureEnabled: (featureKey: keyof FeatureFlags) => boolean;
   isFeatureActive: (featureKey: keyof FeatureFlags) => boolean;
@@ -886,6 +887,20 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return isAdmin || isServiceExecutive;
   }, [isAdmin, isServiceExecutive]);
 
+  // Service Center role access check: Admin, Service Executive, Collector
+  const canAccessServiceCenter = useMemo(() => {
+    if (!isLoggedIn) return false;
+    const role = currentUser?.role;
+    return (
+      isAdmin ||
+      isServiceExecutive ||
+      role === 'admin' ||
+      role === 'service_executive' ||
+      (role as string) === 'serviceexecutive' ||
+      role === 'collector'
+    );
+  }, [isLoggedIn, currentUser?.role, isAdmin, isServiceExecutive]);
+
   const isGuest = !isLoggedIn;
 
   // Check if a feature is enabled for current session (incorporating admin & guest status)
@@ -904,9 +919,12 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       if (tab === 'user-management') {
         return canManageUsers && isFeatureEnabled('userManagement');
       }
+      if (tab === 'service-center') {
+        return canAccessServiceCenter && isFeatureEnabled('serviceCenter');
+      }
       return isTabAccessible(tab, isAdmin, isGuest);
     };
-  }, [isAdmin, isGuest, canManageUsers, isFeatureEnabled]);
+  }, [isAdmin, isGuest, canManageUsers, canAccessServiceCenter, isFeatureEnabled]);
 
   // Guard setIsAddListingOpen: only users with the 'seller' role can open the create/edit listing modal
   const setIsAddListingOpen = useCallback(
@@ -931,9 +949,11 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Auto-fallback: if the current active tab is disabled, switch to the first accessible tab
   useEffect(() => {
     if (!isTabEnabled(activeTab)) {
-      setActiveTab(getFirstAccessibleTab(isAdmin, isGuest));
+      const allTabs: ActiveTab[] = ['explore', 'service-center', 'collection', 'wishlist', 'seller-hub', 'orders', 'user-management'];
+      const firstAccessible = allTabs.find((t) => isTabEnabled(t)) || 'explore';
+      setActiveTab(firstAccessible);
     }
-  }, [activeTab, isTabEnabled, isAdmin, isGuest]);
+  }, [activeTab, isTabEnabled]);
 
   // Load and sync wishlist when current user / login state changes
   useEffect(() => {
@@ -2272,6 +2292,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         isAdmin,
         isServiceExecutive,
         canManageUsers,
+        canAccessServiceCenter,
         isGuest,
         isFeatureEnabled,
         isFeatureActive,

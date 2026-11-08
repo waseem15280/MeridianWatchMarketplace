@@ -499,10 +499,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     return String(r.userId) === String(currentUser?.id) && r.currentState !== 'TransitBack' && r.currentState !== 'ServiceRequestRejected';
   }).length;
 
-  const isAdminTabActive = activeTab === 'service-center' || activeTab === 'user-management';
+  const isAdminTabActive = activeTab === 'user-management';
 
   const navItems: { id: ActiveTab; label: string; icon: React.FC<{ className?: string }>; count?: number }[] = [
     { id: 'explore', label: 'Marketplace', icon: Watch },
+    { id: 'service-center', label: 'Service Center', icon: Wrench, count: activeServiceRequestsCount > 0 ? activeServiceRequestsCount : undefined },
     { id: 'collection', label: 'My Watch Vault', icon: Box },
     { id: 'wishlist', label: 'Wishlist', icon: Heart, count: isLoggedIn ? wishlist.length : 0 },
     { id: 'seller-hub', label: 'Seller Hub', icon: Store },
@@ -650,15 +651,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                     >
                       <ShieldCheck className={`w-3.5 h-3.5 ${isAdminTabActive ? 'text-[#C5A880]' : 'text-[#78716C]'}`} />
                       <span>Admin</span>
-                      {activeServiceRequestsCount > 0 && (
-                        <span
-                          className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                            isAdminTabActive ? 'bg-[#C5A880] text-[#1C1917]' : 'bg-[#DDD6CB] text-[#1C1917]'
-                          }`}
-                        >
-                          {activeServiceRequestsCount}
-                        </span>
-                      )}
                       <ChevronDown
                         className={`w-3 h-3 transition-transform duration-200 ${
                           isAdminDropdownOpen ? 'rotate-180 text-[#C5A880]' : 'opacity-70'
@@ -672,33 +664,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                         <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest text-[#8C7D70] border-b border-[#E5DFD5]">
                           Administration Atelier
                         </div>
-
-                        {/* Service Center */}
-                        {isTabEnabled('service-center') && (
-                          <button
-                            type="button"
-                            id="admin-dropdown-service-center"
-                            onClick={() => {
-                              setActiveTab('service-center');
-                              setIsAdminDropdownOpen(false);
-                            }}
-                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer ${
-                              activeTab === 'service-center'
-                                ? 'bg-[#1C1917] text-[#FAF8F5] font-semibold'
-                                : 'text-[#1C1917] hover:bg-[#EDE8E0]'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Wrench className={`w-3.5 h-3.5 ${activeTab === 'service-center' ? 'text-[#C5A880]' : 'text-[#967139]'}`} />
-                              <span>Service Center</span>
-                            </div>
-                            {activeServiceRequestsCount > 0 && (
-                              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#C5A880] text-[#1C1917] font-bold">
-                                {activeServiceRequestsCount}
-                              </span>
-                            )}
-                          </button>
-                        )}
 
                         {/* User Management */}
                         {isTabEnabled('user-management') && (
@@ -1139,15 +1104,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                 >
                   <ShieldCheck className={`w-3.5 h-3.5 ${isAdminTabActive ? 'text-[#C5A880]' : 'text-[#78716C]'}`} />
                   <span>Admin</span>
-                  {activeServiceRequestsCount > 0 && (
-                    <span
-                      className={`text-[9px] px-1 rounded-full font-bold ${
-                        isAdminTabActive ? 'bg-[#C5A880] text-[#1C1917]' : 'bg-[#DDD6CB] text-[#1C1917]'
-                      }`}
-                    >
-                      {activeServiceRequestsCount}
-                    </span>
-                  )}
                   <ChevronDown className={`w-3 h-3 transition-transform ${isMobileAdminDropdownOpen ? 'rotate-180 text-[#C5A880]' : 'opacity-70'}`} />
                 </button>
               )}
@@ -1162,32 +1118,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                 <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest text-[#8C7D70] border-b border-[#E5DFD5]">
                   Administration Atelier
                 </div>
-
-                {isTabEnabled('service-center') && (
-                  <button
-                    type="button"
-                    id="mobile-admin-service-center"
-                    onClick={() => {
-                      setActiveTab('service-center');
-                      setIsMobileAdminDropdownOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer ${
-                      activeTab === 'service-center'
-                        ? 'bg-[#1C1917] text-[#FAF8F5] font-semibold'
-                        : 'text-[#1C1917] hover:bg-[#EDE8E0]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Wrench className={`w-3.5 h-3.5 ${activeTab === 'service-center' ? 'text-[#C5A880]' : 'text-[#967139]'}`} />
-                      <span>Service Center</span>
-                    </div>
-                    {activeServiceRequestsCount > 0 && (
-                      <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#C5A880] text-[#1C1917] font-bold">
-                        {activeServiceRequestsCount}
-                      </span>
-                    )}
-                  </button>
-                )}
 
                 {isTabEnabled('user-management') && (
                   <button

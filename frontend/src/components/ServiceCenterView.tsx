@@ -34,8 +34,10 @@ export const ServiceCenterView: React.FC = () => {
     showToast
   } = useMarketplace();
 
-  // Role check
-  const isServiceExecutive = currentUser?.role === 'service_executive' || isAdmin;
+  // Role check: Service Center accessible to Admin, Service Executive, Collector
+  const isServiceExecutive = currentUser?.role === 'service_executive' || (currentUser?.role as string) === 'serviceexecutive' || isAdmin;
+  const isCollector = currentUser?.role === 'collector';
+  const hasAccess = isAdmin || isServiceExecutive || isCollector;
 
   // Filter states
   const [filterState, setFilterState] = useState<string>('all');
@@ -248,6 +250,21 @@ export const ServiceCenterView: React.FC = () => {
     { id: 'InTesting', label: '5. Testing', desc: 'Regulating' },
     { id: 'TransitBack', label: '6. Return', desc: 'Shipped' }
   ];
+
+  if (!hasAccess) {
+    return (
+      <div className="max-w-xl mx-auto my-12 p-8 bg-[#FFFFFF] border border-[#E5DFD5] rounded-3xl text-center space-y-4 shadow-sm">
+        <div className="w-12 h-12 rounded-2xl bg-amber-50 text-[#967139] mx-auto flex items-center justify-center">
+          <Wrench className="w-6 h-6" />
+        </div>
+        <h2 className="text-xl font-serif font-bold text-[#1C1917]">Role Permission Required</h2>
+        <p className="text-xs text-[#78716C] leading-relaxed">
+          The Service Center atelier is accessible only to <strong>Admin</strong>, <strong>Service Executive</strong>, and <strong>Collector</strong> accounts.
+          Your current persona is <strong>{currentUser?.name}</strong> ({currentUser?.role}).
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div id="service-center-view" className="space-y-6 pb-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
