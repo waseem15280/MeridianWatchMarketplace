@@ -72,7 +72,7 @@ public static class RolePermissionHelper
         {
             "marketplace_access", "wishlist_access", "orders_access", "offers_access", "my_vault_access",
             "seller_hub_access", "service_center_access", "manage_service_center", "manage_users",
-            "manage_orders", "manage_vault", "manage_seller_hub"
+            "manage_orders", "manage_vault", "manage_seller_hub", "manage_roles"
         },
         UserRole.ServiceExecutive => new List<string> { "manage_service_center" },
         _ => new List<string>()

@@ -82,7 +82,8 @@ export const TAB_TO_FEATURE_MAP: Record<ActiveTab, keyof FeatureFlags> = {
   'orders': 'ordersAndOffers',
   'offers': 'ordersAndOffers',
   'service-center': 'serviceCenter',
-  'user-management': 'userManagement'
+  'user-management': 'userManagement',
+  'role-management': 'userManagement'
 };
 
 /**
@@ -140,7 +141,7 @@ export function getFirstAccessibleTab(
   isAdmin: boolean,
   isGuest: boolean = false
 ): ActiveTab {
-  const allTabs: ActiveTab[] = ['explore', 'collection', 'wishlist', 'seller-hub', 'orders', 'service-center', 'user-management'];
+  const allTabs: ActiveTab[] = ['explore', 'collection', 'wishlist', 'seller-hub', 'orders', 'service-center', 'user-management', 'role-management'];
   for (const tab of allTabs) {
     if (isTabAccessible(tab, isAdmin, isGuest)) {
       return tab;

@@ -12,6 +12,9 @@ import {
   UserRole,
   Permission,
   ROLE_PERMISSIONS,
+  RoleDefinition,
+  DEFAULT_ROLES,
+  PERMISSION_METADATA,
   ServiceRequest,
   ServiceWorkflowState,
   ServiceRequestAuditLog
@@ -137,6 +140,13 @@ interface MarketplaceContextType {
   updateUserPersonaRole: (personaId: string | number, role: UserRole) => Promise<boolean>;
   deleteUserPersona: (personaId: string | number) => Promise<boolean>;
   createPersonaForUser: (loginId: string | number, role: UserRole, name: string, bio?: string) => Promise<boolean>;
+
+  // Dynamic Role & Permission Management (Admin only)
+  roles: RoleDefinition[];
+  createRole: (newRole: { id: string; name: string; description: string; permissions: Permission[]; color?: string }) => { success: boolean; message: string };
+  updateRolePermissions: (roleId: string, permissions: Permission[]) => { success: boolean; message: string };
+  deleteRole: (roleId: string) => { success: boolean; message: string };
+  resetRolesToDefault: () => void;
 
   // Global Authentication & Login Modal
   isLoginModalOpen: boolean;
@@ -461,9 +471,45 @@ export const DEFAULT_SERVICE_REQUESTS: ServiceRequest[] = [
   }
 ];
 
+const ROLES_STORAGE_KEY = 'thc_dynamic_roles_v1';
+
 const MarketplaceContext = createContext<MarketplaceContextType | undefined>(undefined);
 
 export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Dynamic Role & Permission Registry State
+  const [roles, setRoles] = useState<RoleDefinition[]>(() => {
+    try {
+      const stored = localStorage.getItem(ROLES_STORAGE_KEY);
+      if (stored) {
+        const parsed: RoleDefinition[] = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Merge with DEFAULT_ROLES to make sure system roles have newest permissions (e.g. manage_roles in admin)
+          return DEFAULT_ROLES.map((defaultRole) => {
+            const saved = parsed.find((p) => p.id === defaultRole.id);
+            if (saved) {
+              const mergedPerms = Array.from(
+                new Set([
+                  ...saved.permissions,
+                  ...(defaultRole.id === 'admin' ? (['manage_roles'] as Permission[]) : [])
+                ])
+              );
+              return {
+                ...defaultRole,
+                ...saved,
+                permissions: mergedPerms,
+                isSystem: true
+              };
+            }
+            return defaultRole;
+          }).concat(parsed.filter((p) => !DEFAULT_ROLES.some((d) => d.id === p.id)));
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse stored roles', e);
+    }
+    return DEFAULT_ROLES;
+  });
+
   // Load initial local states with localStorage fallback (defaults to GUEST if no saved authenticated session)
   const [currentLoginId, setCurrentLoginId] = useState<string | number>(() => {
     const saved = localStorage.getItem('chronos_current_login_id');
@@ -894,8 +940,12 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (currentUser?.permissions && currentUser.permissions.length > 0) {
       return currentUser.permissions;
     }
+    const matchedRole = roles.find((r) => r.id.toLowerCase() === currentUser?.role?.toLowerCase());
+    if (matchedRole) {
+      return matchedRole.permissions;
+    }
     return ROLE_PERMISSIONS[currentUser?.role] || [];
-  }, [currentUser?.role, currentUser?.permissions, isLoggedIn]);
+  }, [currentUser?.role, currentUser?.permissions, isLoggedIn, roles]);
 
   const hasPermission = useCallback(
     (permission: Permission): boolean => {
@@ -970,6 +1020,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
           );
         case 'user-management':
           return hasPermission('manage_users') && isFeatureEnabled('userManagement');
+        case 'role-management':
+          return hasPermission('manage_roles') && isFeatureEnabled('userManagement');
         default:
           return isTabAccessible(tab, isAdmin, isGuest);
       }
@@ -1001,7 +1053,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Auto-fallback: if the current active tab is disabled, switch to the first accessible tab
   useEffect(() => {
     if (!isTabEnabled(activeTab)) {
-      const allTabs: ActiveTab[] = ['explore', 'service-center', 'collection', 'wishlist', 'seller-hub', 'orders', 'user-management'];
+      const allTabs: ActiveTab[] = ['explore', 'service-center', 'collection', 'wishlist', 'seller-hub', 'orders', 'user-management', 'role-management'];
       const firstAccessible = allTabs.find((t) => isTabEnabled(t)) || 'explore';
       setActiveTab(firstAccessible);
     }
@@ -1585,6 +1637,98 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return false;
     }
   };
+
+  // Dynamic Role & Permission Management Handlers
+  const createRole = useCallback(
+    (newRole: { id: string; name: string; description: string; permissions: Permission[]; color?: string }) => {
+      const slug = newRole.id.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+      if (!slug) {
+        return { success: false, message: 'Role identifier cannot be empty.' };
+      }
+      if (roles.some((r) => r.id.toLowerCase() === slug)) {
+        return { success: false, message: `Role with identifier "${slug}" already exists.` };
+      }
+      const role: RoleDefinition = {
+        id: slug,
+        name: newRole.name.trim() || slug,
+        description: newRole.description.trim(),
+        permissions: newRole.permissions,
+        isSystem: false,
+        color: newRole.color || '#C5A059'
+      };
+      const updated = [...roles, role];
+      setRoles(updated);
+      try {
+        localStorage.setItem(ROLES_STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      showToast('Role Created', `Custom role "${role.name}" was successfully registered.`, 'success');
+      return { success: true, message: 'Role created successfully' };
+    },
+    [roles, showToast]
+  );
+
+  const updateRolePermissions = useCallback(
+    (roleId: string, permissions: Permission[]) => {
+      const index = roles.findIndex((r) => r.id.toLowerCase() === roleId.toLowerCase());
+      if (index === -1) {
+        return { success: false, message: 'Role not found.' };
+      }
+      let finalPermissions = [...permissions];
+      // Keep admin locked with manage_roles so they never lose access
+      if (roles[index].id === 'admin' && !finalPermissions.includes('manage_roles')) {
+        finalPermissions.push('manage_roles');
+      }
+
+      const updated = [...roles];
+      updated[index] = {
+        ...updated[index],
+        permissions: finalPermissions
+      };
+      setRoles(updated);
+      try {
+        localStorage.setItem(ROLES_STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      showToast('Permissions Updated', `Permissions for "${updated[index].name}" updated.`, 'success');
+      return { success: true, message: 'Permissions updated successfully' };
+    },
+    [roles, showToast]
+  );
+
+  const deleteRole = useCallback(
+    (roleId: string) => {
+      const targetRole = roles.find((r) => r.id.toLowerCase() === roleId.toLowerCase());
+      if (!targetRole) {
+        return { success: false, message: 'Role not found.' };
+      }
+      if (targetRole.isSystem) {
+        return { success: false, message: 'System defined roles cannot be deleted.' };
+      }
+      const updated = roles.filter((r) => r.id.toLowerCase() !== roleId.toLowerCase());
+      setRoles(updated);
+      try {
+        localStorage.setItem(ROLES_STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      showToast('Role Removed', `Custom role "${targetRole.name}" was removed.`, 'info');
+      return { success: true, message: 'Role deleted' };
+    },
+    [roles, showToast]
+  );
+
+  const resetRolesToDefault = useCallback(() => {
+    setRoles(DEFAULT_ROLES);
+    try {
+      localStorage.setItem(ROLES_STORAGE_KEY, JSON.stringify(DEFAULT_ROLES));
+    } catch (e) {
+      console.error(e);
+    }
+    showToast('Roles Reset', 'Default role permissions restored.', 'info');
+  }, [showToast]);
 
   // Listings Management
   const createListing = (
@@ -2362,6 +2506,11 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         updateUserPersonaRole,
         deleteUserPersona,
         createPersonaForUser,
+        roles,
+        createRole,
+        updateRolePermissions,
+        deleteRole,
+        resetRolesToDefault,
         isLoginModalOpen,
         setIsLoginModalOpen,
         promptLogin,

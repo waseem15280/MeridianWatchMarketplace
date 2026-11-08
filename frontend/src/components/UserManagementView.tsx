@@ -46,7 +46,9 @@ export const UserManagementView: React.FC = () => {
     deleteUserPersona,
     createPersonaForUser,
     setActiveTab,
-    isGatewayConnected
+    isGatewayConnected,
+    roles,
+    hasPermission
   } = useMarketplace();
 
   // Search & Filter State
@@ -308,12 +310,34 @@ export const UserManagementView: React.FC = () => {
           </span>
         );
       case 'buyer':
-      default:
         return (
           <span className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
             Buyer
           </span>
         );
+      default: {
+        const customRole = roles.find((r) => r.id.toLowerCase() === role.toLowerCase());
+        if (customRole) {
+          return (
+            <span
+              className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border"
+              style={{
+                backgroundColor: `${customRole.color || '#C5A059'}20`,
+                color: customRole.color || '#85642F',
+                borderColor: `${customRole.color || '#C5A059'}50`
+              }}
+            >
+              <Sparkles className="w-3 h-3" />
+              {customRole.name}
+            </span>
+          );
+        }
+        return (
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-stone-100 text-stone-800 border border-stone-200">
+            {role.replace('_', ' ')}
+          </span>
+        );
+      }
     }
   };
 
@@ -365,6 +389,17 @@ export const UserManagementView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            {hasPermission('manage_roles') && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('role-management')}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#C5A059] hover:bg-[#b08d4b] text-white text-xs font-semibold shadow-sm transition-all"
+                title="Go to Role & Permission Management"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Role Atelier</span>
+              </button>
+            )}
             <button
               onClick={() => {
                 setIsLoading(true);
@@ -437,11 +472,11 @@ export const UserManagementView: React.FC = () => {
               className="bg-transparent text-[#1C1917] font-semibold focus:outline-none cursor-pointer"
             >
               <option value="all">All Roles</option>
-              <option value="admin">Admin</option>
-              <option value="service_executive">Service Executive</option>
-              <option value="seller">Seller</option>
-              <option value="buyer">Buyer</option>
-              <option value="collector">Collector</option>
+              {roles.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -819,7 +854,7 @@ export const UserManagementView: React.FC = () => {
                           <div className="text-[11px] text-[#78716C]">{acc.email}</div>
                           {/* Granular Permissions Tag List */}
                           <div className="flex flex-wrap gap-1 mt-1 max-w-sm">
-                            {(ROLE_PERMISSIONS[acc.role] || []).map((perm) => (
+                            {(roles.find((r) => r.id.toLowerCase() === acc.role?.toLowerCase())?.permissions || ROLE_PERMISSIONS[acc.role] || []).map((perm) => (
                               <span key={perm} className="text-[9px] font-mono bg-[#DDD6CB]/60 text-[#57534E] px-1.5 py-0.2 rounded">
                                 {perm}
                               </span>
@@ -838,11 +873,11 @@ export const UserManagementView: React.FC = () => {
                                 onChange={(e) => setEditPersonaRole(e.target.value as UserRole)}
                                 className="px-2.5 py-1 bg-white border border-[#DDD6CB] rounded-lg text-xs font-medium text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#C5A880]"
                               >
-                                <option value="buyer">Buyer</option>
-                                <option value="seller">Seller</option>
-                                <option value="collector">Collector</option>
-                                <option value="service_executive">Service Executive</option>
-                                <option value="admin">Admin</option>
+                                {roles.map((r) => (
+                                  <option key={r.id} value={r.id}>
+                                    {r.name}
+                                  </option>
+                                ))}
                               </select>
                               <button
                                 onClick={() => handleSavePersonaRole(acc.id)}
@@ -859,7 +894,7 @@ export const UserManagementView: React.FC = () => {
                               </button>
                             </div>
                             <div className="text-[10px] text-[#78716C] font-mono max-w-xs">
-                              Grants: {(ROLE_PERMISSIONS[editPersonaRole] || []).join(', ')}
+                              Grants: {(roles.find((r) => r.id.toLowerCase() === editPersonaRole?.toLowerCase())?.permissions || ROLE_PERMISSIONS[editPersonaRole] || []).join(', ')}
                             </div>
                           </div>
                         ) : (
@@ -935,11 +970,11 @@ export const UserManagementView: React.FC = () => {
                   onChange={(e) => setNewPersonaRole(e.target.value as UserRole)}
                   className="w-full px-3.5 py-2 bg-[#EDE8E0]/70 border border-[#DDD6CB] rounded-xl text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#C5A880]"
                 >
-                  <option value="buyer">Buyer (Collector & Enthusiast)</option>
-                  <option value="seller">Seller (Verified Horological Dealer)</option>
-                  <option value="collector">Collector (Private Watch Vault Owner)</option>
-                  <option value="service_executive">Service Executive (Watchmaker & Atelier Lead)</option>
-                  <option value="admin">Admin (Platform Administrator)</option>
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} {r.isSystem ? '' : '(Custom)'}
+                    </option>
+                  ))}
                 </select>
               </div>
 

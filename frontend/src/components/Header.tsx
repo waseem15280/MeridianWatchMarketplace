@@ -499,7 +499,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     return String(r.userId) === String(currentUser?.id) && r.currentState !== 'TransitBack' && r.currentState !== 'ServiceRequestRejected';
   }).length;
 
-  const isAdminTabActive = activeTab === 'user-management';
+  const isAdminTabActive = activeTab === 'user-management' || activeTab === 'role-management';
 
   const navItems: { id: ActiveTab; label: string; icon: React.FC<{ className?: string }>; count?: number }[] = [
     { id: 'explore', label: 'Marketplace', icon: Watch },
@@ -637,7 +637,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                 })}
 
                 {/* Admin Dropdown Item (Admin & Service Executive Only) */}
-                {canManageUsers && (
+                {(isTabEnabled('user-management') || isTabEnabled('role-management')) && (
                   <div className="relative" ref={adminDropdownRef}>
                     <button
                       id="nav-tab-admin"
@@ -683,6 +683,28 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                             <div className="flex items-center gap-2">
                               <Users className={`w-3.5 h-3.5 ${activeTab === 'user-management' ? 'text-[#C5A880]' : 'text-[#967139]'}`} />
                               <span>User Management</span>
+                            </div>
+                          </button>
+                        )}
+
+                        {/* Role Management */}
+                        {isTabEnabled('role-management') && (
+                          <button
+                            type="button"
+                            id="admin-dropdown-role-management"
+                            onClick={() => {
+                              setActiveTab('role-management');
+                              setIsAdminDropdownOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer ${
+                              activeTab === 'role-management'
+                                ? 'bg-[#1C1917] text-[#FAF8F5] font-semibold'
+                                : 'text-[#1C1917] hover:bg-[#EDE8E0]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <ShieldCheck className={`w-3.5 h-3.5 ${activeTab === 'role-management' ? 'text-[#C5A880]' : 'text-[#967139]'}`} />
+                              <span>Role Management</span>
                             </div>
                           </button>
                         )}
@@ -1001,7 +1023,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   )}
 
                   {/* Quick Hub Navigation */}
-                  {(isTabEnabled('collection') || isTabEnabled('seller-hub') || isTabEnabled('user-management')) && (
+                  {(isTabEnabled('collection') || isTabEnabled('seller-hub') || isTabEnabled('user-management') || isTabEnabled('role-management')) && (
                     <div className="mt-3 pt-2 border-t border-[#E5DFD5]">
                       <div className="grid grid-cols-2 gap-1.5">
                         {isTabEnabled('collection') && (
@@ -1047,6 +1069,20 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                           <span>User Management</span>
                         </button>
                       )}
+                      {isTabEnabled('role-management') && (
+                        <button
+                          type="button"
+                          id="account-menu-role-management-btn"
+                          onClick={() => {
+                            setActiveTab('role-management');
+                            setIsAccountMenuOpen(false);
+                          }}
+                          className="w-full mt-2 flex items-center justify-center gap-1.5 p-2 rounded-xl bg-[#2D2A26] hover:bg-[#1C1917] text-xs text-[#FAF8F5] font-medium transition-colors shadow-xs"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-[#C5A880]" />
+                          <span>Role Management</span>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1057,7 +1093,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
         </div>
 
         {/* Mobile Navigation Tabs */}
-        {(visibleNavItems.length > 0 || canManageUsers) && (
+        {(visibleNavItems.length > 0 || isTabEnabled('user-management') || isTabEnabled('role-management')) && (
           <div className="relative lg:hidden mt-3 pt-2.5 border-t border-[#E5DFD5]">
             <div className="flex items-center justify-between gap-1 overflow-x-auto no-scrollbar">
               {visibleNavItems.map((item) => {
@@ -1090,7 +1126,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
               })}
 
               {/* Mobile Admin Trigger Button */}
-              {canManageUsers && (
+              {(isTabEnabled('user-management') || isTabEnabled('role-management')) && (
                 <button
                   id="mobile-nav-tab-admin"
                   ref={mobileAdminBtnRef}
@@ -1110,7 +1146,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
             </div>
 
             {/* Mobile Admin Dropdown Menu - Floats above all page elements */}
-            {canManageUsers && isMobileAdminDropdownOpen && (
+            {(isTabEnabled('user-management') || isTabEnabled('role-management')) && isMobileAdminDropdownOpen && (
               <div
                 ref={mobileAdminMenuRef}
                 className="absolute right-0 top-full mt-2 w-56 bg-[#FAF8F5] rounded-2xl shadow-2xl border border-[#DDD6CB] p-2 z-50 animate-fadeIn space-y-1"
@@ -1135,6 +1171,25 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   >
                     <Users className={`w-3.5 h-3.5 ${activeTab === 'user-management' ? 'text-[#C5A880]' : 'text-[#967139]'}`} />
                     <span>User Management</span>
+                  </button>
+                )}
+
+                {isTabEnabled('role-management') && (
+                  <button
+                    type="button"
+                    id="mobile-admin-role-management"
+                    onClick={() => {
+                      setActiveTab('role-management');
+                      setIsMobileAdminDropdownOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer ${
+                      activeTab === 'role-management'
+                        ? 'bg-[#1C1917] text-[#FAF8F5] font-semibold'
+                        : 'text-[#1C1917] hover:bg-[#EDE8E0]'
+                    }`}
+                  >
+                    <ShieldCheck className={`w-3.5 h-3.5 ${activeTab === 'role-management' ? 'text-[#C5A880]' : 'text-[#967139]'}`} />
+                    <span>Role Management</span>
                   </button>
                 )}
               </div>
