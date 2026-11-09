@@ -359,9 +359,12 @@ services:
 
     ports:
        - "80:80"
+       - "443:443"
 
     volumes:
        - /opt/thc-marketplace/nginx/conf.d/marketplace.conf:/etc/nginx/conf.d/default.conf:ro
+       - /opt/thc-marketplace/certbot/conf:/etc/letsencrypt:ro
+       - /opt/thc-marketplace/certbot/www:/var/www/certbot:ro
 
     depends_on:
        - frontend
