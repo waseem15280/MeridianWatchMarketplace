@@ -23,6 +23,7 @@ import { CollectionWatch } from '../types';
 export const CollectionManager: React.FC = () => {
   const {
     currentUser,
+    userAccounts,
     collection,
     isFeatureEnabled,
     setIsAddCollectionOpen,
@@ -39,9 +40,15 @@ export const CollectionManager: React.FC = () => {
   const [listingPrice, setListingPrice] = useState<number>(0);
   const [listingDescription, setListingDescription] = useState<string>('');
 
-  // Granular Permission checks for Watch Vault
+  // Granular Permission & Role checks for Watch Vault:
+  // Vault feature is for users who own watches. Only sellers (or admins) can move/publish vault watches to marketplace.
   const canManageAllVaults = hasPermission('manage_vault');
-  const canListOnMarketplace = hasPermission('seller_hub_access') || hasPermission('manage_seller_hub');
+  const isSeller = currentUser?.role === 'seller' ||
+                   currentUser?.role === 'admin' ||
+                   userAccounts?.some((acc) => acc.role === 'seller') ||
+                   hasPermission('seller_hub_access') ||
+                   hasPermission('manage_seller_hub');
+  const canListOnMarketplace = isSeller;
 
   const [viewAllVaults, setViewAllVaults] = useState(canManageAllVaults);
 
@@ -58,7 +65,7 @@ export const CollectionManager: React.FC = () => {
 
   const handleOpenListModal = (watch: CollectionWatch) => {
     if (!canListOnMarketplace) {
-      showToast('Permission Required', 'You do not have permission to publish listings to the marketplace.', 'warning');
+      showToast('Permission Required', 'You must have a seller role to publish listings to the marketplace.', 'warning');
       return;
     }
     setListModalWatch(watch);
@@ -69,7 +76,7 @@ export const CollectionManager: React.FC = () => {
   const handleConfirmList = () => {
     if (!listModalWatch) return;
     if (!canListOnMarketplace) {
-      showToast('Permission Required', 'You do not have permission to publish listings to the marketplace.', 'warning');
+      showToast('Permission Required', 'You must have a seller role to publish listings to the marketplace.', 'warning');
       setListModalWatch(null);
       return;
     }
@@ -97,7 +104,7 @@ export const CollectionManager: React.FC = () => {
                 </h1>
               </div>
               <p className="text-xs text-[#57534E] mt-1 max-w-xl">
-                Personal Horology Box • Track your luxury timepieces, estimated market valuation, serials, wrist time, and convert pieces into marketplace listings with a single click.
+                Personal Horology Box • Showcase the luxury timepieces you own, track estimated market valuations, serials, and documentation. Users with seller privileges can also publish owned watches to the marketplace.
               </p>
             </div>
           </div>

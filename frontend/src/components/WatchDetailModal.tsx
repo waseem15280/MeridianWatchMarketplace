@@ -16,7 +16,6 @@ import {
   Sparkles,
   MapPin,
   CheckCircle2,
-  Box,
   Truck,
   MessageSquare,
   Lock
@@ -41,7 +40,6 @@ export const WatchDetailModal: React.FC = () => {
     setIsOfferOpen,
     compareList,
     toggleCompare,
-    addToCollection,
     showToast
   } = useMarketplace();
 
@@ -73,23 +71,6 @@ export const WatchDetailModal: React.FC = () => {
   const handleMakeOffer = () => {
     setOfferWatch(selectedWatch);
     setIsOfferOpen(true);
-  };
-
-  const handleSaveToVault = () => {
-    addToCollection({
-      brand: selectedWatch.brand,
-      model: selectedWatch.model,
-      referenceNumber: selectedWatch.referenceNumber,
-      year: selectedWatch.year,
-      caseDiameter: selectedWatch.caseDiameter,
-      caseMaterial: selectedWatch.caseMaterial,
-      movement: selectedWatch.movement,
-      dialColor: selectedWatch.dialColor,
-      condition: selectedWatch.condition,
-      estimatedMarketValue: selectedWatch.price,
-      images: selectedWatch.images,
-      notes: `Imported from listing ${selectedWatch.referenceNumber}.`
-    });
   };
 
   return (
@@ -286,40 +267,27 @@ export const WatchDetailModal: React.FC = () => {
                 </div>
 
                 {/* Main Action CTAs */}
-                {(isFeatureEnabled('ordersAndOffers') || isFeatureEnabled('collectorVault')) && (
+                {isFeatureEnabled('ordersAndOffers') && (
                   <div className="space-y-2.5">
-                    {isFeatureEnabled('ordersAndOffers') && (
-                      <div className="grid grid-cols-2 gap-3">
-                        <button
-                          id="detail-buy-now-btn"
-                          onClick={handleBuyNow}
-                          className="w-full bg-[#1C1917] hover:bg-[#2D2A26] text-[#FAF8F5] font-bold py-3 px-4 rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2"
-                        >
-                          <Lock className="w-4 h-4 text-[#C5A880]" />
-                          <span>Buy with Escrow</span>
-                        </button>
-
-                        <button
-                          id="detail-make-offer-btn"
-                          onClick={handleMakeOffer}
-                          className="w-full bg-[#FFFFFF] hover:bg-[#EDE8E0] text-[#1C1917] font-semibold py-3 px-4 rounded-xl text-sm border border-[#D8D0C5] transition-all flex items-center justify-center gap-2 shadow-2xs"
-                        >
-                          <MessageSquare className="w-4 h-4 text-[#967139]" />
-                          <span>Make an Offer</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {isFeatureEnabled('collectorVault') && (
+                    <div className="grid grid-cols-2 gap-3">
                       <button
-                        id="detail-save-to-vault-btn"
-                        onClick={handleSaveToVault}
-                        className="w-full bg-[#FAF8F5] hover:bg-[#EDE8E0] text-[#57534E] hover:text-[#1C1917] font-medium py-2.5 px-4 rounded-xl text-xs border border-[#D8D0C5] transition-colors flex items-center justify-center gap-2"
+                        id="detail-buy-now-btn"
+                        onClick={handleBuyNow}
+                        className="w-full bg-[#1C1917] hover:bg-[#2D2A26] text-[#FAF8F5] font-bold py-3 px-4 rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2"
                       >
-                        <Box className="w-3.5 h-3.5 text-[#967139]" />
-                        <span>Save to My Private Watch Box / Vault</span>
+                        <Lock className="w-4 h-4 text-[#C5A880]" />
+                        <span>Buy</span>
                       </button>
-                    )}
+
+                      <button
+                        id="detail-make-offer-btn"
+                        onClick={handleMakeOffer}
+                        className="w-full bg-[#FFFFFF] hover:bg-[#EDE8E0] text-[#1C1917] font-semibold py-3 px-4 rounded-xl text-sm border border-[#D8D0C5] transition-all flex items-center justify-center gap-2 shadow-2xs"
+                      >
+                        <MessageSquare className="w-4 h-4 text-[#967139]" />
+                        <span>Make an Offer</span>
+                      </button>
+                    </div>
                   </div>
                 )}
 

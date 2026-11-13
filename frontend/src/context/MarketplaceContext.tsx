@@ -1824,22 +1824,32 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Convert Collection watch into active Marketplace Listing
   const listFromCollection = (collectionWatchId: string, price: number, description?: string) => {
-    if (!hasPermission('seller_hub_access') && !hasPermission('manage_seller_hub')) {
-      showToast('Permission Required', 'You do not have permission to publish listings to the marketplace.', 'warning');
+    const isSeller = currentUser?.role === 'seller' ||
+                     currentUser?.role === 'admin' ||
+                     userAccounts?.some((acc) => acc.role === 'seller') ||
+                     hasPermission('seller_hub_access') ||
+                     hasPermission('manage_seller_hub');
+    if (!isSeller) {
+      showToast('Permission Required', 'You must have a seller role to publish listings to the marketplace.', 'warning');
       return;
     }
     const watch = collection.find((w) => w.id === collectionWatchId);
     if (!watch) return;
 
+    // Use seller account if current user is not active seller, but has seller account
+    const sellerAccount = currentUser.role === 'seller'
+      ? currentUser
+      : (userAccounts?.find((acc) => acc.role === 'seller') || currentUser);
+
     const newListingId = 'watch-' + Date.now();
     const newListing: WatchListing = {
       id: newListingId,
-      sellerId: currentUser.id,
-      sellerName: currentUser.name,
-      sellerRating: currentUser.rating,
-      sellerReviewCount: currentUser.reviewCount,
-      sellerVerified: currentUser.verifiedDealer,
-      sellerLocation: currentUser.location,
+      sellerId: sellerAccount.id,
+      sellerName: sellerAccount.name,
+      sellerRating: sellerAccount.rating,
+      sellerReviewCount: sellerAccount.reviewCount,
+      sellerVerified: sellerAccount.verifiedDealer,
+      sellerLocation: sellerAccount.location,
       brand: watch.brand,
       model: watch.model,
       referenceNumber: watch.referenceNumber,
@@ -1879,8 +1889,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       collectorVaultApi.listForSale(collectionWatchId, {
         price,
         description,
-        sellerId: currentUser.id,
-        sellerName: currentUser.name
+        sellerId: sellerAccount.id,
+        sellerName: sellerAccount.name
       }).then((res) => {
         if (res.listingId) {
           setListings((prev) =>
