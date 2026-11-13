@@ -525,7 +525,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
             </span>
             <span className="hidden md:inline-block text-[#6E6760]">•</span>
             <span className="hidden md:inline-block text-[#B8AEA3]">
-              Watch originality feedback
+              Watch originality feedback by expert collectors.
             </span>
           </div>
 

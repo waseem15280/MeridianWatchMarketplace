@@ -93,7 +93,7 @@ export const ExploreView: React.FC = () => {
             <ShieldCheck className="w-5 h-5 text-[#967139] shrink-0" />
             <div>
               <div className="font-bold text-[#1C1917]">100% Escrow Protection</div>
-              <div className="text-[11px] text-[#78716C]">Funds released after buyer inspection</div>
+              <div className="text-[11px] text-[#78716C]">Funds released after seller inspection</div>
             </div>
           </div>
 
@@ -105,19 +105,19 @@ export const ExploreView: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* <div className="flex items-center gap-3">
             <TrendingUp className="w-5 h-5 text-[#967139] shrink-0" />
             <div>
               <div className="font-bold text-[#1C1917]">Live Valuation Index</div>
               <div className="text-[11px] text-[#78716C]">Real-time reference pricing tracking</div>
             </div>
-          </div>
+          </div> */}
 
           <div className="flex items-center gap-3">
             <Layers className="w-5 h-5 text-[#967139] shrink-0" />
             <div>
               <div className="font-bold text-[#1C1917]">Personal Vault Manager</div>
-              <div className="text-[11px] text-[#78716C]">One-click collection to listing flow</div>
+              <div className="text-[11px] text-[#78716C]">Show your collected timepieces</div>
             </div>
           </div>
         </div>
