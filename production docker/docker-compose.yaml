@@ -1,3 +1,5 @@
+name: thc-marketplace
+
 services:
   # ============================================================
   # PostgreSQL
@@ -10,10 +12,11 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: MarketplaceDb
+      POSTGRES_DB: ${POSTGRES_DB:-MarketplaceDb}
+      POSTGRES_MULTIPLE_DATABASES: ${POSTGRES_MULTIPLE_DATABASES}
 
     volumes:
-      - thc-marketplace-postgres-data:/var/lib/postgresql/data
+      - ${POSTGRES_DATA_DIR:-thc-marketplace-postgres-data}:/var/lib/postgresql/data
       - ./init-db:/docker-entrypoint-initdb.d:ro
 
     healthcheck:
@@ -375,8 +378,9 @@ services:
 
 volumes:
   thc-marketplace-postgres-data:
-
+    name: thc-marketplace-postgres-data
 
 networks:
   thc-marketplace-network:
+    name: thc-marketplace-network
     driver: bridge

@@ -1,3 +1,5 @@
+name: thc-marketplace-dev
+
 services:
   # =========================================================================
   # 1. Database: PostgreSQL 17 Multi-Database Service
@@ -282,7 +284,9 @@ services:
 
 volumes:
   MyWatchMarketplace-postgres-data:
+    name: thc-marketplace-dev-postgres-data
 
 networks:
   thc-marketplace-network:
+    name: thc-marketplace-dev-network
     driver: bridge
