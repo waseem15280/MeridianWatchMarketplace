@@ -244,7 +244,7 @@ export const WatchDetailModal: React.FC = () => {
                     {selectedWatch.model}
                   </h1>
                   <p className="text-xs text-[#78716C] mt-1 font-mono">
-                    Year: {selectedWatch.year} • Reference: {selectedWatch.referenceNumber}
+                    {selectedWatch.year ? `Year: ${selectedWatch.year} • ` : ''}Reference: {selectedWatch.referenceNumber}
                   </p>
                 </div>
 
@@ -417,17 +417,17 @@ export const WatchDetailModal: React.FC = () => {
 
                 <div className="p-3 rounded-xl bg-[#FFFFFF] border border-[#E5DFD5]">
                   <div className="text-[#78716C] text-[11px] uppercase">Case Diameter</div>
-                  <div className="font-semibold text-[#1C1917] mt-0.5 font-mono">{selectedWatch.caseDiameter} mm</div>
+                  <div className="font-semibold text-[#1C1917] mt-0.5 font-mono">{selectedWatch.caseDiameter ? `${selectedWatch.caseDiameter} mm` : 'N/A'}</div>
                 </div>
 
                 <div className="p-3 rounded-xl bg-[#FFFFFF] border border-[#E5DFD5]">
                   <div className="text-[#78716C] text-[11px] uppercase">Case Material</div>
-                  <div className="font-semibold text-[#1C1917] mt-0.5">{selectedWatch.caseMaterial}</div>
+                  <div className="font-semibold text-[#1C1917] mt-0.5">{selectedWatch.caseMaterial || 'N/A'}</div>
                 </div>
 
                 <div className="p-3 rounded-xl bg-[#FFFFFF] border border-[#E5DFD5]">
                   <div className="text-[#78716C] text-[11px] uppercase">Dial</div>
-                  <div className="font-semibold text-[#1C1917] mt-0.5">{selectedWatch.dialColor}</div>
+                  <div className="font-semibold text-[#1C1917] mt-0.5">{selectedWatch.dialColor || 'N/A'}</div>
                 </div>
 
                 <div className="p-3 rounded-xl bg-[#FFFFFF] border border-[#E5DFD5]">

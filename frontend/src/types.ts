@@ -235,9 +235,9 @@ export interface UserLogin {
   accounts?: UserAccount[];
 }
 
-export type WatchCondition = 'Unworn' | 'Mint' | 'Very Good' | 'Good' | 'Fair';
+export type WatchCondition = 'Unworn' | 'Mint' | 'Very Good' | 'Good' | 'Fair' | string;
 
-export type WatchMovement = 'Automatic' | 'Manual Winding' | 'Quartz' | 'Digital' | 'Solar' | 'Hybrid' | 'Spring Drive';
+export type WatchMovement = 'Automatic' | 'Manual Winding' | 'Quartz' | 'Digital' | 'Solar' | 'Hybrid' | 'Spring Drive' | string;
 
 export type WatchCaseMaterial = 
   | 'Stainless Steel' 
@@ -245,7 +245,9 @@ export type WatchCaseMaterial =
   | 'Platinum' 
   | 'Titanium' 
   | 'Ceramic' 
-  | 'Bronze';
+  | 'Bronze'
+  | 'Other'
+  | string;
 
 export interface SellerReview {
   id: string | number;

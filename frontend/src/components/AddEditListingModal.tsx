@@ -46,13 +46,14 @@ const MOVEMENTS: WatchMovement[] = [
 
 const CONDITIONS: WatchCondition[] = ['Unworn', 'Mint', 'Very Good', 'Good', 'Fair'];
 
-const CASE_MATERIALS: WatchCaseMaterial[] = [
+const CASE_MATERIALS: string[] = [
   'Stainless Steel',
   'Gold Plated',
   'Platinum',
   'Titanium',
   'Ceramic',
-  'Bronze'
+  'Bronze',
+  'Other'
 ];
 
 interface ImageItem {
@@ -78,16 +79,17 @@ export const AddEditListingModal: React.FC = () => {
   const [brand, setBrand] = useState('Rolex');
   const [model, setModel] = useState('');
   const [referenceNumber, setReferenceNumber] = useState('');
-  const [year, setYear] = useState<number>(2023);
-  const [price, setPrice] = useState<number>(10000);
-  const [condition, setCondition] = useState<WatchCondition>('Mint');
-  const [movement, setMovement] = useState<WatchMovement>('Automatic');
-  const [caseMaterial, setCaseMaterial] = useState<WatchCaseMaterial>('Stainless Steel');
-  const [caseDiameter, setCaseDiameter] = useState<number>(40);
-  const [dialColor, setDialColor] = useState('Black');
-  const [braceletMaterial, setBraceletMaterial] = useState('Stainless Steel Bracelet');
-  const [hasOriginalBox, setHasOriginalBox] = useState(true);
-  const [hasOriginalPapers, setHasOriginalPapers] = useState(true);
+  const [year, setYear] = useState<number | ''>('');
+  const [price, setPrice] = useState<number | ''>(0);
+  const [condition, setCondition] = useState<WatchCondition | ''>('');
+  const [movement, setMovement] = useState<WatchMovement | ''>('');
+  const [caseMaterial, setCaseMaterial] = useState<string>('');
+  const [otherCaseMaterial, setOtherCaseMaterial] = useState<string>('');
+  const [caseDiameter, setCaseDiameter] = useState<number | ''>('');
+  const [dialColor, setDialColor] = useState('');
+  const [braceletMaterial, setBraceletMaterial] = useState('');
+  const [hasOriginalBox, setHasOriginalBox] = useState(false);
+  const [hasOriginalPapers, setHasOriginalPapers] = useState(false);
   const [description, setDescription] = useState('');
   const [provenanceNotes, setProvenanceNotes] = useState('');
 
@@ -100,20 +102,32 @@ export const AddEditListingModal: React.FC = () => {
   // Pre-fill if editing
   useEffect(() => {
     if (editingListing) {
-      setBrand(editingListing.brand);
-      setModel(editingListing.model);
-      setReferenceNumber(editingListing.referenceNumber);
-      setYear(editingListing.year);
-      setPrice(editingListing.price);
-      setCondition(editingListing.condition);
-      setMovement(editingListing.movement);
-      setCaseMaterial(editingListing.caseMaterial);
-      setCaseDiameter(editingListing.caseDiameter);
-      setDialColor(editingListing.dialColor);
-      setBraceletMaterial(editingListing.braceletMaterial);
-      setHasOriginalBox(editingListing.hasOriginalBox);
-      setHasOriginalPapers(editingListing.hasOriginalPapers);
-      setDescription(editingListing.description);
+      setBrand(editingListing.brand || 'Rolex');
+      setModel(editingListing.model || '');
+      setReferenceNumber(editingListing.referenceNumber || '');
+      setYear(editingListing.year ?? '');
+      setPrice(editingListing.price ?? 0);
+      setCondition(editingListing.condition || '');
+      setMovement(editingListing.movement || '');
+
+      const presetMaterials = ['Stainless Steel', 'Gold Plated', 'Platinum', 'Titanium', 'Ceramic', 'Bronze'];
+      if (presetMaterials.includes(editingListing.caseMaterial)) {
+        setCaseMaterial(editingListing.caseMaterial);
+        setOtherCaseMaterial('');
+      } else if (editingListing.caseMaterial) {
+        setCaseMaterial('Other');
+        setOtherCaseMaterial(editingListing.caseMaterial);
+      } else {
+        setCaseMaterial('');
+        setOtherCaseMaterial('');
+      }
+
+      setCaseDiameter(editingListing.caseDiameter ?? '');
+      setDialColor(editingListing.dialColor || '');
+      setBraceletMaterial(editingListing.braceletMaterial || '');
+      setHasOriginalBox(Boolean(editingListing.hasOriginalBox));
+      setHasOriginalPapers(Boolean(editingListing.hasOriginalPapers));
+      setDescription(editingListing.description || '');
       setProvenanceNotes(editingListing.provenanceNotes || '');
 
       setImageItems(
@@ -124,11 +138,20 @@ export const AddEditListingModal: React.FC = () => {
         }))
       );
     } else {
+      setBrand('Rolex');
       setModel('');
       setReferenceNumber('');
-      setYear(2024);
-      setPrice(12500);
-      setCondition('Mint');
+      setYear('');
+      setPrice(0);
+      setCondition('');
+      setMovement('');
+      setCaseMaterial('');
+      setOtherCaseMaterial('');
+      setCaseDiameter('');
+      setDialColor('');
+      setBraceletMaterial('');
+      setHasOriginalBox(false);
+      setHasOriginalPapers(false);
       setDescription('');
       setProvenanceNotes('');
       setImageItems([]);
@@ -206,8 +229,19 @@ export const AddEditListingModal: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!model.trim() || !referenceNumber.trim() || price <= 0) {
-      showToast('Missing Fields', 'Please fill in Watch Model, Reference Number, and a valid Price', 'warning');
+    if (!model.trim() || !referenceNumber.trim()) {
+      showToast('Missing Fields', 'Please fill in Watch Model and Reference Number', 'warning');
+      return;
+    }
+
+    const numPrice = typeof price === 'number' ? price : Number(price) || 0;
+    if (numPrice <= 0) {
+      showToast('Invalid Price', 'Please enter a valid Asking Price greater than 0', 'warning');
+      return;
+    }
+
+    if (!movement) {
+      showToast('Missing Fields', 'Please select a Caliber Movement', 'warning');
       return;
     }
 
@@ -241,44 +275,48 @@ export const AddEditListingModal: React.FC = () => {
 
       const verifiedUrls = finalUrls.filter((u): u is string => typeof u === 'string' && u.length > 0);
 
+      const parsedYear = year !== '' ? Number(year) : (editingListing?.year || new Date().getFullYear());
+      const parsedDiameter = caseDiameter !== '' ? Number(caseDiameter) : 0;
+      const finalCaseMaterial = caseMaterial === 'Other' ? (otherCaseMaterial.trim() || 'Other') : (caseMaterial || '');
+
       if (editingListing) {
         await updateListing(editingListing.id, {
           brand,
-          model,
-          referenceNumber,
-          year,
-          price,
-          condition,
+          model: model.trim(),
+          referenceNumber: referenceNumber.trim(),
+          year: parsedYear,
+          price: numPrice,
+          condition: condition || '',
           movement,
-          caseMaterial,
-          caseDiameter,
-          dialColor,
-          braceletMaterial,
+          caseMaterial: finalCaseMaterial,
+          caseDiameter: parsedDiameter,
+          dialColor: dialColor.trim() || '',
+          braceletMaterial: braceletMaterial.trim() || '',
           hasOriginalBox,
           hasOriginalPapers,
-          description: description || `Certified ${brand} ${model} in ${condition} condition.`,
-          provenanceNotes,
+          description: description.trim() || `Certified ${brand} ${model}${condition ? ` in ${condition} condition` : ''}.`,
+          provenanceNotes: provenanceNotes.trim() || undefined,
           images: verifiedUrls
         });
         showToast('Listing Updated', 'Your timepiece listing and Cloudinary photography have been updated.', 'success');
       } else {
         await createListing({
           brand,
-          model,
-          referenceNumber,
-          year,
-          price,
+          model: model.trim(),
+          referenceNumber: referenceNumber.trim(),
+          year: parsedYear,
+          price: numPrice,
           currency: 'INR',
-          condition,
+          condition: condition || '',
           movement,
-          caseMaterial,
-          caseDiameter,
-          dialColor,
-          braceletMaterial,
+          caseMaterial: finalCaseMaterial,
+          caseDiameter: parsedDiameter,
+          dialColor: dialColor.trim() || '',
+          braceletMaterial: braceletMaterial.trim() || '',
           hasOriginalBox,
           hasOriginalPapers,
-          description: description || `Certified authentic ${brand} ${model} reference ${referenceNumber}. Inspected and timed.`,
-          provenanceNotes,
+          description: description.trim() || `Certified authentic ${brand} ${model} reference ${referenceNumber}. Inspected and timed.`,
+          provenanceNotes: provenanceNotes.trim() || undefined,
           images: verifiedUrls,
           authenticityVerified: true,
           status: 'active'
@@ -313,7 +351,7 @@ export const AddEditListingModal: React.FC = () => {
         <div className="px-6 py-4 border-b border-[#E5DFD5] flex items-center justify-between bg-[#FFFFFF]">
           <div>
             <span className="text-xs font-serif font-bold uppercase tracking-widest text-[#967139]">
-              Seller Management
+              Seller Hub
             </span>
             <h2 className="text-lg font-serif font-bold text-[#1C1917] mt-0.5">
               {editingListing ? 'Edit Timepiece Listing' : 'Create New Marketplace Listing'}
@@ -375,7 +413,7 @@ export const AddEditListingModal: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-[#57534E] uppercase tracking-wider mb-1.5">
-                Reference Number *
+                Reference Number
               </label>
               <input
                 id="listing-ref-input"
@@ -396,9 +434,10 @@ export const AddEditListingModal: React.FC = () => {
                 id="listing-year-input"
                 type="number"
                 value={year}
-                onChange={(e) => setYear(Number(e.target.value))}
-                min={1950}
-                max={2026}
+                onChange={(e) => setYear(e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="e.g. 2024"
+                min={1900}
+                max={2030}
                 className="w-full bg-[#FFFFFF] border border-[#D8D0C5] rounded-xl px-3.5 py-2.5 text-xs font-mono text-[#1C1917] focus:outline-none focus:border-[#967139]"
               />
             </div>
@@ -415,8 +454,8 @@ export const AddEditListingModal: React.FC = () => {
                   id="listing-price-input"
                   type="number"
                   value={price}
-                  onChange={(e) => setPrice(Number(e.target.value))}
-                  min={1}
+                  onChange={(e) => setPrice(e.target.value === '' ? '' : Number(e.target.value))}
+                  min={0}
                   required
                   className="w-full bg-[#FFFFFF] border border-[#D8D0C5] rounded-xl pl-7 pr-3 py-2.5 text-xs font-mono text-[#1C1917] focus:outline-none focus:border-[#967139] font-bold"
                 />
@@ -433,9 +472,10 @@ export const AddEditListingModal: React.FC = () => {
               <select
                 id="listing-condition-select"
                 value={condition}
-                onChange={(e) => setCondition(e.target.value as WatchCondition)}
+                onChange={(e) => setCondition(e.target.value as WatchCondition | '')}
                 className="w-full bg-[#FFFFFF] border border-[#D8D0C5] rounded-xl px-3.5 py-2.5 text-xs text-[#1C1917] focus:outline-none focus:border-[#967139]"
               >
+                <option value="">Select</option>
                 {CONDITIONS.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -446,14 +486,16 @@ export const AddEditListingModal: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-[#57534E] uppercase tracking-wider mb-1.5">
-                Caliber Movement
+                Caliber Movement *
               </label>
               <select
                 id="listing-movement-select"
+                required
                 value={movement}
-                onChange={(e) => setMovement(e.target.value as WatchMovement)}
+                onChange={(e) => setMovement(e.target.value as WatchMovement | '')}
                 className="w-full bg-[#FFFFFF] border border-[#D8D0C5] rounded-xl px-3.5 py-2.5 text-xs text-[#1C1917] focus:outline-none focus:border-[#967139]"
               >
+                <option value="">Select</option>
                 {MOVEMENTS.map((m) => (
                   <option key={m} value={m}>
                     {m}
@@ -470,9 +512,10 @@ export const AddEditListingModal: React.FC = () => {
                 id="listing-diameter-input"
                 type="number"
                 value={caseDiameter}
-                onChange={(e) => setCaseDiameter(Number(e.target.value))}
-                min={28}
-                max={50}
+                onChange={(e) => setCaseDiameter(e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="e.g. 40"
+                min={20}
+                max={60}
                 className="w-full bg-[#FFFFFF] border border-[#D8D0C5] rounded-xl px-3.5 py-2.5 text-xs font-mono text-[#1C1917] focus:outline-none focus:border-[#967139]"
               />
             </div>
@@ -485,16 +528,28 @@ export const AddEditListingModal: React.FC = () => {
                 Case Material
               </label>
               <select
+                id="listing-case-material-select"
                 value={caseMaterial}
-                onChange={(e) => setCaseMaterial(e.target.value as WatchCaseMaterial)}
+                onChange={(e) => setCaseMaterial(e.target.value)}
                 className="w-full bg-[#FFFFFF] border border-[#D8D0C5] rounded-xl px-3.5 py-2.5 text-xs text-[#1C1917] focus:outline-none focus:border-[#967139]"
               >
+                <option value="">Select</option>
                 {CASE_MATERIALS.map((cm) => (
                   <option key={cm} value={cm}>
                     {cm}
                   </option>
                 ))}
               </select>
+              {caseMaterial === 'Other' && (
+                <input
+                  id="listing-case-material-other-input"
+                  type="text"
+                  value={otherCaseMaterial}
+                  onChange={(e) => setOtherCaseMaterial(e.target.value)}
+                  placeholder="Specify case material..."
+                  className="w-full mt-2 bg-[#FFFFFF] border border-[#D8D0C5] rounded-xl px-3.5 py-2.5 text-xs text-[#1C1917] focus:outline-none focus:border-[#967139]"
+                />
+              )}
             </div>
 
             <div>
@@ -532,6 +587,7 @@ export const AddEditListingModal: React.FC = () => {
             <div className="grid grid-cols-2 gap-3">
               <label className="flex items-center gap-3 p-3 rounded-xl bg-[#FFFFFF] border border-[#E5DFD5] cursor-pointer shadow-2xs">
                 <input
+                  id="listing-has-box-checkbox"
                   type="checkbox"
                   checked={hasOriginalBox}
                   onChange={(e) => setHasOriginalBox(e.target.checked)}
@@ -545,6 +601,7 @@ export const AddEditListingModal: React.FC = () => {
 
               <label className="flex items-center gap-3 p-3 rounded-xl bg-[#FFFFFF] border border-[#E5DFD5] cursor-pointer shadow-2xs">
                 <input
+                  id="listing-has-papers-checkbox"
                   type="checkbox"
                   checked={hasOriginalPapers}
                   onChange={(e) => setHasOriginalPapers(e.target.checked)}

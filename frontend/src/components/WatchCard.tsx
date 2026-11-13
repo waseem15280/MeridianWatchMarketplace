@@ -80,9 +80,11 @@ export const WatchCard: React.FC<WatchCardProps> = ({ watch, onSelect }) => {
 
         {/* Condition & Authenticity Tag */}
         <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold tracking-wide uppercase bg-[#1C1917]/85 text-[#FAF8F5] border border-[#3D3A36] backdrop-blur-md">
-            {watch.condition}
-          </span>
+          {watch.condition && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold tracking-wide uppercase bg-[#1C1917]/85 text-[#FAF8F5] border border-[#3D3A36] backdrop-blur-md">
+              {watch.condition}
+            </span>
+          )}
           {watch.authenticityVerified && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-[#3D5A45]/90 text-[#F5F2ED] border border-[#4A6B53]/50 backdrop-blur-md">
               <ShieldCheck className="w-3 h-3 text-[#A7D7B5]" />
@@ -117,11 +119,13 @@ export const WatchCard: React.FC<WatchCardProps> = ({ watch, onSelect }) => {
         {/* Quick specs pill bottom overlay */}
         <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-[11px] text-[#FAF8F5] z-10 pointer-events-none">
           <span className="bg-[#1C1917]/85 px-2 py-0.5 rounded-md backdrop-blur-md font-mono border border-[#3D3A36]">
-            {watch.caseDiameter}mm • {watch.movement}
+            {watch.caseDiameter ? `${watch.caseDiameter}mm • ` : ''}{watch.movement}
           </span>
-          <span className="bg-[#1C1917]/85 px-2 py-0.5 rounded-md backdrop-blur-md font-mono border border-[#3D3A36]">
-            {watch.year}
-          </span>
+          {watch.year ? (
+            <span className="bg-[#1C1917]/85 px-2 py-0.5 rounded-md backdrop-blur-md font-mono border border-[#3D3A36]">
+              {watch.year}
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -158,8 +162,12 @@ export const WatchCard: React.FC<WatchCardProps> = ({ watch, onSelect }) => {
               <FileText className="w-3 h-3" />
               Papers
             </span>
-            <span className="text-[#D8D0C5]">•</span>
-            <span className="text-[#78716C] truncate">{watch.dialColor} Dial</span>
+            {watch.dialColor && (
+              <>
+                <span className="text-[#D8D0C5]">•</span>
+                <span className="text-[#78716C] truncate">{watch.dialColor} Dial</span>
+              </>
+            )}
           </div>
         </div>
 
