@@ -329,7 +329,7 @@ export const AddCollectionWatchModal: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-[#57534E] uppercase tracking-wider mb-1.5">
-                Brand *
+                Brand (<span className="text-red-500 font-bold">*</span>)
               </label>
               <input
                 id="vault-watch-brand-input"
@@ -344,7 +344,7 @@ export const AddCollectionWatchModal: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-[#57534E] uppercase tracking-wider mb-1.5">
-                Model Name *
+                Model Name (<span className="text-red-500 font-bold">*</span>)
               </label>
               <input
                 id="vault-watch-model-input"
@@ -362,7 +362,7 @@ export const AddCollectionWatchModal: React.FC = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-semibold text-[#57534E] uppercase tracking-wider">
-                Timepiece Photography (Maximum 2 Images) *
+                Timepiece Photography (Maximum 2 Images) (<span className="text-red-500 font-bold">*</span>)
               </label>
               <span className="text-[11px] font-medium text-[#78716C]">
                 {imageItems.length} / 2 photos selected

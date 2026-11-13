@@ -32,7 +32,8 @@ const POPULAR_BRANDS = [
   'Allwyn',
   'Timex',
   'Casio',
-  'Westend'
+  'Westend',
+  'Other'
 ];
 
 const MOVEMENTS: WatchMovement[] = [
@@ -76,7 +77,8 @@ export const AddEditListingModal: React.FC = () => {
     hasPermission
   } = useMarketplace();
 
-  const [brand, setBrand] = useState('Rolex');
+  const [brand, setBrand] = useState('HMT');
+  const [otherBrand, setOtherBrand] = useState('');
   const [model, setModel] = useState('');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [year, setYear] = useState<number | ''>('');
@@ -102,7 +104,18 @@ export const AddEditListingModal: React.FC = () => {
   // Pre-fill if editing
   useEffect(() => {
     if (editingListing) {
-      setBrand(editingListing.brand || 'Rolex');
+      const presetBrands = ['HMT', 'Seiko', 'Citizen', 'Ricoh', 'Titan', 'Omega', 'Allwyn', 'Timex', 'Casio', 'Westend'];
+      if (presetBrands.includes(editingListing.brand)) {
+        setBrand(editingListing.brand);
+        setOtherBrand('');
+      } else if (editingListing.brand) {
+        setBrand('Other');
+        setOtherBrand(editingListing.brand);
+      } else {
+        setBrand('HMT');
+        setOtherBrand('');
+      }
+
       setModel(editingListing.model || '');
       setReferenceNumber(editingListing.referenceNumber || '');
       setYear(editingListing.year ?? '');
@@ -138,7 +151,8 @@ export const AddEditListingModal: React.FC = () => {
         }))
       );
     } else {
-      setBrand('Rolex');
+      setBrand('HMT');
+      setOtherBrand('');
       setModel('');
       setReferenceNumber('');
       setYear('');
@@ -229,6 +243,12 @@ export const AddEditListingModal: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const finalBrand = brand === 'Other' ? otherBrand.trim() : (brand.trim() || 'HMT');
+    if (brand === 'Other' && !otherBrand.trim()) {
+      showToast('Missing Fields', 'Please enter a brand name', 'warning');
+      return;
+    }
+
     if (!model.trim()) {
       showToast('Missing Fields', 'Please fill in Watch Model', 'warning');
       return;
@@ -278,12 +298,13 @@ export const AddEditListingModal: React.FC = () => {
       const parsedYear = year !== '' ? Number(year) : (editingListing?.year || new Date().getFullYear());
       const parsedDiameter = caseDiameter !== '' ? Number(caseDiameter) : 0;
       const finalCaseMaterial = caseMaterial === 'Other' ? (otherCaseMaterial.trim() || 'Other') : (caseMaterial || '');
+      const finalRefNumber = referenceNumber.trim() || 'N/A';
 
       if (editingListing) {
         await updateListing(editingListing.id, {
-          brand,
+          brand: finalBrand,
           model: model.trim(),
-          referenceNumber: referenceNumber.trim(),
+          referenceNumber: finalRefNumber,
           year: parsedYear,
           price: numPrice,
           condition: condition || '',
@@ -294,16 +315,16 @@ export const AddEditListingModal: React.FC = () => {
           braceletMaterial: braceletMaterial.trim() || '',
           hasOriginalBox,
           hasOriginalPapers,
-          description: description.trim() || `Certified ${brand} ${model}${condition ? ` in ${condition} condition` : ''}.`,
+          description: description.trim() || `Certified ${finalBrand} ${model}${condition ? ` in ${condition} condition` : ''}.`,
           provenanceNotes: provenanceNotes.trim() || undefined,
           images: verifiedUrls
         });
         showToast('Listing Updated', 'Your timepiece listing has been updated.', 'success');
       } else {
         await createListing({
-          brand,
+          brand: finalBrand,
           model: model.trim(),
-          referenceNumber: referenceNumber.trim(),
+          referenceNumber: finalRefNumber,
           year: parsedYear,
           price: numPrice,
           currency: 'INR',
@@ -315,7 +336,7 @@ export const AddEditListingModal: React.FC = () => {
           braceletMaterial: braceletMaterial.trim() || '',
           hasOriginalBox,
           hasOriginalPapers,
-          description: description.trim() || `Certified authentic ${brand} ${model} reference ${referenceNumber}. Inspected and timed.`,
+          description: description.trim() || `Certified authentic ${finalBrand} ${model} reference ${finalRefNumber}. Inspected and timed.`,
           provenanceNotes: provenanceNotes.trim() || undefined,
           images: verifiedUrls,
           authenticityVerified: true,
@@ -377,7 +398,7 @@ export const AddEditListingModal: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-[#57534E] uppercase tracking-wider mb-1.5">
-                Manufacture / Brand *
+                Manufacture / Brand (<span className="text-red-500 font-bold">*</span>)
               </label>
               <select
                 id="listing-brand-select"
@@ -391,11 +412,21 @@ export const AddEditListingModal: React.FC = () => {
                   </option>
                 ))}
               </select>
+              {brand === 'Other' && (
+                <input
+                  id="listing-brand-other-input"
+                  type="text"
+                  value={otherBrand}
+                  onChange={(e) => setOtherBrand(e.target.value)}
+                  placeholder="Enter custom brand name..."
+                  className="w-full mt-2 bg-[#FFFFFF] border border-[#D8D0C5] rounded-xl px-3.5 py-2.5 text-xs text-[#1C1917] focus:outline-none focus:border-[#967139]"
+                />
+              )}
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-[#57534E] uppercase tracking-wider mb-1.5">
-                Model Name *
+                Model Name (<span className="text-red-500 font-bold">*</span>)
               </label>
               <input
                 id="listing-model-input"
@@ -420,8 +451,7 @@ export const AddEditListingModal: React.FC = () => {
                 type="text"
                 value={referenceNumber}
                 onChange={(e) => setReferenceNumber(e.target.value)}
-                placeholder="e.g. 116500LN, 5711/1A"
-                required
+                placeholder="e.g. 116500LN, 5711/1A (Optional)"
                 className="w-full bg-[#FFFFFF] border border-[#D8D0C5] rounded-xl px-3.5 py-2.5 text-xs font-mono text-[#1C1917] focus:outline-none focus:border-[#967139]"
               />
             </div>
@@ -444,7 +474,7 @@ export const AddEditListingModal: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-[#57534E] uppercase tracking-wider mb-1.5">
-                Asking Price (INR) *
+                Asking Price (INR) (<span className="text-red-500 font-bold">*</span>)
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#78716C] text-xs font-mono">
@@ -486,7 +516,7 @@ export const AddEditListingModal: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-[#57534E] uppercase tracking-wider mb-1.5">
-                Caliber Movement *
+                Caliber Movement (<span className="text-red-500 font-bold">*</span>)
               </label>
               <select
                 id="listing-movement-select"
@@ -619,7 +649,7 @@ export const AddEditListingModal: React.FC = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-semibold text-[#57534E] uppercase tracking-wider">
-                Timepiece Photography (Maximum 5 Images) *
+                Timepiece Photography (Maximum 5 Images) (<span className="text-red-500 font-bold">*</span>)
               </label>
               <span className="text-[11px] font-medium text-[#78716C]">
                 {imageItems.length} / 5 photos selected
