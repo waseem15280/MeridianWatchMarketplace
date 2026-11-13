@@ -14,15 +14,23 @@ import {
 import { WatchCondition, WatchMovement } from '../types';
 
 const BRANDS = [
-  'Rolex',
-  'Patek Philippe',
-  'Audemars Piguet',
+  'HMT',
+  'Citizen',
+  'Seiko',
+  'Ricoh',
+  'Allwyn',
+  'Titan',
+  'Casio',
+  'Timex',
+  'Orient',
+  'West End',
+  'DWC',
   'Omega',
-  'Cartier',
-  'Grand Seiko',
-  'Tudor',
-  'Vacheron Constantin',
-  'IWC'
+  'Rolex',
+  'Tissot',
+  'Argos',
+  'Jayco',
+  'Rado',
 ];
 
 const MOVEMENTS: WatchMovement[] = [
