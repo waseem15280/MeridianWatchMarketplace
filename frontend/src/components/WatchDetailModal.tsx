@@ -281,7 +281,7 @@ export const WatchDetailModal: React.FC = () => {
                         ₹{selectedWatch.originalPrice.toLocaleString()}
                       </span>
                     )}
-                    <span className="text-xs text-[#3D5A45] font-semibold">Free Fully Insured Shipping</span>
+                    {/* <span className="text-xs text-[#3D5A45] font-semibold">Free Fully Insured Shipping</span> */}
                   </div>
                 </div>
 
