@@ -75,10 +75,34 @@ export const sanitizeAccount = (acc: UserAccount): UserAccount => {
 };
 
 export const sanitizeListing = (listing: WatchListing): WatchListing => {
-  if (!listing.sellerReviewCount || listing.sellerReviewCount === 0) {
-    return { ...listing, sellerRating: 0, sellerReviewCount: 0 };
-  }
-  return listing;
+  const sellerReviewCount = Number(listing.sellerReviewCount) || 0;
+  const sellerRating = sellerReviewCount === 0 ? 0 : (Number(listing.sellerRating) || 0);
+  const images = Array.isArray(listing.images) && listing.images.length > 0
+    ? listing.images
+    : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80'];
+
+  return {
+    ...listing,
+    id: String(listing.id),
+    sellerId: String(listing.sellerId ?? ''),
+    sellerName: listing.sellerName || 'Verified Seller',
+    sellerRating,
+    sellerReviewCount,
+    brand: listing.brand || 'Other',
+    model: listing.model || 'Timepiece',
+    referenceNumber: listing.referenceNumber || '',
+    condition: listing.condition || '',
+    movement: listing.movement || 'Automatic',
+    caseMaterial: listing.caseMaterial || '',
+    caseDiameter: Number(listing.caseDiameter) || 0,
+    dialColor: listing.dialColor || '',
+    braceletMaterial: listing.braceletMaterial || '',
+    price: typeof listing.price === 'number' ? listing.price : (Number(listing.price) || 0),
+    currency: listing.currency || 'INR',
+    images,
+    status: listing.status || 'active',
+    createdAt: listing.createdAt || new Date().toISOString()
+  };
 };
 
 const EMPTY_USER = GUEST_ACCOUNT;
@@ -161,7 +185,7 @@ interface MarketplaceContextType {
   // Listings
   listings: WatchListing[];
   filteredListings: WatchListing[];
-  createListing: (listingData: Omit<WatchListing, 'id' | 'createdAt' | 'viewsCount' | 'wishlistCount' | 'sellerId' | 'sellerName' | 'sellerRating' | 'sellerReviewCount' | 'sellerVerified' | 'sellerLocation'>) => WatchListing;
+  createListing: (listingData: Omit<WatchListing, 'id' | 'createdAt' | 'viewsCount' | 'wishlistCount' | 'sellerId' | 'sellerName' | 'sellerRating' | 'sellerReviewCount' | 'sellerVerified' | 'sellerLocation'>) => Promise<WatchListing>;
   updateListing: (id: string, updates: Partial<WatchListing>) => void;
   deleteListing: (id: string) => void;
   toggleListingStatus: (id: string, newStatus: WatchListing['status']) => void;
@@ -206,6 +230,12 @@ interface MarketplaceContextType {
   filters: FilterOptions;
   setFilters: React.Dispatch<React.SetStateAction<FilterOptions>>;
   resetFilters: () => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  selectedBrand: string;
+  setSelectedBrand: (brand: string) => void;
+  sortBy: FilterOptions['sortBy'];
+  setSortBy: (sortBy: FilterOptions['sortBy']) => void;
   
   // Comparison
   compareList: string[];
@@ -261,7 +291,7 @@ const DEFAULT_FILTERS: FilterOptions = {
   movement: [],
   condition: [],
   minPrice: 0,
-  maxPrice: 150000,
+  maxPrice: 10000000,
   hasBox: false,
   hasPapers: false,
   minSellerRating: 0,
@@ -1740,7 +1770,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [showToast]);
 
   // Listings Management
-  const createListing = (
+  const createListing = async (
     listingData: Omit<
       WatchListing,
       | 'id'
@@ -1754,31 +1784,74 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       | 'sellerVerified'
       | 'sellerLocation'
     >
-  ): WatchListing => {
-    const newListing: WatchListing = {
+  ): Promise<WatchListing> => {
+    const tempId = 'watch-' + Date.now();
+    const payload: Partial<WatchListing> = {
       ...listingData,
-      id: 'watch-' + Date.now(),
-      sellerId: currentUser.id,
-      sellerName: currentUser.name,
-      sellerRating: currentUser.rating,
-      sellerReviewCount: currentUser.reviewCount,
-      sellerVerified: currentUser.verifiedDealer,
-      sellerLocation: currentUser.location,
-      createdAt: new Date().toISOString(),
-      viewsCount: 1,
-      wishlistCount: 0
+      sellerId: String(currentUser.id || '1'),
+      sellerName: currentUser.name || 'Verified Seller',
+      sellerRating: typeof currentUser.rating === 'number' ? currentUser.rating : 0,
+      sellerReviewCount: typeof currentUser.reviewCount === 'number' ? currentUser.reviewCount : 0,
+      sellerVerified: Boolean(currentUser.verifiedDealer),
+      sellerLocation: currentUser.location || 'Global',
+      currency: listingData.currency || 'INR',
+      status: 'active',
+      authenticityVerified: true,
+      condition: listingData.condition || '',
+      referenceNumber: listingData.referenceNumber || '',
+      caseMaterial: listingData.caseMaterial || '',
+      dialColor: listingData.dialColor || '',
+      braceletMaterial: listingData.braceletMaterial || ''
     };
 
-    setListings((prev) => [newListing, ...prev]);
-    showToast('Listing Published', `${newListing.brand} ${newListing.model} is now live on the marketplace!`, 'success');
+    let savedListing: WatchListing;
 
     if (isGatewayConnected) {
-      marketplaceApi.createListing(newListing).catch((err) => {
-        console.warn('Failed to persist listing to Marketplace microservice', err);
-      });
+      try {
+        const created = await marketplaceApi.createListing(payload);
+        savedListing = sanitizeListing({
+          ...created,
+          id: String(created.id)
+        });
+      } catch (err: any) {
+        console.error('Failed to persist listing to Marketplace microservice:', err);
+        savedListing = sanitizeListing({
+          ...payload,
+          id: tempId,
+          createdAt: new Date().toISOString(),
+          viewsCount: 1,
+          wishlistCount: 0
+        } as WatchListing);
+        // Persist locally as fallback
+        setListings((prev) => [savedListing, ...prev.filter((item) => String(item.id) !== String(savedListing.id))]);
+        try {
+          const currentCached = JSON.parse(localStorage.getItem('chronos_listings') || '[]');
+          localStorage.setItem('chronos_listings', JSON.stringify([savedListing, ...currentCached.filter((i: any) => String(i.id) !== String(savedListing.id))]));
+        } catch (e) {
+          console.warn('Could not cache listing in localStorage', e);
+        }
+        throw err;
+      }
+    } else {
+      savedListing = sanitizeListing({
+        ...payload,
+        id: tempId,
+        createdAt: new Date().toISOString(),
+        viewsCount: 1,
+        wishlistCount: 0
+      } as WatchListing);
     }
 
-    return newListing;
+    setListings((prev) => [savedListing, ...prev.filter((item) => String(item.id) !== String(savedListing.id))]);
+    try {
+      const currentCached = JSON.parse(localStorage.getItem('chronos_listings') || '[]');
+      localStorage.setItem('chronos_listings', JSON.stringify([savedListing, ...currentCached.filter((i: any) => String(i.id) !== String(savedListing.id))]));
+    } catch (e) {
+      console.warn('Could not cache listing in localStorage', e);
+    }
+
+    showToast('Listing Published', `${savedListing.brand} ${savedListing.model} is now live on the marketplace!`, 'success');
+    return savedListing;
   };
 
   const updateListing = (id: string, updates: Partial<WatchListing>) => {
@@ -2427,35 +2500,39 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         if (watch.status !== 'active') return false;
 
         // Search query
-        if (filters.searchQuery.trim()) {
+        if (filters.searchQuery?.trim()) {
           const q = filters.searchQuery.toLowerCase();
-          const matchBrand = watch.brand.toLowerCase().includes(q);
-          const matchModel = watch.model.toLowerCase().includes(q);
-          const matchRef = watch.referenceNumber.toLowerCase().includes(q);
-          const matchDial = watch.dialColor.toLowerCase().includes(q);
-          const matchSeller = watch.sellerName.toLowerCase().includes(q);
+          const matchBrand = (watch.brand || '').toLowerCase().includes(q);
+          const matchModel = (watch.model || '').toLowerCase().includes(q);
+          const matchRef = (watch.referenceNumber || '').toLowerCase().includes(q);
+          const matchDial = (watch.dialColor || '').toLowerCase().includes(q);
+          const matchSeller = (watch.sellerName || '').toLowerCase().includes(q);
           if (!matchBrand && !matchModel && !matchRef && !matchDial && !matchSeller) {
             return false;
           }
         }
 
         // Brands
-        if (filters.brand.length > 0 && !filters.brand.includes(watch.brand)) {
+        if (filters.brand?.length > 0 && !filters.brand.includes(watch.brand)) {
           return false;
         }
 
         // Movement
-        if (filters.movement.length > 0 && !filters.movement.includes(watch.movement)) {
+        if (filters.movement?.length > 0 && !filters.movement.includes(watch.movement)) {
           return false;
         }
 
         // Condition
-        if (filters.condition.length > 0 && !filters.condition.includes(watch.condition)) {
+        if (filters.condition?.length > 0 && !filters.condition.includes(watch.condition)) {
           return false;
         }
 
         // Price range
-        if (watch.price < filters.minPrice || watch.price > filters.maxPrice) {
+        const watchPrice = typeof watch.price === 'number' ? watch.price : (Number(watch.price) || 0);
+        if (filters.minPrice > 0 && watchPrice < filters.minPrice) {
+          return false;
+        }
+        if (filters.maxPrice > 0 && filters.maxPrice < 10000000 && watchPrice > filters.maxPrice) {
           return false;
         }
 
@@ -2464,14 +2541,16 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         if (filters.hasPapers && !watch.hasOriginalPapers) return false;
 
         // Seller rating
-        if (filters.minSellerRating > 0 && watch.sellerRating < filters.minSellerRating) {
+        if (filters.minSellerRating > 0 && (watch.sellerRating || 0) < filters.minSellerRating) {
           return false;
         }
 
-        // Case diameter
+        // Case diameter (only filter if watch explicitly specifies a positive case diameter)
         if (
-          watch.caseDiameter < filters.caseDiameterRange[0] ||
-          watch.caseDiameter > filters.caseDiameterRange[1]
+          watch.caseDiameter > 0 &&
+          filters.caseDiameterRange &&
+          (watch.caseDiameter < filters.caseDiameterRange[0] ||
+            watch.caseDiameter > filters.caseDiameterRange[1])
         ) {
           return false;
         }
@@ -2479,13 +2558,51 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         return true;
       })
       .sort((a, b) => {
-        if (filters.sortBy === 'price-asc') return a.price - b.price;
-        if (filters.sortBy === 'price-desc') return b.price - a.price;
-        if (filters.sortBy === 'rating-desc') return b.sellerRating - a.sellerRating;
-        if (filters.sortBy === 'popular') return b.wishlistCount - a.wishlistCount;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        const priceA = typeof a.price === 'number' ? a.price : (Number(a.price) || 0);
+        const priceB = typeof b.price === 'number' ? b.price : (Number(b.price) || 0);
+        const ratingA = typeof a.sellerRating === 'number' ? a.sellerRating : (Number(a.sellerRating) || 0);
+        const ratingB = typeof b.sellerRating === 'number' ? b.sellerRating : (Number(b.sellerRating) || 0);
+
+        if (filters.sortBy === 'price-asc') return priceA - priceB;
+        if (filters.sortBy === 'price-desc') return priceB - priceA;
+        if (filters.sortBy === 'rating-desc' || filters.sortBy === 'rating') return ratingB - ratingA;
+        if (filters.sortBy === 'year-desc') return (b.year || 0) - (a.year || 0);
+        if (filters.sortBy === 'popular') return (b.wishlistCount || 0) - (a.wishlistCount || 0);
+        if (filters.sortBy === 'featured') return (b.viewsCount || 0) - (a.viewsCount || 0);
+
+        // Default or 'newest': most recently created first
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
       });
   }, [listings, filters]);
+
+  // Convenience Search & Filter accessors
+  const searchQuery = filters.searchQuery || '';
+  const setSearchQuery = useCallback(
+    (query: string) => setFilters((prev) => ({ ...prev, searchQuery: query })),
+    []
+  );
+
+  const selectedBrand = useMemo(() => {
+    if (filters.brand.length === 1) return filters.brand[0];
+    if (filters.brand.length === 0) return 'All';
+    return 'Multiple';
+  }, [filters.brand]);
+
+  const setSelectedBrand = useCallback(
+    (brand: string) =>
+      setFilters((prev) => ({
+        ...prev,
+        brand: brand === 'All' ? [] : [brand]
+      })),
+    []
+  );
+
+  const sortBy = filters.sortBy || 'newest';
+  const setSortBy = useCallback(
+    (newSort: FilterOptions['sortBy']) =>
+      setFilters((prev) => ({ ...prev, sortBy: newSort })),
+    []
+  );
 
   return (
     <MarketplaceContext.Provider
@@ -2572,6 +2689,12 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         filters,
         setFilters,
         resetFilters,
+        searchQuery,
+        setSearchQuery,
+        selectedBrand,
+        setSelectedBrand,
+        sortBy,
+        setSortBy,
         compareList,
         toggleCompare,
         clearCompare,

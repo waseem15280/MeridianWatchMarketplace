@@ -135,7 +135,7 @@ export const WatchCard: React.FC<WatchCardProps> = ({ watch, onSelect }) => {
           {/* Brand & Reference */}
           <div className="flex items-center justify-between text-xs text-[#967139] font-serif font-bold uppercase tracking-wider">
             <span>{watch.brand}</span>
-            <span className="font-mono text-[#78716C] text-[11px]">Ref. {watch.referenceNumber}</span>
+            <span className="font-mono text-[#78716C] text-[11px]">{watch.referenceNumber && watch.referenceNumber !== 'N/A' ? `Ref. ${watch.referenceNumber}` : ''}</span>
           </div>
 
           {/* Model Name */}

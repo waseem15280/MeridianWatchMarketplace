@@ -156,9 +156,9 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({ onCloseMobile }) =
             id="price-range-slider"
             type="range"
             min={0}
-            max={150000}
-            step={2500}
-            value={filters.maxPrice}
+            max={5000000}
+            step={25000}
+            value={Math.min(filters.maxPrice, 5000000)}
             onChange={(e) =>
               setFilters((prev) => ({ ...prev, maxPrice: Number(e.target.value) }))
             }
@@ -187,7 +187,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({ onCloseMobile }) =
                 type="number"
                 value={filters.maxPrice}
                 onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, maxPrice: Number(e.target.value) || 150000 }))
+                  setFilters((prev) => ({ ...prev, maxPrice: Number(e.target.value) || 10000000 }))
                 }
                 placeholder="Max"
                 className="w-full bg-[#FAF8F5] border border-[#D8D0C5] rounded-lg pl-6 pr-2 py-1.5 text-xs text-[#1C1917] focus:outline-none focus:border-[#967139] font-mono"

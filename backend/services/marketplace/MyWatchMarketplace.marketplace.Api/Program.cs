@@ -11,6 +11,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString;
+    options.SerializerOptions.PropertyNameCaseInsensitive = true;
+});
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -259,84 +265,157 @@ listingsApi.MapGet("/{id:int}", async (int id, MarketplaceDbContext db) =>
 });
 
 // 3. POST /api/marketplace/listings - Create listing
-listingsApi.MapPost("/", async (CreateWatchListingRequest request, MarketplaceDbContext db, [FromServices] ICloudinaryService cloudinaryService, CancellationToken cancellationToken) =>
+listingsApi.MapPost("/", async (CreateWatchListingRequest request, MarketplaceDbContext db, [FromServices] ICloudinaryService cloudinaryService, ILogger<Program> logger, CancellationToken cancellationToken) =>
 {
-    var finalImages = new List<string>();
-    if (request.Images != null)
+    try
     {
-        foreach (var img in request.Images)
+        var finalImages = new List<string>();
+        if (request.Images != null)
         {
-            if (string.IsNullOrWhiteSpace(img)) continue;
-            if (img.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
+            foreach (var img in request.Images)
             {
-                var uploadedUrl = await cloudinaryService.UploadImageAsync(img, cancellationToken: cancellationToken);
-                finalImages.Add(uploadedUrl);
-            }
-            else
-            {
-                finalImages.Add(img);
+                if (string.IsNullOrWhiteSpace(img)) continue;
+                if (img.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        var uploadedUrl = await cloudinaryService.UploadImageAsync(img, cancellationToken: cancellationToken);
+                        finalImages.Add(uploadedUrl);
+                    }
+                    catch (Exception imgEx)
+                    {
+                        logger.LogWarning(imgEx, "Could not upload base64 image to Cloudinary, skipping upload");
+                        finalImages.Add(img);
+                    }
+                }
+                else
+                {
+                    finalImages.Add(img);
+                }
             }
         }
+
+        var sellerIdStr = request.SellerId?.ToString()?.Trim();
+
+        var listing = new WatchListing
+        {
+            SellerId = !string.IsNullOrWhiteSpace(sellerIdStr) ? sellerIdStr : "1",
+            SellerName = !string.IsNullOrWhiteSpace(request.SellerName) ? request.SellerName : "Verified Seller",
+            SellerRating = request.SellerRating ?? 0.0,
+            SellerReviewCount = request.SellerReviewCount ?? 0,
+            SellerVerified = request.SellerVerified ?? false,
+            SellerLocation = !string.IsNullOrWhiteSpace(request.SellerLocation) ? request.SellerLocation : "Global",
+            Brand = !string.IsNullOrWhiteSpace(request.Brand) ? request.Brand : "Other",
+            Model = !string.IsNullOrWhiteSpace(request.Model) ? request.Model : "Timepiece",
+            ReferenceNumber = request.ReferenceNumber ?? string.Empty,
+            Year = request.Year ?? DateTime.UtcNow.Year,
+            Price = request.Price ?? 0m,
+            OriginalPrice = request.OriginalPrice,
+            Currency = !string.IsNullOrWhiteSpace(request.Currency) ? request.Currency : "INR",
+            Condition = request.Condition ?? string.Empty,
+            Movement = !string.IsNullOrWhiteSpace(request.Movement) ? request.Movement : "Automatic",
+            CaseMaterial = request.CaseMaterial ?? string.Empty,
+            CaseDiameter = request.CaseDiameter ?? 0.0,
+            DialColor = request.DialColor ?? string.Empty,
+            BraceletMaterial = request.BraceletMaterial ?? string.Empty,
+            WaterResistance = request.WaterResistance,
+            Caliber = request.Caliber,
+            PowerReserve = request.PowerReserve,
+            HasOriginalBox = request.HasOriginalBox ?? false,
+            HasOriginalPapers = request.HasOriginalPapers ?? false,
+            HasServicePapers = request.HasServicePapers,
+            WarrantyUntil = request.WarrantyUntil,
+            Images = finalImages.Count > 0 ? finalImages : (request.Images?.Where(x => !string.IsNullOrWhiteSpace(x)).ToList() ?? new List<string>()),
+            Description = !string.IsNullOrWhiteSpace(request.Description) ? request.Description : string.Empty,
+            ProvenanceNotes = request.ProvenanceNotes,
+            AuthenticityVerified = request.AuthenticityVerified ?? true,
+            Status = "active",
+            CreatedAt = DateTimeOffset.UtcNow,
+            ViewsCount = 1,
+            WishlistCount = 0,
+            IsFeatured = request.IsFeatured ?? false,
+            FromPersonalCollectionId = request.FromPersonalCollectionId
+        };
+
+        if (listing.Images.Count == 0)
+        {
+            listing.Images.Add("https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=80");
+        }
+
+        db.WatchListings.Add(listing);
+        await db.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation("Successfully created listing {ListingId} for seller {SellerId} ({Brand} {Model})", listing.Id, listing.SellerId, listing.Brand, listing.Model);
+
+        return Results.Created($"/api/marketplace/listings/{listing.Id}", new WatchListingDto(
+            listing.Id,
+            listing.SellerId,
+            listing.SellerName,
+            listing.SellerRating,
+            listing.SellerReviewCount,
+            listing.SellerVerified,
+            listing.SellerLocation,
+            listing.Brand,
+            listing.Model,
+            listing.ReferenceNumber,
+            listing.Year,
+            listing.Price,
+            listing.OriginalPrice,
+            listing.Currency,
+            listing.Condition,
+            listing.Movement,
+            listing.CaseMaterial,
+            listing.CaseDiameter,
+            listing.DialColor,
+            listing.BraceletMaterial,
+            listing.WaterResistance,
+            listing.Caliber,
+            listing.PowerReserve,
+            listing.HasOriginalBox,
+            listing.HasOriginalPapers,
+            listing.HasServicePapers,
+            listing.WarrantyUntil,
+            listing.Images,
+            listing.Description,
+            listing.ProvenanceNotes,
+            listing.AuthenticityVerified,
+            listing.Status,
+            listing.CreatedAt,
+            listing.ViewsCount,
+            listing.WishlistCount,
+            listing.IsFeatured,
+            listing.FromPersonalCollectionId
+        ));
     }
-
-    var listing = new WatchListing
+    catch (Exception ex)
     {
-        SellerId = request.SellerId ?? "1",
-        SellerName = request.SellerName ?? "Alexander Vance",
-        SellerRating = request.SellerRating ?? 0.0,
-        SellerReviewCount = request.SellerReviewCount ?? 0,
-        SellerVerified = request.SellerVerified ?? false,
-        SellerLocation = request.SellerLocation ?? "Global",
-        Brand = request.Brand,
-        Model = request.Model,
-        ReferenceNumber = request.ReferenceNumber,
-        Year = request.Year,
-        Price = request.Price,
-        OriginalPrice = request.OriginalPrice,
-        Currency = request.Currency ?? "USD",
-        Condition = request.Condition,
-        Movement = request.Movement,
-        CaseMaterial = request.CaseMaterial,
-        CaseDiameter = request.CaseDiameter,
-        DialColor = request.DialColor,
-        BraceletMaterial = request.BraceletMaterial,
-        WaterResistance = request.WaterResistance,
-        Caliber = request.Caliber,
-        PowerReserve = request.PowerReserve,
-        HasOriginalBox = request.HasOriginalBox,
-        HasOriginalPapers = request.HasOriginalPapers,
-        HasServicePapers = request.HasServicePapers,
-        WarrantyUntil = request.WarrantyUntil,
-        Images = finalImages,
-        Description = request.Description,
-        ProvenanceNotes = request.ProvenanceNotes,
-        AuthenticityVerified = request.AuthenticityVerified,
-        Status = "active",
-        CreatedAt = DateTimeOffset.UtcNow,
-        ViewsCount = 1,
-        WishlistCount = 0,
-        IsFeatured = request.IsFeatured ?? false,
-        FromPersonalCollectionId = request.FromPersonalCollectionId
-    };
-
-    db.WatchListings.Add(listing);
-    await db.SaveChangesAsync(cancellationToken);
-
-    return Results.Created($"/api/marketplace/listings/{listing.Id}", listing);
+        logger.LogError(ex, "Failed to create watch listing");
+        return Results.Problem(detail: ex.Message, statusCode: 500, title: "Failed to create watch listing");
+    }
 });
 
 // 4. PUT /api/marketplace/listings/{id:int} - Update listing
-listingsApi.MapPut("/{id:int}", async (int id, UpdateWatchListingRequest request, MarketplaceDbContext db, [FromServices] ICloudinaryService cloudinaryService, CancellationToken cancellationToken) =>
+listingsApi.MapPut("/{id:int}", async (int id, UpdateWatchListingRequest request, MarketplaceDbContext db, [FromServices] ICloudinaryService cloudinaryService, ILogger<Program> logger, CancellationToken cancellationToken) =>
 {
     var listing = await db.WatchListings.FirstOrDefaultAsync(w => w.Id == id, cancellationToken);
     if (listing is null) return Results.NotFound(new { message = $"Listing {id} not found." });
 
+    if (!string.IsNullOrWhiteSpace(request.Brand)) listing.Brand = request.Brand;
+    if (!string.IsNullOrWhiteSpace(request.Model)) listing.Model = request.Model;
+    if (request.ReferenceNumber is not null) listing.ReferenceNumber = request.ReferenceNumber;
+    if (request.Year.HasValue) listing.Year = request.Year.Value;
     if (request.Price.HasValue) listing.Price = request.Price.Value;
     if (request.OriginalPrice.HasValue) listing.OriginalPrice = request.OriginalPrice.Value;
-    if (!string.IsNullOrWhiteSpace(request.Condition)) listing.Condition = request.Condition;
-    if (!string.IsNullOrWhiteSpace(request.Description)) listing.Description = request.Description;
-    if (!string.IsNullOrWhiteSpace(request.ProvenanceNotes)) listing.ProvenanceNotes = request.ProvenanceNotes;
-    if (request.Images is not null)
+    if (!string.IsNullOrWhiteSpace(request.Currency)) listing.Currency = request.Currency;
+    if (request.Condition is not null) listing.Condition = request.Condition;
+    if (!string.IsNullOrWhiteSpace(request.Movement)) listing.Movement = request.Movement;
+    if (request.CaseMaterial is not null) listing.CaseMaterial = request.CaseMaterial;
+    if (request.CaseDiameter.HasValue) listing.CaseDiameter = request.CaseDiameter.Value;
+    if (request.DialColor is not null) listing.DialColor = request.DialColor;
+    if (request.BraceletMaterial is not null) listing.BraceletMaterial = request.BraceletMaterial;
+    if (request.Description is not null) listing.Description = request.Description;
+    if (request.ProvenanceNotes is not null) listing.ProvenanceNotes = request.ProvenanceNotes;
+    if (request.Images is not null && request.Images.Count > 0)
     {
         var finalImages = new List<string>();
         foreach (var img in request.Images)
@@ -344,8 +423,16 @@ listingsApi.MapPut("/{id:int}", async (int id, UpdateWatchListingRequest request
             if (string.IsNullOrWhiteSpace(img)) continue;
             if (img.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
             {
-                var uploadedUrl = await cloudinaryService.UploadImageAsync(img, cancellationToken: cancellationToken);
-                finalImages.Add(uploadedUrl);
+                try
+                {
+                    var uploadedUrl = await cloudinaryService.UploadImageAsync(img, cancellationToken: cancellationToken);
+                    finalImages.Add(uploadedUrl);
+                }
+                catch (Exception imgEx)
+                {
+                    logger.LogWarning(imgEx, "Could not upload base64 image to Cloudinary, skipping upload");
+                    finalImages.Add(img);
+                }
             }
             else
             {
@@ -358,7 +445,46 @@ listingsApi.MapPut("/{id:int}", async (int id, UpdateWatchListingRequest request
     if (request.IsFeatured.HasValue) listing.IsFeatured = request.IsFeatured.Value;
 
     await db.SaveChangesAsync(cancellationToken);
-    return Results.Ok(listing);
+
+    return Results.Ok(new WatchListingDto(
+        listing.Id,
+        listing.SellerId,
+        listing.SellerName,
+        listing.SellerRating,
+        listing.SellerReviewCount,
+        listing.SellerVerified,
+        listing.SellerLocation,
+        listing.Brand,
+        listing.Model,
+        listing.ReferenceNumber,
+        listing.Year,
+        listing.Price,
+        listing.OriginalPrice,
+        listing.Currency,
+        listing.Condition,
+        listing.Movement,
+        listing.CaseMaterial,
+        listing.CaseDiameter,
+        listing.DialColor,
+        listing.BraceletMaterial,
+        listing.WaterResistance,
+        listing.Caliber,
+        listing.PowerReserve,
+        listing.HasOriginalBox,
+        listing.HasOriginalPapers,
+        listing.HasServicePapers,
+        listing.WarrantyUntil,
+        listing.Images,
+        listing.Description,
+        listing.ProvenanceNotes,
+        listing.AuthenticityVerified,
+        listing.Status,
+        listing.CreatedAt,
+        listing.ViewsCount,
+        listing.WishlistCount,
+        listing.IsFeatured,
+        listing.FromPersonalCollectionId
+    ));
 });
 
 // 5. DELETE /api/marketplace/listings/{id:int}

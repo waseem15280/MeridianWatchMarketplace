@@ -61,15 +61,15 @@ export const SellerDashboard: React.FC = () => {
   // Filter listings by current user, or show all platform listings if manage_seller_hub is active
   const myListings = (canManageAllSellers && viewAllSellers)
     ? listings
-    : listings.filter((l) => l.sellerId === currentUser.id);
+    : listings.filter((l) => String(l.sellerId) === String(currentUser.id));
   const myActiveListings = myListings.filter((l) => l.status === 'active');
-  const myReviews = getSellerReviews(currentUser.id);
+  const myReviews = getSellerReviews(String(currentUser.id));
   const myReceivedOffers = (canManageAllSellers && viewAllSellers)
     ? offers
-    : offers.filter((o) => o.sellerId === currentUser.id);
+    : offers.filter((o) => String(o.sellerId) === String(currentUser.id));
 
   // Unlisted collection watches
-  const unlistedCollection = collection.filter((c) => c.userId === currentUser.id && !c.isListedForSale);
+  const unlistedCollection = collection.filter((c) => String(c.userId) === String(currentUser.id) && !c.isListedForSale);
 
   // Compute stats
   const totalInventoryValue = myActiveListings.reduce((sum, item) => sum + item.price, 0);

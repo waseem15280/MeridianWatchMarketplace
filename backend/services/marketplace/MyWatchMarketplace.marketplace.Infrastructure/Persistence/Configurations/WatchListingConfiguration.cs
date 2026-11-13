@@ -34,7 +34,7 @@ public class WatchListingConfiguration : IEntityTypeConfiguration<WatchListing>
 
         builder.Property(w => w.ReferenceNumber)
             .HasMaxLength(100)
-            .IsRequired();
+            .IsRequired(false);
 
         builder.Property(w => w.Price)
             .HasPrecision(18, 2)
@@ -46,11 +46,11 @@ public class WatchListingConfiguration : IEntityTypeConfiguration<WatchListing>
         builder.Property(w => w.Currency)
             .HasMaxLength(10)
             .IsRequired()
-            .HasDefaultValue("USD");
+            .HasDefaultValue("INR");
 
         builder.Property(w => w.Condition)
             .HasMaxLength(50)
-            .IsRequired();
+            .IsRequired(false);
 
         builder.Property(w => w.Movement)
             .HasMaxLength(50)
@@ -58,15 +58,15 @@ public class WatchListingConfiguration : IEntityTypeConfiguration<WatchListing>
 
         builder.Property(w => w.CaseMaterial)
             .HasMaxLength(100)
-            .IsRequired();
+            .IsRequired(false);
 
         builder.Property(w => w.DialColor)
             .HasMaxLength(50)
-            .IsRequired();
+            .IsRequired(false);
 
         builder.Property(w => w.BraceletMaterial)
             .HasMaxLength(100)
-            .IsRequired();
+            .IsRequired(false);
 
         builder.Property(w => w.WaterResistance)
             .HasMaxLength(50);

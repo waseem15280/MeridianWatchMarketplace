@@ -223,10 +223,10 @@ export const ExploreView: React.FC = () => {
                 onChange={(e) => setSortBy(e.target.value as any)}
                 className="bg-[#FAF8F5] border border-[#D8D0C5] text-[#1C1917] text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#967139]"
               >
+                <option value="newest">Recently Listed (Newest)</option>
                 <option value="featured">Featured & Verified</option>
                 <option value="price-asc">Price: Low to High</option>
                 <option value="price-desc">Price: High to Low</option>
-                <option value="newest">Recently Listed</option>
                 <option value="year-desc">Year: Modern to Vintage</option>
                 <option value="rating">Top Seller Rating</option>
               </select>
