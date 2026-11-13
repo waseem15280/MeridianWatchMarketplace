@@ -24,9 +24,6 @@ const MarketplaceApp: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F5F2ED] text-[#1C1917] flex flex-col font-sans selection:bg-[#C5A880]/30 selection:text-[#1C1917]">
-      {/* Toast Notifications */}
-      <ToastContainer />
-
       {/* Primary Header */}
       <Header />
 
@@ -90,6 +87,9 @@ const MarketplaceApp: React.FC = () => {
       {isFeatureEnabled('ordersAndOffers') && <CheckoutModal />}
       {isFeatureEnabled('ordersAndOffers') && <LeaveReviewModal />}
       <CompareDrawer />
+
+      {/* Toast Notifications (Rendered last with high z-index to overlay all modals) */}
+      <ToastContainer />
     </div>
   );
 };

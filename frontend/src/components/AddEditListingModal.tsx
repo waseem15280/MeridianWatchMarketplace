@@ -229,8 +229,8 @@ export const AddEditListingModal: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!model.trim() || !referenceNumber.trim()) {
-      showToast('Missing Fields', 'Please fill in Watch Model and Reference Number', 'warning');
+    if (!model.trim()) {
+      showToast('Missing Fields', 'Please fill in Watch Model', 'warning');
       return;
     }
 
@@ -298,7 +298,7 @@ export const AddEditListingModal: React.FC = () => {
           provenanceNotes: provenanceNotes.trim() || undefined,
           images: verifiedUrls
         });
-        showToast('Listing Updated', 'Your timepiece listing and Cloudinary photography have been updated.', 'success');
+        showToast('Listing Updated', 'Your timepiece listing has been updated.', 'success');
       } else {
         await createListing({
           brand,
@@ -321,7 +321,7 @@ export const AddEditListingModal: React.FC = () => {
           authenticityVerified: true,
           status: 'active'
         });
-        showToast('Listing Published', 'Your timepiece has been published to the marketplace with Cloudinary images.', 'success');
+        showToast('Listing Published', 'Your timepiece has been published to the marketplace.', 'success');
       }
 
       // Cleanup local blob URLs
@@ -334,7 +334,7 @@ export const AddEditListingModal: React.FC = () => {
       setIsAddListingOpen(false);
       setEditingListing(null);
     } catch (err: any) {
-      console.error('Error saving listing with Cloudinary:', err);
+      console.error('Error saving watch image with external source:', err);
       showToast('Upload Error', err?.message || 'Failed to upload images or save listing. Please try again.', 'error');
     } finally {
       setIsUploading(false);
@@ -700,7 +700,7 @@ export const AddEditListingModal: React.FC = () => {
                   Upload up to {5 - imageItems.length} more {imageItems.length === 0 ? 'photos' : 'photo(s)'} (JPG, PNG, WEBP, GIF, max 10MB each)
                 </div>
                 <div className="text-[10px] text-[#A8A29E] mt-1 italic">
-                  Photos will be stored on Cloudinary upon submission. The first photo acts as the primary cover.
+                  Photos will be stored upon submission. The first photo acts as the primary cover.
                 </div>
               </div>
             )}
@@ -758,7 +758,7 @@ export const AddEditListingModal: React.FC = () => {
               {isUploading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin text-[#C5A880]" />
-                  <span>Uploading to Cloudinary...</span>
+                  <span>Uploading watch image...</span>
                 </>
               ) : (
                 <>
