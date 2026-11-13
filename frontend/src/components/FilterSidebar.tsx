@@ -99,7 +99,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({ onCloseMobile }) =
         <div className="flex items-center gap-2">
           <SlidersHorizontal className="w-4 h-4 text-[#967139]" />
           <h3 className="text-xs font-serif font-bold uppercase tracking-wider text-[#1C1917]">
-            Horology Filters
+            Quick Filters
           </h3>
         </div>
 
