@@ -10,6 +10,8 @@ import { OrdersOffersView } from './components/OrdersOffersView';
 import { ServiceCenterView } from './components/ServiceCenterView';
 import { UserManagementView } from './components/UserManagementView';
 import { RoleManagementView } from './components/RoleManagementView';
+import { SellerOnboardingView } from './components/SellerOnboardingView';
+import { SellerDecisionModal } from './components/SellerDecisionModal';
 import { WatchDetailModal } from './components/WatchDetailModal';
 import { SellerProfileModal } from './components/SellerProfileModal';
 import { AddEditListingModal } from './components/AddEditListingModal';
@@ -37,6 +39,7 @@ const MarketplaceApp: React.FC = () => {
         {activeTab === 'service-center' && isTabEnabled('service-center') && <ServiceCenterView />}
         {activeTab === 'user-management' && isTabEnabled('user-management') && <UserManagementView />}
         {activeTab === 'role-management' && isTabEnabled('role-management') && <RoleManagementView />}
+        {activeTab === 'seller-onboarding' && isTabEnabled('seller-onboarding') && <SellerOnboardingView />}
         {!isTabEnabled(activeTab) && (
           <div className="py-20 text-center">
             <h3 className="text-lg font-bold text-[#1C1917]">Feature Unavailable</h3>
@@ -87,6 +90,9 @@ const MarketplaceApp: React.FC = () => {
       {isFeatureEnabled('ordersAndOffers') && <CheckoutModal />}
       {isFeatureEnabled('ordersAndOffers') && <LeaveReviewModal />}
       <CompareDrawer />
+
+      {/* Mandatory Seller Decision Modal (Explicit close required - no toaster) */}
+      <SellerDecisionModal />
 
       {/* Toast Notifications (Rendered last with high z-index to overlay all modals) */}
       <ToastContainer />

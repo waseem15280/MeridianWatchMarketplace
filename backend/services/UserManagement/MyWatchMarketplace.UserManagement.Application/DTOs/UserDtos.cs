@@ -113,3 +113,55 @@ public record ChangePasswordResponse(
     bool Success,
     string Message
 );
+
+public record SellerOnboardingRequestDto(
+    int Id,
+    string Type,
+    int? UserLoginId,
+    string Username,
+    string Email,
+    string DisplayName,
+    string? Location,
+    string? Bio,
+    string Status,
+    DateTimeOffset SubmittedAt,
+    DateTimeOffset? ReviewedAt = null,
+    string? ReviewedBy = null,
+    string? RejectionReason = null,
+    bool UserNotified = false
+);
+
+public record CreateSellerOnboardingRequest(
+    string Type,
+    int? UserLoginId,
+    string Username,
+    string Email,
+    string? Password,
+    string DisplayName,
+    string? Location = null,
+    string? Bio = null
+);
+
+public record ApproveSellerRequest(
+    string? AdminUsername = null,
+    string? Note = null
+);
+
+public record RejectSellerRequest(
+    string Reason,
+    string? AdminUsername = null
+);
+
+public record SellerDecisionNotificationDto(
+    int Id,
+    int RequestId,
+    int? UserLoginId,
+    string Username,
+    string Email,
+    string Status,
+    string DisplayName,
+    string Message,
+    string? RejectionReason,
+    DateTimeOffset Timestamp,
+    bool Acknowledged
+);

@@ -17,7 +17,9 @@ import {
   PERMISSION_METADATA,
   ServiceRequest,
   ServiceWorkflowState,
-  ServiceRequestAuditLog
+  ServiceRequestAuditLog,
+  SellerOnboardingRequest,
+  SellerDecisionNotification
 } from '../types';
 import {
   FeatureFlags,
@@ -37,7 +39,8 @@ import {
   TransitionRequestPayload,
   checkGatewayHealth,
   RegisterRequest,
-  AdminCreateUserRequest
+  AdminCreateUserRequest,
+  emailApi
 } from '../services/api';
 
 export const GUEST_LOGIN: UserLogin = {
@@ -167,6 +170,25 @@ interface MarketplaceContextType {
   deleteUserPersona: (personaId: string | number) => Promise<boolean>;
   createPersonaForUser: (loginId: string | number, role: UserRole, name: string, bio?: string) => Promise<boolean>;
   adminCreateUser: (data: AdminCreateUserRequest) => Promise<boolean>;
+
+  // Seller Onboarding & Verification Atelier (Admin Supervisory)
+  sellerOnboardingRequests: SellerOnboardingRequest[];
+  pendingSellerRequestsCount: number;
+  loadSellerOnboardingRequests: () => Promise<void>;
+  submitSellerOnboardingRequest: (data: {
+    type: 'new_user' | 'new_persona';
+    userLoginId?: string | number;
+    username: string;
+    email: string;
+    password?: string;
+    displayName: string;
+    location?: string;
+    bio?: string;
+  }) => Promise<boolean>;
+  approveSellerRequest: (id: string | number, note?: string) => Promise<boolean>;
+  rejectSellerRequest: (id: string | number, reason: string) => Promise<boolean>;
+  pendingSellerDecision: SellerDecisionNotification | null;
+  dismissSellerDecision: () => Promise<void>;
 
   // Dynamic Role & Permission Management (Admin only)
   roles: RoleDefinition[];
@@ -690,6 +712,80 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
+  // ================= SELLER ONBOARDING & VERIFICATION STATE =================
+  const DEFAULT_SELLER_REQUESTS: SellerOnboardingRequest[] = [
+    {
+      id: 'req-1',
+      type: 'new_user',
+      username: 'geneva_horology',
+      email: 'contact@genevahorology.ch',
+      displayName: 'Geneva Horology Gallery',
+      location: 'Geneva, Switzerland',
+      bio: 'Specialized in vintage Patek Philippe and Audemars Piguet certified timepieces since 1998.',
+      status: 'pending',
+      submittedAt: new Date(Date.now() - 18 * 3600000).toISOString(),
+      userNotified: false
+    },
+    {
+      id: 'req-2',
+      type: 'new_persona',
+      userLoginId: 2,
+      username: 'alex_vance',
+      email: 'alex@meridian.com',
+      displayName: 'Vance Chrono Atelier',
+      location: 'London, UK',
+      bio: 'Curated collection of 1960s-1970s sports chronographs and tool watches.',
+      status: 'pending',
+      submittedAt: new Date(Date.now() - 6 * 3600000).toISOString(),
+      userNotified: false
+    }
+  ];
+
+  const [sellerOnboardingRequests, setSellerOnboardingRequests] = useState<SellerOnboardingRequest[]>(() => {
+    const saved = localStorage.getItem('chronos_seller_requests');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {}
+    }
+    return DEFAULT_SELLER_REQUESTS;
+  });
+
+  const [sellerNotifications, setSellerNotifications] = useState<SellerDecisionNotification[]>(() => {
+    const saved = localStorage.getItem('chronos_seller_notifications');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
+  });
+
+  const [pendingSellerDecision, setPendingSellerDecision] = useState<SellerDecisionNotification | null>(null);
+
+  const pendingSellerRequestsCount = useMemo(() => {
+    return sellerOnboardingRequests.filter((r) => r.status === 'pending').length;
+  }, [sellerOnboardingRequests]);
+
+  // Check for pending unacknowledged seller decisions upon login / session change
+  useEffect(() => {
+    if (!isLoggedIn || !currentLogin.username || currentLogin.username === 'guest') {
+      setPendingSellerDecision(null);
+      return;
+    }
+    const unacknowledged = sellerNotifications.find(
+      (n) =>
+        !n.acknowledged &&
+        (n.username.toLowerCase() === currentLogin.username.toLowerCase() ||
+         n.email.toLowerCase() === currentLogin.email.toLowerCase())
+    );
+    if (unacknowledged) {
+      setPendingSellerDecision(unacknowledged);
+    }
+  }, [currentLogin.username, currentLogin.email, isLoggedIn, sellerNotifications]);
+
   const promptLogin = (message?: string, watchIdToWishlist?: string) => {
     if (watchIdToWishlist) {
       setPendingWishlistId(watchIdToWishlist);
@@ -1063,6 +1159,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
           return hasPermission('manage_users') && isFeatureEnabled('userManagement');
         case 'role-management':
           return hasPermission('manage_roles') && isFeatureEnabled('userManagement');
+        case 'seller-onboarding':
+          return (hasPermission('manage_users') || isAdmin) && isFeatureEnabled('userManagement');
         default:
           return isTabAccessible(tab, isAdmin, isGuest);
       }
@@ -1285,9 +1383,15 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const registerUser = async (data: RegisterRequest): Promise<boolean> => {
+    const isSellerRoleRequested = data.role === 'seller';
+    const effectiveData: RegisterRequest = {
+      ...data,
+      role: isSellerRoleRequested ? ('buyer' as UserRole) : data.role
+    };
+
     if (isGatewayConnected) {
       try {
-        const res = await userManagementApi.register(data);
+        const res = await userManagementApi.register(effectiveData);
         if (res && res.login) {
           setAvailableLogins((prev) => {
             const exists = prev.some((l) => l.id === res.login.id);
@@ -1313,7 +1417,30 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
             localStorage.setItem('chronos_current_user_id', String(activeAccId));
           }
 
-          showToast('Registration Successful', `Welcome to The Heritage Club, @${res.login.username}! Active persona: ${data.role.toUpperCase()}`, 'success');
+          if (isSellerRoleRequested) {
+            // Queue seller onboarding application for administrative review
+            await submitSellerOnboardingRequest({
+              type: 'new_user',
+              userLoginId: res.login.id,
+              username: data.username,
+              email: data.email,
+              displayName: data.accountName,
+              location: data.location,
+              bio: data.bio
+            });
+
+            showToast(
+              'Seller Application Submitted',
+              `Welcome to The Heritage Club, @${res.login.username}! Your Seller application has been queued for admin verification. You will be notified via email and upon your next login.`,
+              'success'
+            );
+          } else {
+            showToast(
+              'Registration Successful',
+              `Welcome to The Heritage Club, @${res.login.username}! Active persona: ${data.role.toUpperCase()}`,
+              'success'
+            );
+          }
           return true;
         }
       } catch (err: any) {
@@ -1338,17 +1465,17 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       userLoginId: fallbackLoginId,
       name: data.accountName.trim(),
       email: data.email.trim(),
-      role: data.role,
+      role: isSellerRoleRequested ? 'buyer' : data.role,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
       location: data.location || 'Global',
       memberSince: new Date().getFullYear().toString(),
-      verifiedDealer: data.role === 'seller',
-      bio: data.bio || `${data.role.toUpperCase()} profile persona for ${data.accountName}`,
+      verifiedDealer: false,
+      bio: data.bio || `Horologist profile persona for ${data.accountName}`,
       rating: 0,
       reviewCount: 0,
       totalSalesCount: 0,
       responseRate: '100%',
-      avgShipTime: data.role === 'seller' ? 'Within 24 hours' : 'N/A',
+      avgShipTime: 'N/A',
       isDefault: true
     };
     newLogin.accounts = [newAccount];
@@ -1369,7 +1496,24 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setCurrentUserId(fallbackAccountId);
     localStorage.setItem('chronos_current_user_id', fallbackAccountId);
 
-    showToast('Account Created (Offline)', `Registered @${data.username} locally as ${data.role.toUpperCase()}`, 'success');
+    if (isSellerRoleRequested) {
+      await submitSellerOnboardingRequest({
+        type: 'new_user',
+        userLoginId: fallbackLoginId,
+        username: data.username,
+        email: data.email,
+        displayName: data.accountName,
+        location: data.location,
+        bio: data.bio
+      });
+      showToast(
+        'Seller Application Submitted',
+        `Registered @${data.username}! Your Seller application has been queued for admin verification. You will be notified by email and upon next login.`,
+        'success'
+      );
+    } else {
+      showToast('Account Created (Offline)', `Registered @${data.username} locally as ${data.role.toUpperCase()}`, 'success');
+    }
     return true;
   };
 
@@ -1404,6 +1548,23 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const createUserAccount = async (role: UserRole, name: string, bio?: string): Promise<UserAccount> => {
+    if (role === 'seller') {
+      await submitSellerOnboardingRequest({
+        type: 'new_persona',
+        userLoginId: currentLogin.id,
+        username: currentLogin.username,
+        email: currentLogin.email,
+        displayName: name.trim(),
+        bio
+      });
+      showToast(
+        'Seller Persona Application Submitted',
+        `Your application to create a Seller persona ("${name.trim()}") has been queued for THC Admin verification. You will be notified via email and upon next login.`,
+        'success'
+      );
+      return currentUser;
+    }
+
     const newAccount: UserAccount = {
       id: 'account-' + Date.now().toString(36),
       userLoginId: currentLogin.id,
@@ -1771,6 +1932,285 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       showToast('Error', msg, 'error');
       return false;
     }
+  };
+
+  // ================= SELLER ONBOARDING HANDLERS =================
+  const loadSellerOnboardingRequests = useCallback(async () => {
+    if (isGatewayConnected) {
+      try {
+        const res = await userManagementApi.getSellerOnboardingRequests();
+        if (Array.isArray(res) && res.length > 0) {
+          setSellerOnboardingRequests(res);
+          localStorage.setItem('chronos_seller_requests', JSON.stringify(res));
+        }
+      } catch (err) {
+        console.warn('Could not fetch seller onboarding requests from gateway:', err);
+      }
+    }
+  }, [isGatewayConnected]);
+
+  const submitSellerOnboardingRequest = async (data: {
+    type: 'new_user' | 'new_persona';
+    userLoginId?: string | number;
+    username: string;
+    email: string;
+    password?: string;
+    displayName: string;
+    location?: string;
+    bio?: string;
+  }): Promise<boolean> => {
+    const newReq: SellerOnboardingRequest = {
+      id: 'req-' + Date.now().toString(36),
+      type: data.type,
+      userLoginId: data.userLoginId,
+      username: data.username.trim(),
+      email: data.email.trim(),
+      displayName: data.displayName.trim(),
+      location: data.location?.trim() || 'Global',
+      bio: data.bio?.trim() || `Seller application for ${data.displayName.trim()}`,
+      status: 'pending',
+      submittedAt: new Date().toISOString(),
+      userNotified: false
+    };
+
+    setSellerOnboardingRequests((prev) => {
+      const updated = [newReq, ...prev];
+      localStorage.setItem('chronos_seller_requests', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (isGatewayConnected) {
+      try {
+        await userManagementApi.submitSellerOnboardingRequest(data);
+      } catch (err) {
+        console.warn('Backend submit seller request error:', err);
+      }
+    }
+
+    return true;
+  };
+
+  const approveSellerRequest = async (id: string | number, note?: string): Promise<boolean> => {
+    try {
+      const target = sellerOnboardingRequests.find((r) => String(r.id) === String(id));
+      if (!target) return false;
+
+      const updatedRequest: SellerOnboardingRequest = {
+        ...target,
+        status: 'approved',
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: currentLogin.username || 'admin',
+        userNotified: false
+      };
+
+      setSellerOnboardingRequests((prev) => {
+        const updated = prev.map((r) => (String(r.id) === String(id) ? updatedRequest : r));
+        localStorage.setItem('chronos_seller_requests', JSON.stringify(updated));
+        return updated;
+      });
+
+      // Provision the seller persona account
+      const sellerAccount: UserAccount = {
+        id: 'acc-' + Date.now().toString(36),
+        userLoginId: target.userLoginId || target.username,
+        name: target.displayName,
+        email: target.email,
+        role: 'seller',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
+        location: target.location || 'Geneva, Switzerland',
+        memberSince: new Date().getFullYear().toString(),
+        verifiedDealer: true,
+        bio: target.bio || `Certified THC Luxury Timepiece Dealer: ${target.displayName}`,
+        rating: 5.0,
+        reviewCount: 0,
+        totalSalesCount: 0,
+        responseRate: '100%',
+        avgShipTime: 'Within 24 hours',
+        isDefault: false
+      };
+
+      setAccounts((prev) => [...prev, sellerAccount]);
+
+      // If user is in allLogins, update their accounts list
+      setAllLogins((prev) =>
+        prev.map((l) => {
+          if (
+            (target.userLoginId && String(l.id) === String(target.userLoginId)) ||
+            l.username.toLowerCase() === target.username.toLowerCase() ||
+            l.email.toLowerCase() === target.email.toLowerCase()
+          ) {
+            return {
+              ...l,
+              accounts: [...(l.accounts || []), sellerAccount]
+            };
+          }
+          return l;
+        })
+      );
+
+      // Create decision notification for the user's next login session
+      const notification: SellerDecisionNotification = {
+        id: 'notif-' + Date.now().toString(36),
+        requestId: target.id,
+        userLoginId: target.userLoginId,
+        username: target.username,
+        email: target.email,
+        status: 'approved',
+        displayName: target.displayName,
+        message:
+          note ||
+          'Congratulations! Your THC Verified Seller application has been reviewed and officially approved by THC Administration. Your Seller persona is now active, granting you full access to Seller Hub and timepiece listing capabilities.',
+        timestamp: new Date().toISOString(),
+        acknowledged: false
+      };
+
+      setSellerNotifications((prev) => {
+        const updated = [...prev, notification];
+        localStorage.setItem('chronos_seller_notifications', JSON.stringify(updated));
+        return updated;
+      });
+
+      // Dispatch Email Notification via EmailService
+      try {
+        await emailApi.sendEmail(
+          target.email,
+          'THC Concierge: Your Seller Application Has Been Approved!',
+          `<div style="font-family:serif; color:#1C1917; padding:24px; background:#FAF8F5; border:1px solid #DDD6CB; border-radius:16px;">
+            <h2 style="color:#C5A059; margin-top:0;">The Heritage Club — Seller Status Approved</h2>
+            <p>Dear <strong>${target.displayName}</strong>,</p>
+            <p>We are delighted to inform you that your application to become a verified seller on <strong>The Heritage Club</strong> has been approved.</p>
+            <p style="background:#EDE8E0; padding:12px; border-radius:8px;">${notification.message}</p>
+            <p>You may now sign in to access your Seller Hub and list luxury certified timepieces for collectors worldwide.</p>
+            <p style="margin-top:24px; font-size:12px; color:#78716C;">The Heritage Club Concierge Atelier</p>
+          </div>`
+        );
+      } catch (err) {
+        console.warn('Could not dispatch approval email:', err);
+      }
+
+      if (isGatewayConnected) {
+        try {
+          await userManagementApi.approveSellerOnboardingRequest(id, {
+            adminUsername: currentLogin.username,
+            note
+          });
+        } catch (err) {
+          console.warn('Gateway approve seller request error:', err);
+        }
+      }
+
+      showToast('Seller Approved', `Approved seller onboarding for ${target.displayName}. Email notification dispatched.`, 'success');
+      return true;
+    } catch (err: any) {
+      console.error('Approve seller request failed:', err);
+      showToast('Error', 'Failed to approve seller request.', 'error');
+      return false;
+    }
+  };
+
+  const rejectSellerRequest = async (id: string | number, reason: string): Promise<boolean> => {
+    try {
+      const target = sellerOnboardingRequests.find((r) => String(r.id) === String(id));
+      if (!target) return false;
+
+      const trimmedReason = reason.trim() || 'Application did not meet current dealer qualification criteria.';
+
+      const updatedRequest: SellerOnboardingRequest = {
+        ...target,
+        status: 'rejected',
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: currentLogin.username || 'admin',
+        rejectionReason: trimmedReason,
+        userNotified: false
+      };
+
+      setSellerOnboardingRequests((prev) => {
+        const updated = prev.map((r) => (String(r.id) === String(id) ? updatedRequest : r));
+        localStorage.setItem('chronos_seller_requests', JSON.stringify(updated));
+        return updated;
+      });
+
+      // Create decision notification for the user's next login session
+      const notification: SellerDecisionNotification = {
+        id: 'notif-' + Date.now().toString(36),
+        requestId: target.id,
+        userLoginId: target.userLoginId,
+        username: target.username,
+        email: target.email,
+        status: 'rejected',
+        displayName: target.displayName,
+        message: 'Thank you for your interest in becoming a verified seller on The Heritage Club. After administrative review, we regret to inform you that your seller application could not be approved at this time.',
+        rejectionReason: trimmedReason,
+        timestamp: new Date().toISOString(),
+        acknowledged: false
+      };
+
+      setSellerNotifications((prev) => {
+        const updated = [...prev, notification];
+        localStorage.setItem('chronos_seller_notifications', JSON.stringify(updated));
+        return updated;
+      });
+
+      // Dispatch Email Notification via EmailService
+      try {
+        await emailApi.sendEmail(
+          target.email,
+          'THC Concierge: Notice of Determination on Seller Application',
+          `<div style="font-family:serif; color:#1C1917; padding:24px; background:#FAF8F5; border:1px solid #DDD6CB; border-radius:16px;">
+            <h2 style="color:#85642F; margin-top:0;">The Heritage Club — Seller Application Update</h2>
+            <p>Dear <strong>${target.displayName}</strong>,</p>
+            <p>Thank you for submitting your application to join The Heritage Club as a verified seller.</p>
+            <p>After administrative review, our concierge team is unable to approve your application at this time.</p>
+            <p style="background:#FFF1F2; border:1px solid #FECDD3; padding:12px; border-radius:8px; color:#9F1239;">
+              <strong>Reason for Determination:</strong> ${trimmedReason}
+            </p>
+            <p>You are welcome to continue enjoying our marketplace, watch collection vault, and enthusiast services as a member.</p>
+            <p style="margin-top:24px; font-size:12px; color:#78716C;">The Heritage Club Concierge Atelier</p>
+          </div>`
+        );
+      } catch (err) {
+        console.warn('Could not dispatch rejection email:', err);
+      }
+
+      if (isGatewayConnected) {
+        try {
+          await userManagementApi.rejectSellerOnboardingRequest(id, {
+            reason: trimmedReason,
+            adminUsername: currentLogin.username
+          });
+        } catch (err) {
+          console.warn('Gateway reject seller request error:', err);
+        }
+      }
+
+      showToast('Application Rejected', `Declined seller application for ${target.displayName}. Email notice dispatched.`, 'info');
+      return true;
+    } catch (err: any) {
+      console.error('Reject seller request failed:', err);
+      showToast('Error', 'Failed to reject seller request.', 'error');
+      return false;
+    }
+  };
+
+  const dismissSellerDecision = async () => {
+    if (!pendingSellerDecision) return;
+    const notifId = pendingSellerDecision.id;
+
+    setSellerNotifications((prev) => {
+      const updated = prev.map((n) => (n.id === notifId ? { ...n, acknowledged: true } : n));
+      localStorage.setItem('chronos_seller_notifications', JSON.stringify(updated));
+      return updated;
+    });
+
+    if (isGatewayConnected && typeof notifId === 'number') {
+      try {
+        await userManagementApi.dismissSellerNotification(notifId);
+      } catch (err) {
+        console.warn('Gateway dismiss notification error:', err);
+      }
+    }
+
+    setPendingSellerDecision(null);
   };
 
   // Dynamic Role & Permission Management Handlers
@@ -2739,6 +3179,14 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         deleteUserPersona,
         createPersonaForUser,
         adminCreateUser,
+        sellerOnboardingRequests,
+        pendingSellerRequestsCount,
+        loadSellerOnboardingRequests,
+        submitSellerOnboardingRequest,
+        approveSellerRequest,
+        rejectSellerRequest,
+        pendingSellerDecision,
+        dismissSellerDecision,
         roles,
         createRole,
         updateRolePermissions,

@@ -1,5 +1,5 @@
 import { request } from './client';
-import { UserAccount, UserLogin, UserRole } from '../../types';
+import { UserAccount, UserLogin, UserRole, SellerOnboardingRequest, SellerDecisionNotification } from '../../types';
 
 export interface LoginResponse {
   token: string;
@@ -183,6 +183,75 @@ export const userManagementApi = {
   deleteUserLogin: async (loginId: string | number): Promise<void> => {
     return request<void>(`/api/users/logins/${encodeURIComponent(loginId)}`, {
       method: 'DELETE'
+    });
+  },
+
+  // GET /api/users/seller-onboarding/requests
+  getSellerOnboardingRequests: async (status?: string): Promise<SellerOnboardingRequest[]> => {
+    const qs = status && status !== 'all' ? `?status=${encodeURIComponent(status)}` : '';
+    return request<SellerOnboardingRequest[]>(`/api/users/seller-onboarding/requests${qs}`);
+  },
+
+  // POST /api/users/seller-onboarding/requests
+  submitSellerOnboardingRequest: async (payload: {
+    type: 'new_user' | 'new_persona';
+    userLoginId?: string | number;
+    username: string;
+    email: string;
+    password?: string;
+    displayName: string;
+    location?: string;
+    bio?: string;
+  }): Promise<SellerOnboardingRequest> => {
+    return request<SellerOnboardingRequest>('/api/users/seller-onboarding/requests', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  // POST /api/users/seller-onboarding/requests/{id}/approve
+  approveSellerOnboardingRequest: async (
+    id: string | number,
+    payload?: { adminUsername?: string; note?: string }
+  ): Promise<{ success: boolean; request: SellerOnboardingRequest; notification: SellerDecisionNotification }> => {
+    return request<{ success: boolean; request: SellerOnboardingRequest; notification: SellerDecisionNotification }>(
+      `/api/users/seller-onboarding/requests/${encodeURIComponent(id)}/approve`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload || {})
+      }
+    );
+  },
+
+  // POST /api/users/seller-onboarding/requests/{id}/reject
+  rejectSellerOnboardingRequest: async (
+    id: string | number,
+    payload: { reason: string; adminUsername?: string }
+  ): Promise<{ success: boolean; request: SellerOnboardingRequest; notification: SellerDecisionNotification }> => {
+    return request<{ success: boolean; request: SellerOnboardingRequest; notification: SellerDecisionNotification }>(
+      `/api/users/seller-onboarding/requests/${encodeURIComponent(id)}/reject`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }
+    );
+  },
+
+  // GET /api/users/seller-onboarding/notifications/{usernameOrEmail}
+  getSellerNotification: async (usernameOrEmail: string): Promise<SellerDecisionNotification | null> => {
+    try {
+      return await request<SellerDecisionNotification>(
+        `/api/users/seller-onboarding/notifications/${encodeURIComponent(usernameOrEmail)}`
+      );
+    } catch {
+      return null;
+    }
+  },
+
+  // POST /api/users/seller-onboarding/notifications/{id}/dismiss
+  dismissSellerNotification: async (id: string | number): Promise<void> => {
+    await request<void>(`/api/users/seller-onboarding/notifications/${encodeURIComponent(id)}/dismiss`, {
+      method: 'POST'
     });
   }
 };

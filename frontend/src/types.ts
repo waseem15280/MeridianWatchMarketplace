@@ -461,4 +461,38 @@ export interface ServiceRequest {
   auditLogs?: ServiceRequestAuditLog[];
 }
 
-export type ActiveTab = 'explore' | 'seller-hub' | 'collection' | 'wishlist' | 'orders' | 'offers' | 'service-center' | 'user-management' | 'role-management';
+export type ActiveTab = 'explore' | 'seller-hub' | 'collection' | 'wishlist' | 'orders' | 'offers' | 'service-center' | 'user-management' | 'role-management' | 'seller-onboarding';
+
+export type SellerOnboardingType = 'new_user' | 'new_persona';
+export type SellerOnboardingStatus = 'pending' | 'approved' | 'rejected';
+
+export interface SellerOnboardingRequest {
+  id: string | number;
+  type: SellerOnboardingType;
+  userLoginId?: string | number;
+  username: string;
+  email: string;
+  displayName: string;
+  location?: string;
+  bio?: string;
+  status: SellerOnboardingStatus;
+  submittedAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  rejectionReason?: string;
+  userNotified?: boolean;
+}
+
+export interface SellerDecisionNotification {
+  id: string | number;
+  requestId: string | number;
+  userLoginId?: string | number;
+  username: string;
+  email: string;
+  status: 'approved' | 'rejected';
+  displayName: string;
+  message: string;
+  rejectionReason?: string;
+  timestamp: string;
+  acknowledged: boolean;
+}

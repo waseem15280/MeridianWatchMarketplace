@@ -566,6 +566,235 @@ userApi.MapDelete("/logins/{id:int}", async (int id, UserManagementDbContext db)
     return Results.NoContent();
 });
 
+// ================= SELLER ONBOARDING & VERIFICATION STORE =================
+var sellerRequests = new List<SellerOnboardingRequestDto>
+{
+    new(
+        Id: 1,
+        Type: "new_user",
+        UserLoginId: null,
+        Username: "geneva_horology",
+        Email: "contact@genevahorology.ch",
+        DisplayName: "Geneva Horology Gallery",
+        Location: "Geneva, Switzerland",
+        Bio: "Specialized in vintage Patek Philippe and Audemars Piguet certified timepieces since 1998.",
+        Status: "pending",
+        SubmittedAt: DateTimeOffset.UtcNow.AddHours(-18),
+        UserNotified: false
+    ),
+    new(
+        Id: 2,
+        Type: "new_persona",
+        UserLoginId: 2,
+        Username: "alex_vance",
+        Email: "alex@meridian.com",
+        DisplayName: "Vance Chrono Atelier",
+        Location: "London, UK",
+        Bio: "Curated collection of 1960s-1970s sports chronographs and tool watches.",
+        Status: "pending",
+        SubmittedAt: DateTimeOffset.UtcNow.AddHours(-6),
+        UserNotified: false
+    )
+};
+
+var sellerNotifications = new List<SellerDecisionNotificationDto>();
+var sellerRequestIdCounter = 3;
+var sellerNotificationIdCounter = 1;
+
+// 16. GET /api/users/seller-onboarding/requests
+userApi.MapGet("/seller-onboarding/requests", (string? status) =>
+{
+    var result = string.IsNullOrWhiteSpace(status) || status.ToLower() == "all"
+        ? sellerRequests
+        : sellerRequests.Where(r => r.Status.Equals(status, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    return Results.Ok(result.OrderByDescending(r => r.SubmittedAt));
+});
+
+// 17. POST /api/users/seller-onboarding/requests
+userApi.MapPost("/seller-onboarding/requests", (CreateSellerOnboardingRequest request) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.DisplayName))
+    {
+        return Results.BadRequest(new { message = "Username, Email, and Display Name are required." });
+    }
+
+    var newId = Interlocked.Increment(ref sellerRequestIdCounter);
+    var newRequest = new SellerOnboardingRequestDto(
+        Id: newId,
+        Type: request.Type,
+        UserLoginId: request.UserLoginId,
+        Username: request.Username.Trim(),
+        Email: request.Email.Trim(),
+        DisplayName: request.DisplayName.Trim(),
+        Location: request.Location?.Trim(),
+        Bio: request.Bio?.Trim(),
+        Status: "pending",
+        SubmittedAt: DateTimeOffset.UtcNow,
+        UserNotified: false
+    );
+
+    sellerRequests.Add(newRequest);
+    return Results.Created($"/api/users/seller-onboarding/requests/{newId}", newRequest);
+});
+
+// 18. POST /api/users/seller-onboarding/requests/{id:int}/approve
+userApi.MapPost("/seller-onboarding/requests/{id:int}/approve", async (int id, ApproveSellerRequest request, UserManagementDbContext db) =>
+{
+    var target = sellerRequests.FirstOrDefault(r => r.Id == id);
+    if (target is null) return Results.NotFound(new { message = "Seller request not found." });
+
+    if (target.Status != "pending")
+    {
+        return Results.BadRequest(new { message = $"Request is already {target.Status}." });
+    }
+
+    // Provision seller account persona in database
+    UserLogin? login = null;
+    if (target.UserLoginId.HasValue)
+    {
+        login = await db.Logins.Include(l => l.Accounts).FirstOrDefaultAsync(l => l.Id == target.UserLoginId.Value);
+    }
+    else
+    {
+        login = await db.Logins.Include(l => l.Accounts).FirstOrDefaultAsync(l =>
+            l.Username.ToLower() == target.Username.ToLower() ||
+            l.Email.ToLower() == target.Email.ToLower());
+    }
+
+    if (login is not null)
+    {
+        var existingSeller = login.Accounts.FirstOrDefault(a => a.Role == UserRole.Seller);
+        if (existingSeller is null)
+        {
+            var newAccount = new UserAccount
+            {
+                UserLoginId = login.Id,
+                Name = target.DisplayName,
+                Email = target.Email,
+                Role = UserRole.Seller,
+                Avatar = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80",
+                Location = target.Location ?? "Geneva, Switzerland",
+                MemberSince = DateTime.UtcNow.Year.ToString(),
+                VerifiedDealer = true,
+                Bio = target.Bio ?? $"Certified THC Luxury Timepiece Dealer: {target.DisplayName}",
+                Rating = 5.0,
+                ReviewCount = 0,
+                TotalSalesCount = 0,
+                ResponseRate = "100%",
+                AvgShipTime = "Within 24 hours",
+                IsDefault = login.Accounts.Count == 0
+            };
+            login.Accounts.Add(newAccount);
+            await db.SaveChangesAsync();
+        }
+    }
+
+    var updatedRequest = target with
+    {
+        Status = "approved",
+        ReviewedAt = DateTimeOffset.UtcNow,
+        ReviewedBy = request.AdminUsername ?? "admin",
+        UserNotified = false
+    };
+
+    var index = sellerRequests.IndexOf(target);
+    sellerRequests[index] = updatedRequest;
+
+    // Create decision notification for user's next login
+    var notifId = Interlocked.Increment(ref sellerNotificationIdCounter);
+    var notification = new SellerDecisionNotificationDto(
+        Id: notifId,
+        RequestId: target.Id,
+        UserLoginId: target.UserLoginId ?? login?.Id,
+        Username: target.Username,
+        Email: target.Email,
+        Status: "approved",
+        DisplayName: target.DisplayName,
+        Message: "Congratulations! Your THC Verified Seller application has been reviewed and officially approved by THC Administration. Your Seller persona is now active, granting you full access to Seller Hub and timepiece listing capabilities.",
+        RejectionReason: null,
+        Timestamp: DateTimeOffset.UtcNow,
+        Acknowledged: false
+    );
+    sellerNotifications.Add(notification);
+
+    return Results.Ok(new { success = true, request = updatedRequest, notification });
+});
+
+// 19. POST /api/users/seller-onboarding/requests/{id:int}/reject
+userApi.MapPost("/seller-onboarding/requests/{id:int}/reject", (int id, RejectSellerRequest request) =>
+{
+    var target = sellerRequests.FirstOrDefault(r => r.Id == id);
+    if (target is null) return Results.NotFound(new { message = "Seller request not found." });
+
+    if (target.Status != "pending")
+    {
+        return Results.BadRequest(new { message = $"Request is already {target.Status}." });
+    }
+
+    var reason = string.IsNullOrWhiteSpace(request.Reason)
+        ? "Application does not meet current verification standards."
+        : request.Reason.Trim();
+
+    var updatedRequest = target with
+    {
+        Status = "rejected",
+        ReviewedAt = DateTimeOffset.UtcNow,
+        ReviewedBy = request.AdminUsername ?? "admin",
+        RejectionReason = reason,
+        UserNotified = false
+    };
+
+    var index = sellerRequests.IndexOf(target);
+    sellerRequests[index] = updatedRequest;
+
+    // Create decision notification for user's next login
+    var notifId = Interlocked.Increment(ref sellerNotificationIdCounter);
+    var notification = new SellerDecisionNotificationDto(
+        Id: notifId,
+        RequestId: target.Id,
+        UserLoginId: target.UserLoginId,
+        Username: target.Username,
+        Email: target.Email,
+        Status: "rejected",
+        DisplayName: target.DisplayName,
+        Message: "Thank you for your interest in becoming a verified seller. After administrative review, we regret to inform you that your seller application could not be approved at this time.",
+        RejectionReason: reason,
+        Timestamp: DateTimeOffset.UtcNow,
+        Acknowledged: false
+    );
+    sellerNotifications.Add(notification);
+
+    return Results.Ok(new { success = true, request = updatedRequest, notification });
+});
+
+// 20. GET /api/users/seller-onboarding/notifications/{usernameOrEmail}
+userApi.MapGet("/seller-onboarding/notifications/{usernameOrEmail}", (string usernameOrEmail) =>
+{
+    var target = sellerNotifications
+        .Where(n => !n.Acknowledged && (
+            n.Username.Equals(usernameOrEmail, StringComparison.OrdinalIgnoreCase) ||
+            n.Email.Equals(usernameOrEmail, StringComparison.OrdinalIgnoreCase)
+        ))
+        .OrderByDescending(n => n.Timestamp)
+        .FirstOrDefault();
+
+    if (target is null) return Results.NoContent();
+    return Results.Ok(target);
+});
+
+// 21. POST /api/users/seller-onboarding/notifications/{id:int}/dismiss
+userApi.MapPost("/seller-onboarding/notifications/{id:int}/dismiss", (int id) =>
+{
+    var target = sellerNotifications.FirstOrDefault(n => n.Id == id);
+    if (target is null) return Results.NotFound();
+
+    var index = sellerNotifications.IndexOf(target);
+    sellerNotifications[index] = target with { Acknowledged = true };
+
+    return Results.Ok(new { success = true });
+});
+
 static UserAccountDto ToAccountDto(UserAccount a) => new(
     a.Id,
     a.UserLoginId,

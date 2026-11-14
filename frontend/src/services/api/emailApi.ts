@@ -83,5 +83,15 @@ export const emailApi = {
       method: 'GET',
     });
   },
+
+  /**
+   * Send notification email
+   */
+  async sendEmail(to: string, subject: string, bodyHtml: string, bodyText?: string): Promise<{ success: boolean }> {
+    return request<{ success: boolean }>('/api/emails/send', {
+      method: 'POST',
+      body: JSON.stringify({ to, subject, bodyHtml, bodyText }),
+    });
+  },
 };
 

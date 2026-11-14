@@ -63,6 +63,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     isGatewayConnected,
     isSyncing,
     refreshData,
+    pendingSellerRequestsCount,
     showToast
   } = useMarketplace();
 
@@ -499,7 +500,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
     return String(r.userId) === String(currentUser?.id) && r.currentState !== 'TransitBack' && r.currentState !== 'ServiceRequestRejected';
   }).length;
 
-  const isAdminTabActive = activeTab === 'user-management' || activeTab === 'role-management';
+  const isAdminTabActive = activeTab === 'user-management' || activeTab === 'role-management' || activeTab === 'seller-onboarding';
 
   const navItems: { id: ActiveTab; label: string; icon: React.FC<{ className?: string }>; count?: number }[] = [
     { id: 'explore', label: 'Marketplace', icon: Watch },
@@ -637,7 +638,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                 })}
 
                 {/* Admin Dropdown Item (Admin & Service Executive Only) */}
-                {(isTabEnabled('user-management') || isTabEnabled('role-management')) && (
+                {(isTabEnabled('user-management') || isTabEnabled('role-management') || isTabEnabled('seller-onboarding')) && (
                   <div className="relative" ref={adminDropdownRef}>
                     <button
                       id="nav-tab-admin"
@@ -651,6 +652,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                     >
                       <ShieldCheck className={`w-3.5 h-3.5 ${isAdminTabActive ? 'text-[#C5A880]' : 'text-[#78716C]'}`} />
                       <span>Admin</span>
+                      {pendingSellerRequestsCount > 0 && (
+                        <span
+                          className="px-1.5 py-0.2 rounded-full bg-[#C5A059] text-white text-[10px] font-bold shadow-2xs"
+                          title={`${pendingSellerRequestsCount} pending seller onboarding requests`}
+                        >
+                          {pendingSellerRequestsCount}
+                        </span>
+                      )}
                       <ChevronDown
                         className={`w-3 h-3 transition-transform duration-200 ${
                           isAdminDropdownOpen ? 'rotate-180 text-[#C5A880]' : 'opacity-70'
@@ -706,6 +715,36 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                               <ShieldCheck className={`w-3.5 h-3.5 ${activeTab === 'role-management' ? 'text-[#C5A880]' : 'text-[#967139]'}`} />
                               <span>Role Management</span>
                             </div>
+                          </button>
+                        )}
+
+                        {/* Seller Onboarding */}
+                        {isTabEnabled('seller-onboarding') && (
+                          <button
+                            type="button"
+                            id="admin-dropdown-seller-onboarding"
+                            onClick={() => {
+                              setActiveTab('seller-onboarding');
+                              setIsAdminDropdownOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer ${
+                              activeTab === 'seller-onboarding'
+                                ? 'bg-[#1C1917] text-[#FAF8F5] font-semibold'
+                                : 'text-[#1C1917] hover:bg-[#EDE8E0]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Store className={`w-3.5 h-3.5 ${activeTab === 'seller-onboarding' ? 'text-[#C5A880]' : 'text-[#967139]'}`} />
+                              <span>Seller Onboarding</span>
+                            </div>
+                            {pendingSellerRequestsCount > 0 && (
+                              <span
+                                className="px-1.5 py-0.2 rounded-full bg-[#C5A059] text-white text-[10px] font-bold shadow-2xs"
+                                title={`${pendingSellerRequestsCount} pending onboarding requests`}
+                              >
+                                {pendingSellerRequestsCount}
+                              </span>
+                            )}
                           </button>
                         )}
                       </div>
@@ -1126,7 +1165,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
               })}
 
               {/* Mobile Admin Trigger Button */}
-              {(isTabEnabled('user-management') || isTabEnabled('role-management')) && (
+              {(isTabEnabled('user-management') || isTabEnabled('role-management') || isTabEnabled('seller-onboarding')) && (
                 <button
                   id="mobile-nav-tab-admin"
                   ref={mobileAdminBtnRef}
@@ -1140,13 +1179,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                 >
                   <ShieldCheck className={`w-3.5 h-3.5 ${isAdminTabActive ? 'text-[#C5A880]' : 'text-[#78716C]'}`} />
                   <span>Admin</span>
+                  {pendingSellerRequestsCount > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-[#C5A059] text-white text-[10px] font-bold">
+                      {pendingSellerRequestsCount}
+                    </span>
+                  )}
                   <ChevronDown className={`w-3 h-3 transition-transform ${isMobileAdminDropdownOpen ? 'rotate-180 text-[#C5A880]' : 'opacity-70'}`} />
                 </button>
               )}
             </div>
 
             {/* Mobile Admin Dropdown Menu - Floats above all page elements */}
-            {(isTabEnabled('user-management') || isTabEnabled('role-management')) && isMobileAdminDropdownOpen && (
+            {(isTabEnabled('user-management') || isTabEnabled('role-management') || isTabEnabled('seller-onboarding')) && isMobileAdminDropdownOpen && (
               <div
                 ref={mobileAdminMenuRef}
                 className="absolute right-0 top-full mt-2 w-56 bg-[#FAF8F5] rounded-2xl shadow-2xl border border-[#DDD6CB] p-2 z-50 animate-fadeIn space-y-1"
@@ -1190,6 +1234,32 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   >
                     <ShieldCheck className={`w-3.5 h-3.5 ${activeTab === 'role-management' ? 'text-[#C5A880]' : 'text-[#967139]'}`} />
                     <span>Role Management</span>
+                  </button>
+                )}
+
+                {isTabEnabled('seller-onboarding') && (
+                  <button
+                    type="button"
+                    id="mobile-admin-seller-onboarding"
+                    onClick={() => {
+                      setActiveTab('seller-onboarding');
+                      setIsMobileAdminDropdownOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer ${
+                      activeTab === 'seller-onboarding'
+                        ? 'bg-[#1C1917] text-[#FAF8F5] font-semibold'
+                        : 'text-[#1C1917] hover:bg-[#EDE8E0]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Store className={`w-3.5 h-3.5 ${activeTab === 'seller-onboarding' ? 'text-[#C5A880]' : 'text-[#967139]'}`} />
+                      <span>Seller Onboarding</span>
+                    </div>
+                    {pendingSellerRequestsCount > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full bg-[#C5A059] text-white text-[10px] font-bold">
+                        {pendingSellerRequestsCount}
+                      </span>
+                    )}
                   </button>
                 )}
               </div>
@@ -1269,6 +1339,15 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                     );
                   })}
                 </div>
+
+                {newAccountRole === 'seller' && (
+                  <div className="p-3 rounded-xl bg-[#C5A059]/10 border border-[#C5A059]/30 text-xs text-[#85642F] flex items-start gap-2.5 mt-2 animate-fadeIn">
+                    <Store className="w-4 h-4 shrink-0 mt-0.5 text-[#C5A059]" />
+                    <div>
+                      <span className="font-bold">Two-Step Seller Verification:</span> Creating a Seller persona requires verification by THC Platform Administration. Once submitted, admins will review your store request. You will be notified by email and upon next login.
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Persona Display Name */}
@@ -1633,6 +1712,15 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   <p className="text-[10px] text-[#78716C] italic mt-1.5">
                     * You can always create additional personas for other roles under your login anytime.
                   </p>
+
+                  {registerRole === 'seller' && (
+                    <div className="p-3 rounded-xl bg-[#C5A059]/10 border border-[#C5A059]/30 text-xs text-[#85642F] flex items-start gap-2.5 mt-2 animate-fadeIn">
+                      <Store className="w-4 h-4 shrink-0 mt-0.5 text-[#C5A059]" />
+                      <div>
+                        <span className="font-bold">Two-Step Seller Onboarding:</span> Registering as a Seller creates your member account and submits an onboarding application to THC Administration. Once reviewed, you will be notified via email and on your next login session.
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
