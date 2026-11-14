@@ -18,6 +18,16 @@ export interface RegisterRequest {
   bio?: string;
 }
 
+export interface AdminCreateUserRequest {
+  username: string;
+  email: string;
+  password: string;
+  displayName: string;
+  roles: UserRole[];
+  location?: string;
+  bio?: string;
+}
+
 export interface CreateAccountRequest {
   userLoginId: string | number;
   name: string;
@@ -62,6 +72,14 @@ export const userManagementApi = {
   // POST /api/users/register
   register: async (payload: RegisterRequest): Promise<LoginResponse> => {
     return request<LoginResponse>('/api/users/register', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
+  // POST /api/users/admin/create-user
+  adminCreateUser: async (payload: AdminCreateUserRequest): Promise<LoginResponse> => {
+    return request<LoginResponse>('/api/users/admin/create-user', {
       method: 'POST',
       body: JSON.stringify(payload)
     });

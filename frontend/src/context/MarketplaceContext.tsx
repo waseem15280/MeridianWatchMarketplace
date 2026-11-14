@@ -36,7 +36,8 @@ import {
   serviceCenterApi,
   TransitionRequestPayload,
   checkGatewayHealth,
-  RegisterRequest
+  RegisterRequest,
+  AdminCreateUserRequest
 } from '../services/api';
 
 export const GUEST_LOGIN: UserLogin = {
@@ -165,6 +166,7 @@ interface MarketplaceContextType {
   updateUserPersonaRole: (personaId: string | number, role: UserRole) => Promise<boolean>;
   deleteUserPersona: (personaId: string | number) => Promise<boolean>;
   createPersonaForUser: (loginId: string | number, role: UserRole, name: string, bio?: string) => Promise<boolean>;
+  adminCreateUser: (data: AdminCreateUserRequest) => Promise<boolean>;
 
   // Dynamic Role & Permission Management (Admin only)
   roles: RoleDefinition[];
@@ -1677,6 +1679,100 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
 
+  const adminCreateUser = async (data: AdminCreateUserRequest): Promise<boolean> => {
+    try {
+      if (isGatewayConnected) {
+        const res = await userManagementApi.adminCreateUser(data);
+        if (res && res.login) {
+          const userWithAccounts: UserLogin & { accounts: UserAccount[]; isActive?: boolean } = {
+            ...res.login,
+            isActive: res.login.isActive !== false,
+            accounts: res.accounts || []
+          };
+
+          setAllLogins((prev) => {
+            const exists = prev.some((l) => String(l.id) === String(res.login.id));
+            return exists
+              ? prev.map((l) => (String(l.id) === String(res.login.id) ? userWithAccounts : l))
+              : [...prev, userWithAccounts];
+          });
+
+          setAvailableLogins((prev) => {
+            const exists = prev.some((l) => String(l.id) === String(res.login.id));
+            const updated = exists
+              ? prev.map((l) => (String(l.id) === String(res.login.id) ? { ...res.login, accounts: res.accounts } : l))
+              : [...prev, { ...res.login, accounts: res.accounts }];
+            localStorage.setItem('chronos_available_logins', JSON.stringify(updated));
+            return updated;
+          });
+
+          if (res.accounts && res.accounts.length > 0) {
+            setAccounts((prev) => {
+              const others = prev.filter((a) => String(a.userLoginId) !== String(res.login.id));
+              const updated = [...others, ...res.accounts];
+              localStorage.setItem('chronos_accounts', JSON.stringify(updated));
+              return updated;
+            });
+          }
+
+          showToast('User Created', `Successfully provisioned user @${res.login.username} with ${res.accounts?.length || data.roles.length} role persona(s).`, 'success');
+          return true;
+        }
+      } else {
+        // Offline / Local fallback logic
+        const fallbackLoginId = 'login-' + Date.now().toString(36);
+        const createdAccounts: UserAccount[] = data.roles.map((r, idx) => ({
+          id: `acc-${Date.now()}-${idx}`,
+          userLoginId: fallbackLoginId,
+          name: data.displayName.trim(),
+          email: data.email.trim(),
+          role: r,
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+          location: data.location || 'Global',
+          memberSince: String(new Date().getFullYear()),
+          verifiedDealer: r === 'seller',
+          bio: data.bio || `THC Horologist Profile (${r}) for ${data.displayName.trim()}`,
+          rating: 5.0,
+          reviewCount: 0,
+          totalSalesCount: 0,
+          responseRate: '100%',
+          avgShipTime: 'Within 24 hours',
+          isDefault: idx === 0
+        }));
+
+        const newLogin: UserLogin & { accounts: UserAccount[]; isActive?: boolean } = {
+          id: fallbackLoginId,
+          username: data.username.trim(),
+          email: data.email.trim(),
+          isActive: true,
+          created: new Date().toISOString(),
+          accounts: createdAccounts
+        };
+
+        setAllLogins((prev) => [...prev, newLogin]);
+        setAvailableLogins((prev) => {
+          const updated = [...prev, newLogin];
+          localStorage.setItem('chronos_available_logins', JSON.stringify(updated));
+          return updated;
+        });
+        setAccounts((prev) => {
+          const updated = [...prev, ...createdAccounts];
+          localStorage.setItem('chronos_accounts', JSON.stringify(updated));
+          return updated;
+        });
+
+        showToast('User Created', `Successfully provisioned user @${data.username} with ${data.roles.length} role persona(s).`, 'success');
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      console.error('Admin create user error:', err);
+      const msg = err?.data?.message || err?.message || 'Failed to create user.';
+      showToast('Error', msg, 'error');
+      return false;
+    }
+  };
+
   // Dynamic Role & Permission Management Handlers
   const createRole = useCallback(
     (newRole: { id: string; name: string; description: string; permissions: Permission[]; color?: string }) => {
@@ -2642,6 +2738,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         updateUserPersonaRole,
         deleteUserPersona,
         createPersonaForUser,
+        adminCreateUser,
         roles,
         createRole,
         updateRolePermissions,

@@ -1240,14 +1240,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-2">
                   Select Role (1 Role per Account)
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {(
                     [
                       { role: 'buyer' as UserRole, label: 'Buyer', desc: 'Browse catalog, buy watches, wishlists', color: 'blue' },
                       { role: 'seller' as UserRole, label: 'Seller', desc: 'List timepieces, seller hub, manage offers', color: 'amber' },
-                      { role: 'collector' as UserRole, label: 'Collector', desc: 'Private vault, market valuation tracking', color: 'purple' },
-                      { role: 'service_executive' as UserRole, label: 'Service Executive', desc: 'Watch repairs, diagnostics & testing', color: 'emerald' },
-                      { role: 'admin' as UserRole, label: 'Admin', desc: 'Escrow oversight, compliance & admin', color: 'rose' }
+                      { role: 'collector' as UserRole, label: 'Collector', desc: 'Private vault, market valuation tracking', color: 'purple' }
                     ] as const
                   ).map((item) => {
                     const isSelected = newAccountRole === item.role;
@@ -1592,7 +1590,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                   <label className="block text-xs font-bold uppercase tracking-wider text-[#78716C] mb-1.5">
                     Select Initial Role Persona *
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {[
                       {
                         role: 'buyer' as UserRole,
@@ -1608,11 +1606,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenFiltersMobile }) => {
                         role: 'collector' as UserRole,
                         title: 'Collector',
                         desc: 'Personal watch vault, track valuations & history'
-                      },
-                      {
-                        role: 'admin' as UserRole,
-                        title: 'Admin',
-                        desc: 'Catalog oversight, marketplace administration'
                       }
                     ].map((item) => {
                       const isSelected = registerRole === item.role;

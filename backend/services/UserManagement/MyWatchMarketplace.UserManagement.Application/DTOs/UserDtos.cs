@@ -55,6 +55,16 @@ public record RegisterRequest(
     string? Bio
 );
 
+public record AdminCreateUserRequest(
+    string Username,
+    string Email,
+    string Password,
+    string DisplayName,
+    List<UserRole> Roles,
+    string? Location = null,
+    string? Bio = null
+);
+
 public record CreateUserAccountRequest(
     int UserLoginId,
     string Name,

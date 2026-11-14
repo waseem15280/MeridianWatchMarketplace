@@ -45,6 +45,7 @@ export const UserManagementView: React.FC = () => {
     updateUserPersonaRole,
     deleteUserPersona,
     createPersonaForUser,
+    adminCreateUser,
     setActiveTab,
     isGatewayConnected,
     roles,
@@ -88,6 +89,19 @@ export const UserManagementView: React.FC = () => {
   // Delete Persona Confirmation Modal State
   const [personaToDelete, setPersonaToDelete] = useState<{ persona: UserAccount; user: UserLogin & { accounts: UserAccount[] } } | null>(null);
   const [isDeletingPersona, setIsDeletingPersona] = useState(false);
+
+  // Create New User Modal State (Admin Multi-Role)
+  const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newDisplayName, setNewDisplayName] = useState('');
+  const [newLocation, setNewLocation] = useState('');
+  const [newBio, setNewBio] = useState('');
+  const [newRoles, setNewRoles] = useState<UserRole[]>(['buyer']);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [createUserError, setCreateUserError] = useState<string | null>(null);
+  const [showCreatePassword, setShowCreatePassword] = useState(false);
 
   // Load logins on mount
   useEffect(() => {
@@ -219,6 +233,96 @@ export const UserManagementView: React.FC = () => {
       }
     } finally {
       setIsCreatingPersona(false);
+    }
+  };
+
+  // Toggle role in Admin Create User multi-role selection
+  const handleToggleRoleSelection = (role: UserRole) => {
+    setNewRoles((prev) => {
+      if (prev.includes(role)) {
+        if (prev.length === 1) {
+          // Keep at least one role selected
+          return prev;
+        }
+        return prev.filter((r) => r !== role);
+      } else {
+        return [...prev, role];
+      }
+    });
+  };
+
+  // Submit Admin Create User
+  const handleCreateUserSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateUserError(null);
+
+    const trimmedUsername = newUsername.trim();
+    const trimmedEmail = newEmail.trim();
+    const trimmedDisplayName = newDisplayName.trim();
+
+    if (!trimmedUsername) {
+      setCreateUserError('Username is required.');
+      return;
+    }
+    if (!trimmedEmail) {
+      setCreateUserError('Email address is required.');
+      return;
+    }
+    if (!newPassword || newPassword.length < 6) {
+      setCreateUserError('Password must be at least 6 characters long.');
+      return;
+    }
+    if (!trimmedDisplayName) {
+      setCreateUserError('Display Name / Full Name is required.');
+      return;
+    }
+    if (newRoles.length === 0) {
+      setCreateUserError('At least one role persona must be assigned.');
+      return;
+    }
+
+    // Check conflict against current logins
+    const usernameConflict = allLogins.some(
+      (l) => l.username.toLowerCase() === trimmedUsername.toLowerCase()
+    );
+    if (usernameConflict) {
+      setCreateUserError(`A user with username "${trimmedUsername}" already exists.`);
+      return;
+    }
+
+    const emailConflict = allLogins.some(
+      (l) => l.email.toLowerCase() === trimmedEmail.toLowerCase()
+    );
+    if (emailConflict) {
+      setCreateUserError(`A user with email "${trimmedEmail}" already exists.`);
+      return;
+    }
+
+    setIsCreatingUser(true);
+    try {
+      const ok = await adminCreateUser({
+        username: trimmedUsername,
+        email: trimmedEmail,
+        password: newPassword,
+        displayName: trimmedDisplayName,
+        roles: newRoles,
+        location: newLocation.trim() || undefined,
+        bio: newBio.trim() || undefined
+      });
+
+      if (ok) {
+        setIsCreateUserModalOpen(false);
+        setNewUsername('');
+        setNewEmail('');
+        setNewPassword('');
+        setNewDisplayName('');
+        setNewLocation('');
+        setNewBio('');
+        setNewRoles(['buyer']);
+        setCreateUserError(null);
+      }
+    } finally {
+      setIsCreatingUser(false);
     }
   };
 
@@ -395,14 +499,29 @@ export const UserManagementView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            {isAdmin && (
+              <button
+                type="button"
+                id="create-new-user-btn"
+                onClick={() => {
+                  setCreateUserError(null);
+                  setIsCreateUserModalOpen(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#C5A059] hover:bg-[#b08d4b] text-white text-xs font-semibold shadow-sm transition-all"
+                title="Create a new Horologist User Login with Roles"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Create New User</span>
+              </button>
+            )}
             {hasPermission('manage_roles') && (
               <button
                 type="button"
                 onClick={() => setActiveTab('role-management')}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#C5A059] hover:bg-[#b08d4b] text-white text-xs font-semibold shadow-sm transition-all"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FAF8F5]/10 hover:bg-[#FAF8F5]/20 text-[#FAF8F5] text-xs font-medium border border-[#FAF8F5]/15 transition-all"
                 title="Go to Role & Permission Management"
               >
-                <ShieldCheck className="w-3.5 h-3.5" />
+                <ShieldCheck className="w-3.5 h-3.5 text-[#C5A880]" />
                 <span>Role Atelier</span>
               </button>
             )}
@@ -1115,6 +1234,282 @@ export const UserManagementView: React.FC = () => {
                 {isDeletingUser ? 'Deleting User...' : 'Permanently Delete User'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= CREATE NEW USER MODAL (ADMIN MULTI-ROLE) ================= */}
+      {isCreateUserModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn overflow-y-auto">
+          <div
+            className="bg-[#FAF8F5] rounded-3xl border border-[#DDD6CB] shadow-2xl max-w-2xl w-full p-6 sm:p-8 max-h-[90vh] overflow-y-auto space-y-6 my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-[#E5DFD5] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#C5A059]/15 border border-[#C5A059]/30 text-[#85642F] flex items-center justify-center">
+                  <UserPlus className="w-5 h-5 text-[#85642F]" />
+                </div>
+                <div>
+                  <div className="text-[11px] font-mono tracking-widest text-[#C5A880] uppercase">
+                    Admin Atelier Provisioning
+                  </div>
+                  <h3 className="text-xl font-serif font-bold text-[#1C1917]">
+                    Create New Horologist Login
+                  </h3>
+                  <p className="text-xs text-[#78716C] mt-0.5">
+                    Provision credentials and multi-role horologist personas for a new member.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                id="close-create-user-modal-btn"
+                onClick={() => setIsCreateUserModalOpen(false)}
+                className="p-1.5 rounded-xl text-[#78716C] hover:text-[#1C1917] hover:bg-[#EDE8E0] transition-colors"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {createUserError && (
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{createUserError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleCreateUserSubmit} className="space-y-6">
+              {/* Section 1: Login Credentials */}
+              <div className="space-y-3">
+                <div className="text-xs font-serif font-bold text-[#1C1917] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#E5DFD5] pb-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-[#C5A880]" />
+                  <span>1. Authentication & Login Credentials</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#57534E] mb-1">
+                      Username *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      id="new-user-username-input"
+                      placeholder="e.g. james_bond"
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      className="w-full px-3.5 py-2 bg-[#EDE8E0]/70 border border-[#DDD6CB] rounded-xl text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#C5A880]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#57534E] mb-1">
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      id="new-user-email-input"
+                      placeholder="e.g. james@horology.com"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      className="w-full px-3.5 py-2 bg-[#EDE8E0]/70 border border-[#DDD6CB] rounded-xl text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#C5A880]"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-semibold text-[#57534E] mb-1">
+                      Initial Password * (Min 6 Characters)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showCreatePassword ? 'text' : 'password'}
+                        required
+                        id="new-user-password-input"
+                        placeholder="••••••••"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full pl-3.5 pr-10 py-2 bg-[#EDE8E0]/70 border border-[#DDD6CB] rounded-xl text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#C5A880]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCreatePassword(!showCreatePassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showCreatePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Horologist Profile */}
+              <div className="space-y-3">
+                <div className="text-xs font-serif font-bold text-[#1C1917] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#E5DFD5] pb-1.5">
+                  <UserCheck className="w-3.5 h-3.5 text-[#C5A880]" />
+                  <span>2. Horologist Profile Details</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#57534E] mb-1">
+                      Display / Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      id="new-user-displayname-input"
+                      placeholder="e.g. Commander James Bond"
+                      value={newDisplayName}
+                      onChange={(e) => setNewDisplayName(e.target.value)}
+                      className="w-full px-3.5 py-2 bg-[#EDE8E0]/70 border border-[#DDD6CB] rounded-xl text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#C5A880]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#57534E] mb-1">
+                      Location (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      id="new-user-location-input"
+                      placeholder="e.g. London, United Kingdom"
+                      value={newLocation}
+                      onChange={(e) => setNewLocation(e.target.value)}
+                      className="w-full px-3.5 py-2 bg-[#EDE8E0]/70 border border-[#DDD6CB] rounded-xl text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#C5A880]"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-semibold text-[#57534E] mb-1">
+                      Bio / Horology Specialization (Optional)
+                    </label>
+                    <textarea
+                      rows={2}
+                      id="new-user-bio-input"
+                      placeholder="e.g. Specialist in vintage Omega Seamaster, Submariners & complicated calibers..."
+                      value={newBio}
+                      onChange={(e) => setNewBio(e.target.value)}
+                      className="w-full px-3.5 py-2 bg-[#EDE8E0]/70 border border-[#DDD6CB] rounded-xl text-xs text-[#1C1917] focus:outline-none focus:ring-2 focus:ring-[#C5A880]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Role Personas Multi-Assignment */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-[#E5DFD5] pb-1.5">
+                  <div className="text-xs font-serif font-bold text-[#1C1917] uppercase tracking-wider flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#C5A880]" />
+                    <span>3. Role Personas Assignment (Multi-Selection) *</span>
+                  </div>
+                  <span className="text-[11px] font-mono font-bold text-[#85642F]">
+                    {newRoles.length} selected
+                  </span>
+                </div>
+
+                <p className="text-xs text-[#78716C] leading-snug">
+                  Select one or more roles. A dedicated horologist persona will automatically be created under this login for each selected role. The first role selected will serve as default.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[
+                    {
+                      role: 'buyer' as UserRole,
+                      title: 'Buyer',
+                      desc: 'Browse catalog, make offers, cart & orders'
+                    },
+                    {
+                      role: 'collector' as UserRole,
+                      title: 'Collector',
+                      desc: 'Personal watch vault, track valuations & history'
+                    },
+                    {
+                      role: 'seller' as UserRole,
+                      title: 'Seller',
+                      desc: 'Create listings, respond to offers, seller hub'
+                    },
+                    {
+                      role: 'admin' as UserRole,
+                      title: 'Admin',
+                      desc: 'Catalog oversight, user management, role atelier'
+                    },
+                    {
+                      role: 'service_executive' as UserRole,
+                      title: 'Service Executive',
+                      desc: 'Watch inspection, authenticity testing, diagnostics'
+                    }
+                  ].map((item) => {
+                    const isSelected = newRoles.includes(item.role);
+                    return (
+                      <div
+                        key={item.role}
+                        id={`new-user-role-${item.role}`}
+                        onClick={() => handleToggleRoleSelection(item.role)}
+                        className={`p-3.5 rounded-2xl border text-left cursor-pointer transition-all flex items-start gap-3 select-none ${
+                          isSelected
+                            ? 'border-[#C5A059] bg-[#C5A059]/10 ring-2 ring-[#C5A059]/30 shadow-xs'
+                            : 'border-[#DDD6CB] bg-[#FAF8F5]/80 hover:border-[#B8AEA3] hover:bg-[#FAF8F5]'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleRoleSelection(item.role)}
+                          className="mt-0.5 rounded text-[#C5A059] focus:ring-[#C5A059] accent-[#C5A059]"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-xs font-bold text-[#1C1917]">{item.title}</span>
+                            {isSelected && <CheckCircle className="w-3.5 h-3.5 text-[#85642F]" />}
+                          </div>
+                          <p className="text-[10px] text-[#78716C] leading-snug">{item.desc}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Modal Footer Actions */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E5DFD5]">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateUserModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-[#EDE8E0] hover:bg-[#DDD6CB] text-xs font-semibold text-[#57534E] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  id="submit-create-user-btn"
+                  disabled={
+                    isCreatingUser ||
+                    !newUsername.trim() ||
+                    !newEmail.trim() ||
+                    !newPassword ||
+                    newPassword.length < 6 ||
+                    !newDisplayName.trim() ||
+                    newRoles.length === 0
+                  }
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C5A059] hover:bg-[#b08d4b] text-white text-xs font-semibold shadow-sm transition-all disabled:opacity-50"
+                >
+                  {isCreatingUser ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Provisioning User...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Create User & Personas</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

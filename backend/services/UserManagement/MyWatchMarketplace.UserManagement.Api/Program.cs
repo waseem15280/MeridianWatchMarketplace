@@ -147,6 +147,11 @@ userApi.MapPost("/register", async (RegisterRequest request, UserManagementDbCon
         return Results.BadRequest(new { message = "All required fields must be supplied." });
     }
 
+    if (request.Role != UserRole.Buyer && request.Role != UserRole.Collector && request.Role != UserRole.Seller)
+    {
+        return Results.BadRequest(new { message = "Public registration is limited to Buyer, Collector, and Seller roles only." });
+    }
+
     var exists = await db.Logins.AnyAsync(l =>
         l.Username.ToLower() == request.Username.ToLower() ||
         l.Email.ToLower() == request.Email.ToLower());
@@ -195,6 +200,96 @@ userApi.MapPost("/register", async (RegisterRequest request, UserManagementDbCon
     );
 
     return Results.Created($"/api/users/accounts/{account.Id}", response);
+});
+
+// 2b. POST /api/users/admin/create-user - Admin user creation with multiple role personas
+userApi.MapPost("/admin/create-user", async (AdminCreateUserRequest request, UserManagementDbContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Username) ||
+        string.IsNullOrWhiteSpace(request.Email) ||
+        string.IsNullOrWhiteSpace(request.Password) ||
+        string.IsNullOrWhiteSpace(request.DisplayName))
+    {
+        return Results.BadRequest(new { message = "Username, Email, Password, and Display Name are required." });
+    }
+
+    if (request.Password.Length < 6)
+    {
+        return Results.BadRequest(new { message = "Password must be at least 6 characters long." });
+    }
+
+    if (request.Roles is null || request.Roles.Count == 0)
+    {
+        return Results.BadRequest(new { message = "At least one role persona must be assigned." });
+    }
+
+    var exists = await db.Logins.AnyAsync(l =>
+        l.Username.ToLower() == request.Username.ToLower() ||
+        l.Email.ToLower() == request.Email.ToLower());
+
+    if (exists)
+    {
+        return Results.Conflict(new { message = "A user with this username or email already exists." });
+    }
+
+    var login = new UserLogin
+    {
+        Username = request.Username.Trim(),
+        Email = request.Email.Trim(),
+        PasswordHash = PasswordHasher.HashPassword(request.Password),
+        IsActive = true,
+        LastLoginAt = null
+    };
+
+    var distinctRoles = request.Roles.Distinct().ToList();
+    var createdAccounts = new List<UserAccount>();
+
+    for (int i = 0; i < distinctRoles.Count; i++)
+    {
+        var role = distinctRoles[i];
+        var isFirst = (i == 0);
+        var roleTitle = role switch
+        {
+            UserRole.ServiceExecutive => "Service Executive",
+            _ => role.ToString()
+        };
+
+        var account = new UserAccount
+        {
+            Name = request.DisplayName.Trim(),
+            Email = request.Email.Trim(),
+            Role = role,
+            Avatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80",
+            Location = request.Location ?? "Global",
+            MemberSince = DateTime.UtcNow.Year.ToString(),
+            VerifiedDealer = (role == UserRole.Seller),
+            Bio = request.Bio ?? $"THC Horologist Profile ({roleTitle}) for {request.DisplayName.Trim()}",
+            Rating = 5.0,
+            ReviewCount = 0,
+            TotalSalesCount = 0,
+            ResponseRate = "100%",
+            AvgShipTime = "Within 24 hours",
+            IsDefault = isFirst
+        };
+
+        login.Accounts.Add(account);
+        createdAccounts.Add(account);
+    }
+
+    db.Logins.Add(login);
+    await db.SaveChangesAsync();
+
+    var accountDtos = createdAccounts.Select(ToAccountDto).ToList();
+    var defaultAcc = createdAccounts.FirstOrDefault(a => a.IsDefault) ?? createdAccounts.First();
+
+    var response = new LoginResponse(
+        Token: "mock-jwt-" + Guid.NewGuid().ToString("N"),
+        Login: ToLoginDto(login),
+        Accounts: accountDtos,
+        ActiveAccountId: defaultAcc.Id
+    );
+
+    return Results.Created($"/api/users/logins/{login.Id}", response);
 });
 
 // 3. GET /api/users/logins - List all logins and their accounts (for demo switcher & user management dashboard)
