@@ -769,23 +769,6 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return sellerOnboardingRequests.filter((r) => r.status === 'pending').length;
   }, [sellerOnboardingRequests]);
 
-  // Check for pending unacknowledged seller decisions upon login / session change
-  useEffect(() => {
-    if (!isLoggedIn || !currentLogin.username || currentLogin.username === 'guest') {
-      setPendingSellerDecision(null);
-      return;
-    }
-    const unacknowledged = sellerNotifications.find(
-      (n) =>
-        !n.acknowledged &&
-        (n.username.toLowerCase() === currentLogin.username.toLowerCase() ||
-         n.email.toLowerCase() === currentLogin.email.toLowerCase())
-    );
-    if (unacknowledged) {
-      setPendingSellerDecision(unacknowledged);
-    }
-  }, [currentLogin.username, currentLogin.email, isLoggedIn, sellerNotifications]);
-
   const promptLogin = (message?: string, watchIdToWishlist?: string) => {
     if (watchIdToWishlist) {
       setPendingWishlistId(watchIdToWishlist);
@@ -1033,6 +1016,23 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (!isLoggedIn) return GUEST_LOGIN;
     return availableLogins.find((l) => l.id === currentLoginId) || availableLogins[0] || GUEST_LOGIN;
   }, [availableLogins, currentLoginId, isLoggedIn]);
+
+  // Check for pending unacknowledged seller decisions upon login / session change
+  useEffect(() => {
+    if (!isLoggedIn || !currentLogin.username || currentLogin.username === 'guest') {
+      setPendingSellerDecision(null);
+      return;
+    }
+    const unacknowledged = sellerNotifications.find(
+      (n) =>
+        !n.acknowledged &&
+        (n.username.toLowerCase() === currentLogin.username.toLowerCase() ||
+         n.email.toLowerCase() === currentLogin.email.toLowerCase())
+    );
+    if (unacknowledged) {
+      setPendingSellerDecision(unacknowledged);
+    }
+  }, [currentLogin.username, currentLogin.email, isLoggedIn, sellerNotifications]);
 
   // Accounts belonging to the current Login
   const userAccounts = useMemo(() => {
