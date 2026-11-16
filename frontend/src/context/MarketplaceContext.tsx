@@ -866,7 +866,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         reviewsRes,
         ordersRes,
         offersRes,
-        serviceRequestsRes
+        serviceRequestsRes,
+        sellerRequestsRes
       ] = await Promise.allSettled([
         marketplaceApi.getListings(),
         collectorVaultApi.getWatches(),
@@ -875,7 +876,8 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         sellerHubApi.getReviews(),
         customerOrdersApi.getOrders(),
         customerOrdersApi.getBuyerOffers(),
-        serviceCenterApi.getServiceRequests(currentUserId, currentUser?.role)
+        serviceCenterApi.getServiceRequests(currentUserId, currentUser?.role),
+        userManagementApi.getSellerOnboardingRequests()
       ]);
 
       if (listingsRes.status === 'fulfilled' && Array.isArray(listingsRes.value)) {
@@ -913,6 +915,15 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
           localStorage.setItem('chronos_service_requests', JSON.stringify(serviceRequestsRes.value));
         } catch (e) {
           console.warn('Could not cache service requests in localStorage', e);
+        }
+      }
+
+      if (sellerRequestsRes.status === 'fulfilled' && Array.isArray(sellerRequestsRes.value)) {
+        setSellerOnboardingRequests(sellerRequestsRes.value);
+        try {
+          localStorage.setItem('chronos_seller_requests', JSON.stringify(sellerRequestsRes.value));
+        } catch (e) {
+          console.warn('Could not cache seller requests in localStorage', e);
         }
       }
 
@@ -1939,7 +1950,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (isGatewayConnected) {
       try {
         const res = await userManagementApi.getSellerOnboardingRequests();
-        if (Array.isArray(res) && res.length > 0) {
+        if (Array.isArray(res)) {
           setSellerOnboardingRequests(res);
           localStorage.setItem('chronos_seller_requests', JSON.stringify(res));
         }
@@ -1981,7 +1992,21 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     if (isGatewayConnected) {
       try {
-        await userManagementApi.submitSellerOnboardingRequest(data);
+        const payload = {
+          ...data,
+          userLoginId: typeof data.userLoginId === 'number'
+            ? data.userLoginId
+            : (typeof data.userLoginId === 'string' && !isNaN(Number(data.userLoginId)) ? Number(data.userLoginId) : undefined)
+        };
+        const savedReq = await userManagementApi.submitSellerOnboardingRequest(payload);
+        if (savedReq && savedReq.id) {
+          setSellerOnboardingRequests((prev) => {
+            const filtered = prev.filter((r) => r.id !== newReq.id && r.id !== savedReq.id);
+            const updated = [savedReq, ...filtered];
+            localStorage.setItem('chronos_seller_requests', JSON.stringify(updated));
+            return updated;
+          });
+        }
       } catch (err) {
         console.warn('Backend submit seller request error:', err);
       }
@@ -2094,6 +2119,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
             adminUsername: currentLogin.username,
             note
           });
+          await loadSellerOnboardingRequests();
         } catch (err) {
           console.warn('Gateway approve seller request error:', err);
         }
@@ -2178,6 +2204,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
             reason: trimmedReason,
             adminUsername: currentLogin.username
           });
+          await loadSellerOnboardingRequests();
         } catch (err) {
           console.warn('Gateway reject seller request error:', err);
         }
@@ -2202,9 +2229,9 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return updated;
     });
 
-    if (isGatewayConnected && typeof notifId === 'number') {
+    if (isGatewayConnected && !isNaN(Number(notifId))) {
       try {
-        await userManagementApi.dismissSellerNotification(notifId);
+        await userManagementApi.dismissSellerNotification(Number(notifId));
       } catch (err) {
         console.warn('Gateway dismiss notification error:', err);
       }

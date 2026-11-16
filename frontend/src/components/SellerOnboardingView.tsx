@@ -54,6 +54,11 @@ export const SellerOnboardingView: React.FC = () => {
     'Application requires additional identity verification and business documentation.'
   ];
 
+  // Load from microservice on mount
+  useEffect(() => {
+    loadSellerOnboardingRequests();
+  }, [loadSellerOnboardingRequests]);
+
   // Refresh from microservice
   const handleRefresh = async () => {
     setIsRefreshing(true);
