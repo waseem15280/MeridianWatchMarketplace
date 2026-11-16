@@ -44,6 +44,12 @@ public class UserManagementDbContextInitialiser
 
     public async Task SeedAsync()
     {
+        await SeedLoginsAsync();
+        await SeedSellerOnboardingRequestsAsync();
+    }
+
+    private async Task SeedLoginsAsync()
+    {
         if (await _context.Logins.AnyAsync())
         {
             return;
@@ -363,5 +369,60 @@ public class UserManagementDbContextInitialiser
         }
 
         _logger.LogInformation("Seeded {Count} user logins with multiple distinct role accounts into UserAccountDb.", logins.Count);
+    }
+
+    private async Task SeedSellerOnboardingRequestsAsync()
+    {
+        if (await _context.SellerOnboardingRequests.AnyAsync())
+        {
+            return;
+        }
+
+        var demoRequests = new List<SellerOnboardingRequest>
+        {
+            new()
+            {
+                Type = "new_user",
+                UserLoginId = null,
+                Username = "geneva_horology",
+                Email = "contact@genevahorology.ch",
+                DisplayName = "Geneva Horology Gallery",
+                Location = "Geneva, Switzerland",
+                Bio = "Specialized in vintage Patek Philippe and Audemars Piguet certified timepieces since 1998.",
+                Status = "pending",
+                SubmittedAt = DateTimeOffset.UtcNow.AddHours(-18),
+                UserNotified = false
+            },
+            new()
+            {
+                Type = "new_persona",
+                UserLoginId = 2,
+                Username = "alex_vance",
+                Email = "alex@meridian.com",
+                DisplayName = "Vance Chrono Atelier",
+                Location = "London, UK",
+                Bio = "Curated collection of 1960s-1970s sports chronographs and tool watches.",
+                Status = "pending",
+                SubmittedAt = DateTimeOffset.UtcNow.AddHours(-6),
+                UserNotified = false
+            }
+        };
+
+        _context.SellerOnboardingRequests.AddRange(demoRequests);
+        await _context.SaveChangesAsync();
+
+        if (_context.Database.IsNpgsql())
+        {
+            try
+            {
+                await _context.Database.ExecuteSqlRawAsync("SELECT setval(pg_get_serial_sequence('\"SellerOnboardingRequests\"', 'Id'), (SELECT COALESCE(MAX(\"Id\"), 1) FROM \"SellerOnboardingRequests\"));");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not reset Postgres sequence for SellerOnboardingRequests.");
+            }
+        }
+
+        _logger.LogInformation("Seeded demo seller onboarding requests into UserAccountDb.");
     }
 }

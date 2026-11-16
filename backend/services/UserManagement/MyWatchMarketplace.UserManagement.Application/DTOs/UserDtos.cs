@@ -127,6 +127,7 @@ public record SellerOnboardingRequestDto(
     DateTimeOffset SubmittedAt,
     DateTimeOffset? ReviewedAt = null,
     string? ReviewedBy = null,
+    string? AdminNotes = null,
     string? RejectionReason = null,
     bool UserNotified = false
 );
