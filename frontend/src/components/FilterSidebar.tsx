@@ -11,27 +11,9 @@ import {
   Compass,
   X
 } from 'lucide-react';
-import { WatchCondition, WatchMovement } from '../types';
+import { KNOWN_BRANDS, ALL_FILTER_BRANDS, WatchCondition, WatchMovement } from '../types';
 
-const BRANDS = [
-  'HMT',
-  'Citizen',
-  'Seiko',
-  'Ricoh',
-  'Allwyn',
-  'Titan',
-  'Casio',
-  'Timex',
-  'Orient',
-  'West End',
-  'DWC',
-  'Omega',
-  'Rolex',
-  'Tissot',
-  'Argos',
-  'Jayco',
-  'Rado',
-];
+const BRANDS = ALL_FILTER_BRANDS;
 
 const MOVEMENTS: WatchMovement[] = [
   'Automatic',
@@ -86,7 +68,17 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({ onCloseMobile }) =
 
   // Count helper
   const getBrandCount = (brand: string) => {
-    return listings.filter((l) => l.brand === brand && l.status === 'active').length;
+    if (brand === 'Other') {
+      return listings.filter((l) => {
+        if (l.status !== 'active') return false;
+        const brandName = (l.brand || '').trim();
+        if (!brandName || brandName.toLowerCase() === 'other') return true;
+        return !KNOWN_BRANDS.some((kb) => kb.toLowerCase() === brandName.toLowerCase());
+      }).length;
+    }
+    return listings.filter(
+      (l) => l.status === 'active' && (l.brand || '').trim().toLowerCase() === brand.toLowerCase()
+    ).length;
   };
 
   return (

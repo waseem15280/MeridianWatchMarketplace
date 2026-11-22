@@ -137,7 +137,27 @@ listingsApi.MapGet("/", async (
     if (!string.IsNullOrWhiteSpace(brand))
     {
         var brands = brand.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        query = query.Where(w => brands.Contains(w.Brand));
+        var hasOther = brands.Any(b => string.Equals(b, "Other", StringComparison.OrdinalIgnoreCase));
+        var namedBrands = brands.Where(b => !string.Equals(b, "Other", StringComparison.OrdinalIgnoreCase)).ToArray();
+
+        string[] knownBrands =
+        [
+            "HMT", "Citizen", "Seiko", "Ricoh", "Allwyn", "Titan", "Casio", "Timex",
+            "Orient", "West End", "DWC", "Omega", "Rolex", "Tissot", "Argos", "Jayco", "Rado"
+        ];
+
+        if (hasOther && namedBrands.Length > 0)
+        {
+            query = query.Where(w => namedBrands.Contains(w.Brand) || !knownBrands.Contains(w.Brand) || w.Brand == "Other");
+        }
+        else if (hasOther)
+        {
+            query = query.Where(w => !knownBrands.Contains(w.Brand) || w.Brand == "Other");
+        }
+        else
+        {
+            query = query.Where(w => namedBrands.Contains(w.Brand));
+        }
     }
 
     if (!string.IsNullOrWhiteSpace(movement))

@@ -235,6 +235,28 @@ export interface UserLogin {
   accounts?: UserAccount[];
 }
 
+export const KNOWN_BRANDS = [
+  'HMT',
+  'Citizen',
+  'Seiko',
+  'Ricoh',
+  'Allwyn',
+  'Titan',
+  'Casio',
+  'Timex',
+  'Orient',
+  'West End',
+  'DWC',
+  'Omega',
+  'Rolex',
+  'Tissot',
+  'Argos',
+  'Jayco',
+  'Rado'
+] as const;
+
+export const ALL_FILTER_BRANDS = [...KNOWN_BRANDS, 'Other'] as const;
+
 export type WatchCondition = 'Unworn' | 'Mint' | 'Very Good' | 'Good' | 'Fair' | string;
 
 export type WatchMovement = 'Automatic' | 'Manual Winding' | 'Quartz' | 'Digital' | 'Solar' | 'Hybrid' | 'Spring Drive' | string;

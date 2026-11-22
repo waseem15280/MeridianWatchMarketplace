@@ -19,7 +19,8 @@ import {
   ServiceWorkflowState,
   ServiceRequestAuditLog,
   SellerOnboardingRequest,
-  SellerDecisionNotification
+  SellerDecisionNotification,
+  KNOWN_BRANDS
 } from '../types';
 import {
   FeatureFlags,
@@ -3076,8 +3077,22 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }
 
         // Brands
-        if (filters.brand?.length > 0 && !filters.brand.includes(watch.brand)) {
-          return false;
+        if (filters.brand?.length > 0) {
+          const hasOther = filters.brand.includes('Other');
+          const namedBrands = filters.brand.filter((b) => b !== 'Other');
+
+          const watchBrandClean = (watch.brand || '').trim();
+          const matchesNamed = namedBrands.some(
+            (b) => b.toLowerCase() === watchBrandClean.toLowerCase()
+          );
+          const isKnown = KNOWN_BRANDS.some(
+            (kb) => kb.toLowerCase() === watchBrandClean.toLowerCase()
+          );
+          const matchesOther = hasOther && (!isKnown || watchBrandClean.toLowerCase() === 'other');
+
+          if (!matchesNamed && !matchesOther) {
+            return false;
+          }
         }
 
         // Movement
