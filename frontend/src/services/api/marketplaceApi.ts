@@ -11,7 +11,7 @@ export const marketplaceApi = {
     if (filters?.movement && filters.movement.length > 0) params.append('movement', filters.movement.join(','));
     if (filters?.condition && filters.condition.length > 0) params.append('condition', filters.condition.join(','));
     if (filters?.minPrice && filters.minPrice > 0) params.append('minPrice', filters.minPrice.toString());
-    if (filters?.maxPrice && filters.maxPrice < 150000) params.append('maxPrice', filters.maxPrice.toString());
+    if (filters?.maxPrice && filters.maxPrice < 200000) params.append('maxPrice', filters.maxPrice.toString());
     if (filters?.hasBox) params.append('hasBox', 'true');
     if (filters?.hasPapers) params.append('hasPapers', 'true');
     if (filters?.sortBy) params.append('sortBy', filters.sortBy);

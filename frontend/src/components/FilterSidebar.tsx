@@ -156,14 +156,19 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({ onCloseMobile }) =
             id="price-range-slider"
             type="range"
             min={0}
-            max={5000000}
-            step={25000}
-            value={Math.min(filters.maxPrice, 5000000)}
+            max={200000}
+            step={2500}
+            value={Math.min(Math.max(filters.maxPrice, 0), 200000)}
             onChange={(e) =>
               setFilters((prev) => ({ ...prev, maxPrice: Number(e.target.value) }))
             }
             className="w-full accent-[#967139] bg-[#E5DFD5] h-1.5 rounded-lg appearance-none cursor-pointer"
           />
+
+          <div className="flex items-center justify-between text-[10px] text-[#78716C] font-mono -mt-1 px-0.5">
+            <span>₹0</span>
+            <span>₹2,00,000</span>
+          </div>
 
           <div className="flex items-center gap-2">
             <div className="flex-1 relative">
@@ -187,7 +192,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({ onCloseMobile }) =
                 type="number"
                 value={filters.maxPrice}
                 onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, maxPrice: Number(e.target.value) || 10000000 }))
+                  setFilters((prev) => ({ ...prev, maxPrice: Number(e.target.value) || 200000 }))
                 }
                 placeholder="Max"
                 className="w-full bg-[#FAF8F5] border border-[#D8D0C5] rounded-lg pl-6 pr-2 py-1.5 text-xs text-[#1C1917] focus:outline-none focus:border-[#967139] font-mono"

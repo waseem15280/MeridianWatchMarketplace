@@ -315,7 +315,7 @@ const DEFAULT_FILTERS: FilterOptions = {
   movement: [],
   condition: [],
   minPrice: 0,
-  maxPrice: 10000000,
+  maxPrice: 200000,
   hasBox: false,
   hasPapers: false,
   minSellerRating: 0,
@@ -3095,7 +3095,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         if (filters.minPrice > 0 && watchPrice < filters.minPrice) {
           return false;
         }
-        if (filters.maxPrice > 0 && filters.maxPrice < 10000000 && watchPrice > filters.maxPrice) {
+        if (filters.maxPrice > 0 && watchPrice > filters.maxPrice) {
           return false;
         }
 
