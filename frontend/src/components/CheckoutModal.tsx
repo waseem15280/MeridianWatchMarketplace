@@ -100,7 +100,7 @@ export const CheckoutModal: React.FC = () => {
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-[#967139]" />
             <h2 className="text-sm font-serif font-bold text-[#1C1917] uppercase tracking-wider">
-              {completedOrder ? 'Acquisition Secured' : 'Chronos Escrow Protected Checkout'}
+              {completedOrder ? 'Acquisition Secured' : 'THC Escrow Protected Checkout'}
             </h2>
           </div>
 

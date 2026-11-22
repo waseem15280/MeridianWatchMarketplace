@@ -2762,7 +2762,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Orders
   const createOrder = (listingId: string, shippingAddress: string, paymentMethod: string): OrderTransaction => {
-    const watch = listings.find((l) => l.id === listingId);
+    const watch = listings.find((l) => String(l.id) === String(listingId));
     if (!watch) throw new Error('Listing not found');
 
     const shippingFee = 150;
@@ -2857,7 +2857,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Offers
   const createOffer = (listingId: string, offerAmount: number, message: string): WatchOffer => {
-    const watch = listings.find((l) => l.id === listingId);
+    const watch = listings.find((l) => String(l.id) === String(listingId));
     if (!watch) throw new Error('Listing not found');
 
     const newOffer: WatchOffer = {

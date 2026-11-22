@@ -17,6 +17,7 @@ import { SellerProfileModal } from './components/SellerProfileModal';
 import { AddEditListingModal } from './components/AddEditListingModal';
 import { AddCollectionWatchModal } from './components/AddCollectionWatchModal';
 import { CheckoutModal } from './components/CheckoutModal';
+import { MakeOfferModal } from './components/MakeOfferModal';
 import { LeaveReviewModal } from './components/LeaveReviewModal';
 import { CompareDrawer } from './components/CompareDrawer';
 import { ShieldCheck, Lock, Award, Heart } from 'lucide-react';
@@ -88,6 +89,7 @@ const MarketplaceApp: React.FC = () => {
       {isFeatureEnabled('sellerHub') && <AddEditListingModal />}
       {isFeatureEnabled('collectorVault') && <AddCollectionWatchModal />}
       {isFeatureEnabled('ordersAndOffers') && <CheckoutModal />}
+      {isFeatureEnabled('ordersAndOffers') && <MakeOfferModal />}
       {isFeatureEnabled('ordersAndOffers') && <LeaveReviewModal />}
       <CompareDrawer />
 

@@ -1,47 +1,105 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMarketplace } from '../context/MarketplaceContext';
-import { X, IndianRupee, Send, ShieldCheck, Check } from 'lucide-react';
+import { X, IndianRupee, Send } from 'lucide-react';
 import { WatchListing } from '../types';
 
 interface MakeOfferModalProps {
-  watch: WatchListing | null;
-  isOpen: boolean;
-  onClose: () => void;
+  watch?: WatchListing | null;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({ watch, isOpen, onClose }) => {
-  const { makeOffer, showToast } = useMarketplace();
+export const MakeOfferModal: React.FC<MakeOfferModalProps> = (props) => {
+  const {
+    isOfferOpen: contextIsOpen,
+    setIsOfferOpen,
+    offerWatch: contextWatch,
+    setOfferWatch,
+    createOffer,
+    showToast,
+    isLoggedIn,
+    promptLogin
+  } = useMarketplace();
+
+  const isOpen = props.isOpen !== undefined ? props.isOpen : contextIsOpen;
+  const watch = props.watch !== undefined ? props.watch : contextWatch;
+
+  const handleClose = () => {
+    if (props.onClose) {
+      props.onClose();
+    } else {
+      setIsOfferOpen(false);
+      setOfferWatch(null);
+    }
+  };
+
   const [offerPrice, setOfferPrice] = useState<number>(watch ? Math.round(watch.price * 0.95) : 0);
   const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    if (watch && isOpen) {
+      setOfferPrice(Math.round(watch.price * 0.95));
+      setMessage('');
+    }
+  }, [watch, isOpen]);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   if (!isOpen || !watch) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!isLoggedIn) {
+      promptLogin('Please log in to submit an offer to the seller.', String(watch.id));
+      handleClose();
+      return;
+    }
+
     if (offerPrice <= 0) {
       showToast('Invalid Offer', 'Please enter a valid offer amount', 'warning');
       return;
     }
 
-    makeOffer(watch.id, offerPrice, message);
-    onClose();
+    try {
+      createOffer(String(watch.id), offerPrice, message);
+      handleClose();
+    } catch (err: any) {
+      showToast('Error', err?.message || 'Failed to submit offer', 'error');
+    }
   };
 
   const discountPercent = Math.round(((watch.price - offerPrice) / watch.price) * 100);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+      onClick={handleClose}
+    >
       <div
         id="make-offer-modal-content"
         className="w-full max-w-md bg-[#FAF8F5] border border-[#E5DFD5] rounded-3xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 text-[#1C1917]"
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between pb-3 border-b border-[#E5DFD5]">
           <h3 className="text-sm font-serif font-bold text-[#1C1917] flex items-center gap-2">
             <IndianRupee className="w-4 h-4 text-[#967139]" />
             <span>Submit Direct Offer to Seller</span>
           </h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-[#78716C] hover:text-[#1C1917] hover:bg-[#EDE8E0] transition-colors">
+          <button
+            onClick={handleClose}
+            className="p-1.5 rounded-lg text-[#78716C] hover:text-[#1C1917] hover:bg-[#EDE8E0] transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -49,7 +107,7 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({ watch, isOpen, o
         {/* Watch summary */}
         <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#FFFFFF] border border-[#E5DFD5] shadow-2xs">
           <img
-            src={watch.images[0]}
+            src={watch.images?.[0] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80'}
             alt={watch.model}
             referrerPolicy="no-referrer"
             className="w-14 h-14 rounded-xl object-cover border border-[#D8D0C5]"
@@ -87,11 +145,16 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({ watch, isOpen, o
                 {discountPercent}% below listing asking price
               </p>
             )}
+            {discountPercent < 0 && (
+              <p className="text-[11px] text-[#3D5A45] mt-1 font-mono font-medium">
+                {Math.abs(discountPercent)}% above listing asking price
+              </p>
+            )}
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-[#57534E] uppercase tracking-wider mb-1.5">
-              Message to Seller ({watch.sellerName})
+              Message to Seller ({watch.sellerName || 'Seller'})
             </label>
             <textarea
               value={message}
@@ -105,7 +168,7 @@ export const MakeOfferModal: React.FC<MakeOfferModalProps> = ({ watch, isOpen, o
           <div className="flex items-center gap-3 pt-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="flex-1 bg-[#FAF8F5] hover:bg-[#EDE8E0] text-[#57534E] font-semibold py-2.5 rounded-xl text-xs border border-[#D8D0C5] transition-colors"
             >
               Cancel
