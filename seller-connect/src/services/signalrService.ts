@@ -1,5 +1,10 @@
 import * as signalR from '@microsoft/signalr';
-import { ChatMessage, MobileInquiryNotification } from '../types';
+import {
+  ChatMessage,
+  ChatConversation,
+  MobileInquiryNotification,
+  LoginResponse
+} from '../types';
 
 export class SignalRService {
   private hubConnection: signalR.HubConnection | null = null;
@@ -19,11 +24,11 @@ export class SignalRService {
       window.location.origin
     ) {
       this.serverUrl = window.location.origin.includes('localhost')
-        ? 'http://192.168.1.33:5000'
+        ? 'http://192.168.1.33:3000'
         : window.location.origin;
     } else {
       // In React Native mobile environment: default to current dev machine LAN IP
-      this.serverUrl = 'http://192.168.1.33:5000';
+      this.serverUrl = 'http://192.168.1.33:3000';
     }
   }
 
@@ -33,6 +38,68 @@ export class SignalRService {
 
   public setServerUrl(url: string): void {
     this.serverUrl = url;
+  }
+
+  // Authenticate seller user against backend UserManagement API
+  public async login(usernameOrEmail: string, password: string): Promise<LoginResponse> {
+    const res = await fetch(`${this.serverUrl}/api/users/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usernameOrEmail, password })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || `Login failed with status ${res.status}`);
+    }
+
+    return await res.json();
+  }
+
+  // Load conversations specifically for this logged-in seller
+  public async fetchConversations(sellerId: string | number): Promise<ChatConversation[]> {
+    try {
+      const res = await fetch(`${this.serverUrl}/api/chat/conversations?sellerId=${sellerId}`);
+      if (!res.ok) return [];
+      return await res.json();
+    } catch (e) {
+      console.warn('fetchConversations error:', e);
+      return [];
+    }
+  }
+
+  // Load mobile push notifications specifically for this logged-in seller
+  public async fetchNotifications(sellerId: string | number): Promise<MobileInquiryNotification[]> {
+    try {
+      const res = await fetch(`${this.serverUrl}/api/chat/notifications?sellerId=${sellerId}`);
+      if (!res.ok) return [];
+      return await res.json();
+    } catch (e) {
+      console.warn('fetchNotifications error:', e);
+      return [];
+    }
+  }
+
+  // Load messages for a given conversation
+  public async fetchMessages(conversationId: string): Promise<ChatMessage[]> {
+    try {
+      const res = await fetch(`${this.serverUrl}/api/chat/messages?conversationId=${encodeURIComponent(conversationId)}`);
+      if (!res.ok) return [];
+      return await res.json();
+    } catch (e) {
+      console.warn('fetchMessages error:', e);
+      return [];
+    }
+  }
+
+  // Mark all buyer messages in a conversation as read on the backend
+  public async markConversationRead(conversationId: string): Promise<void> {
+    try {
+      await fetch(
+        `${this.serverUrl}/api/chat/conversations/${encodeURIComponent(conversationId)}/read?reader=seller`,
+        { method: 'POST' }
+      );
+    } catch {}
   }
 
   public async startConnection(
@@ -65,6 +132,7 @@ export class SignalRService {
       });
 
       await this.hubConnection.start();
+      // Register this mobile connection exclusively to this seller's channel
       await this.hubConnection.invoke('RegisterSeller', String(sellerId));
       return true;
     } catch (err) {
@@ -92,7 +160,7 @@ export class SignalRService {
       }
     }
 
-    // Also attempt REST fallback
+    // Also attempt REST fallback to ensure persistence
     try {
       await fetch(`${this.serverUrl}/api/chat/messages`, {
         method: 'POST',

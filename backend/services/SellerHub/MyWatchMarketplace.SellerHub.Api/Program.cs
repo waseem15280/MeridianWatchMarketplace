@@ -347,4 +347,10 @@ chatApi.MapPost("/notifications/{id}/read", (string id) =>
     return Results.Ok(new { success = true });
 });
 
+chatApi.MapPost("/conversations/{conversationId}/read", (string conversationId, string? reader) =>
+{
+    ChatStore.MarkConversationRead(conversationId, reader);
+    return Results.Ok(new { success = true });
+});
+
 app.Run();

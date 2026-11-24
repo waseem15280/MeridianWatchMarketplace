@@ -56,3 +56,38 @@ export interface SellerProfile {
   avatar: string;
   phone?: string;
 }
+
+export interface UserAccount {
+  id: string | number;
+  userLoginId: number;
+  name: string;
+  email: string;
+  role: 'buyer' | 'seller' | 'collector' | 'admin' | string;
+  avatar?: string;
+  location?: string;
+  memberSince?: string;
+  verifiedDealer?: boolean;
+  bio?: string;
+  rating?: number;
+  reviewCount?: number;
+  totalSalesCount?: number;
+  responseRate?: string;
+  avgShipTime?: string;
+  phone?: string;
+  isDefault?: boolean;
+  isKycDone?: boolean;
+}
+
+export interface UserLogin {
+  id: number;
+  username: string;
+  email: string;
+  isActive: boolean;
+}
+
+export interface LoginResponse {
+  token: string;
+  login: UserLogin;
+  accounts: UserAccount[];
+  activeAccountId: number;
+}

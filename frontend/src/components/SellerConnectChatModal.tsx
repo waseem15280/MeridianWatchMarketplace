@@ -50,99 +50,139 @@ export const SellerConnectChatModal: React.FC = () => {
     let isMounted = true;
     setIsConnecting(true);
 
-    // Initial message creation if thread empty
-    const initialBuyerMessage: ChatMessage = {
-      id: `msg-${Date.now()}-init`,
-      conversationId,
-      listingId: chatWatch.id,
-      buyerId: currentUser.id || 'buyer-1',
-      buyerName: currentUser.name || 'Interested Buyer',
-      sellerId: chatWatch.sellerId,
-      sellerName: chatWatch.sellerName,
-      sender: 'buyer',
-      text: `Hello ${chatWatch.sellerName}, I am inquiring about the ${chatWatch.brand} ${chatWatch.model} (Ref: ${chatWatch.referenceNumber || 'N/A'}) listed on THC for ₹${chatWatch.price.toLocaleString()}. Is this timepiece still available for purchase?`,
-      imageUrl: chatWatch.images?.[0] || '',
-      watchBrand: chatWatch.brand,
-      watchModel: chatWatch.model,
-      price: chatWatch.price,
-      createdAt: new Date().toISOString(),
-      isRead: false
+    const initializeChat = async () => {
+      // 1. Check localStorage for existing history
+      const saved = localStorage.getItem(`chat_${conversationId}`);
+      let localMessages: ChatMessage[] = [];
+      if (saved) {
+        try {
+          localMessages = JSON.parse(saved);
+        } catch {
+          localMessages = [];
+        }
+      }
+
+      // 2. Check backend for existing chat history between this buyer & seller for this watch
+      let backendMessages: ChatMessage[] = [];
+      try {
+        const res = await fetch(
+          `/api/chat/messages?conversationId=${encodeURIComponent(conversationId)}`
+        );
+        if (res.ok) {
+          backendMessages = await res.json();
+        }
+      } catch {}
+
+      if (!isMounted) return;
+
+      const hasExistingHistory = backendMessages.length > 0 || localMessages.length > 0;
+      let initialToDispatch: ChatMessage | null = null;
+
+      if (hasExistingHistory) {
+        // Merge backend & local messages (deduplicated by id) without re-sending watch image/price
+        const mergedMap = new Map<string, ChatMessage>();
+        [...localMessages, ...backendMessages].forEach((m) => mergedMap.set(m.id, m));
+        const merged = Array.from(mergedMap.values()).sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+        setMessages(merged);
+        try {
+          localStorage.setItem(`chat_${conversationId}`, JSON.stringify(merged));
+        } catch {}
+      } else {
+        // New chat for this watch: send watch image & price one time only
+        const initialBuyerMessage: ChatMessage = {
+          id: `msg-${Date.now()}-init`,
+          conversationId,
+          listingId: String(chatWatch.id),
+          buyerId: String(currentUser.id || 'buyer-1'),
+          buyerName: currentUser.name || 'Interested Buyer',
+          sellerId: String(chatWatch.sellerId),
+          sellerName: chatWatch.sellerName,
+          sender: 'buyer',
+          text: `Hello ${chatWatch.sellerName}, I am inquiring about the ${chatWatch.brand} ${chatWatch.model} (Ref: ${chatWatch.referenceNumber || 'N/A'}) listed on THC for ₹${chatWatch.price.toLocaleString()}. Is this timepiece still available for purchase?`,
+          imageUrl: chatWatch.images?.[0] || '',
+          watchBrand: chatWatch.brand,
+          watchModel: chatWatch.model,
+          price: Number(chatWatch.price || 0),
+          createdAt: new Date().toISOString(),
+          isRead: false
+        };
+        initialToDispatch = initialBuyerMessage;
+        setMessages([initialBuyerMessage]);
+        try {
+          localStorage.setItem(`chat_${conversationId}`, JSON.stringify([initialBuyerMessage]));
+        } catch {}
+      }
+
+      // 3. Build SignalR connection
+      const hubUrl = `${window.location.origin}/hubs/chat`;
+      const connection = new signalR.HubConnectionBuilder()
+        .withUrl(hubUrl, {
+          skipNegotiation: false,
+          transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling
+        })
+        .withAutomaticReconnect()
+        .build();
+
+      hubConnectionRef.current = connection;
+
+      // Listen for incoming messages from seller
+      connection.on('ReceiveMessage', (msg: ChatMessage) => {
+        if (!isMounted) return;
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === msg.id)) return prev;
+          const updated = [...prev, msg];
+          try {
+            localStorage.setItem(`chat_${conversationId}`, JSON.stringify(updated));
+          } catch {}
+          return updated;
+        });
+      });
+
+      connection
+        .start()
+        .then(async () => {
+          if (!isMounted) return;
+          setIsConnected(true);
+          setIsConnecting(false);
+
+          // Join conversation room
+          await connection.invoke('JoinConversation', conversationId);
+
+          // Only dispatch initial watch image & price if this is a brand-new chat
+          if (initialToDispatch) {
+            try {
+              await connection.invoke('SendMessage', initialToDispatch);
+            } catch (e) {
+              console.warn('Initial message dispatch via hub:', e);
+            }
+            try {
+              fetch('/api/chat/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(initialToDispatch)
+              }).catch(() => {});
+            } catch {}
+          }
+        })
+        .catch((err) => {
+          console.warn('SignalR hub connection notice (running in local sandbox mode):', err);
+          if (isMounted) {
+            setIsConnected(false);
+            setIsConnecting(false);
+          }
+        });
     };
 
-    // Load any existing messages from localStorage or backend
-    const saved = localStorage.getItem(`chat_${conversationId}`);
-    let existingMessages: ChatMessage[] = [];
-    if (saved) {
-      try {
-        existingMessages = JSON.parse(saved);
-      } catch {
-        existingMessages = [];
-      }
-    }
-
-    if (existingMessages.length === 0) {
-      existingMessages = [initialBuyerMessage];
-      try {
-        localStorage.setItem(`chat_${conversationId}`, JSON.stringify(existingMessages));
-      } catch {}
-    }
-    setMessages(existingMessages);
-
-    // Build SignalR connection
-    const hubUrl = `${window.location.origin}/hubs/chat`;
-    const connection = new signalR.HubConnectionBuilder()
-      .withUrl(hubUrl, {
-        skipNegotiation: false,
-        transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling
-      })
-      .withAutomaticReconnect()
-      .build();
-
-    hubConnectionRef.current = connection;
-
-    connection
-      .start()
-      .then(async () => {
-        if (!isMounted) return;
-        setIsConnected(true);
-        setIsConnecting(false);
-
-        // Join conversation room
-        await connection.invoke('JoinConversation', conversationId);
-
-        // Send initial inquiry through SignalR so the seller's mobile app gets NewInquiryAlert
-        try {
-          await connection.invoke('SendMessage', initialBuyerMessage);
-        } catch (e) {
-          console.warn('Initial message dispatch via hub:', e);
-        }
-      })
-      .catch((err) => {
-        console.warn('SignalR hub connection notice (running in local sandbox mode):', err);
-        if (isMounted) {
-          setIsConnected(false);
-          setIsConnecting(false);
-        }
-      });
-
-    // Listen for incoming messages from seller
-    connection.on('ReceiveMessage', (msg: ChatMessage) => {
-      if (!isMounted) return;
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === msg.id)) return prev;
-        const updated = [...prev, msg];
-        try {
-          localStorage.setItem(`chat_${conversationId}`, JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
-    });
+    initializeChat();
 
     return () => {
       isMounted = false;
-      if (connection.state === signalR.HubConnectionState.Connected) {
-        connection.invoke('LeaveConversation', conversationId).catch(() => {});
-        connection.stop().catch(() => {});
+      const conn = hubConnectionRef.current;
+      if (conn && conn.state === signalR.HubConnectionState.Connected) {
+        conn.invoke('LeaveConversation', conversationId).catch(() => {});
+        conn.stop().catch(() => {});
       }
     };
   }, [isSellerChatOpen, chatWatch, conversationId, currentUser.id, currentUser.name]);
@@ -158,20 +198,21 @@ export const SellerConnectChatModal: React.FC = () => {
     if (e) e.preventDefault();
     if (!inputText.trim()) return;
 
+    const isFirstMessage = messages.length === 0;
     const newMsg: ChatMessage = {
       id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       conversationId,
-      listingId: chatWatch.id,
-      buyerId: currentUser.id || 'buyer-1',
+      listingId: String(chatWatch.id),
+      buyerId: String(currentUser.id || 'buyer-1'),
       buyerName: currentUser.name || 'Interested Buyer',
-      sellerId: chatWatch.sellerId,
+      sellerId: String(chatWatch.sellerId),
       sellerName: chatWatch.sellerName,
       sender: 'buyer',
       text: inputText.trim(),
-      imageUrl: chatWatch.images?.[0],
+      imageUrl: isFirstMessage ? chatWatch.images?.[0] : undefined,
       watchBrand: chatWatch.brand,
       watchModel: chatWatch.model,
-      price: chatWatch.price,
+      price: isFirstMessage ? Number(chatWatch.price || 0) : undefined,
       createdAt: new Date().toISOString(),
       isRead: false
     };
@@ -209,10 +250,10 @@ export const SellerConnectChatModal: React.FC = () => {
     const sellerReply: ChatMessage = {
       id: `msg-${Date.now()}-seller`,
       conversationId,
-      listingId: chatWatch.id,
-      buyerId: currentUser.id || 'buyer-1',
+      listingId: String(chatWatch.id),
+      buyerId: String(currentUser.id || 'buyer-1'),
       buyerName: currentUser.name || 'Interested Buyer',
-      sellerId: chatWatch.sellerId,
+      sellerId: String(chatWatch.sellerId),
       sellerName: chatWatch.sellerName,
       sender: 'seller',
       text: replyText,
@@ -264,8 +305,10 @@ export const SellerConnectChatModal: React.FC = () => {
                 </span>
               </div>
               <div className="flex items-center gap-1.5 text-[11px] text-[#78716C]">
-                <Smartphone className="w-3 h-3 text-[#967139]" />
-                <span>Seller Connect Mobile • SignalR Active</span>
+                <Smartphone className="w-3.5 h-3.5 text-[#967139]" />
+                <span>
+                  Routing to: <strong className="text-[#1C1917]">{chatWatch.sellerName}</strong>'s Mobile (ID: #{chatWatch.sellerId})
+                </span>
               </div>
             </div>
           </div>

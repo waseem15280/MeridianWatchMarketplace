@@ -7,6 +7,7 @@ public static class ChatStore
 {
     private static readonly ConcurrentBag<ChatMessageDto> _messages = new();
     private static readonly ConcurrentDictionary<string, MobileNotificationDto> _notifications = new();
+    private static readonly ConcurrentDictionary<string, bool> _readMessageIds = new();
 
     public static void AddMessage(ChatMessageDto message)
     {
@@ -59,8 +60,8 @@ public static class ChatStore
         foreach (var g in groups)
         {
             var latest = g.OrderByDescending(m => m.CreatedAt).First();
-            var unreadSeller = g.Count(m => m.Sender == "buyer" && !m.IsRead);
-            var unreadBuyer = g.Count(m => m.Sender == "seller" && !m.IsRead);
+            var unreadSeller = g.Count(m => m.Sender == "buyer" && !m.IsRead && !_readMessageIds.ContainsKey(m.Id));
+            var unreadBuyer = g.Count(m => m.Sender == "seller" && !m.IsRead && !_readMessageIds.ContainsKey(m.Id));
 
             list.Add(new ChatConversationDto(
                 Id: g.Key,
@@ -98,6 +99,18 @@ public static class ChatStore
         if (_notifications.TryGetValue(notificationId, out var notif))
         {
             _notifications[notificationId] = notif with { IsRead = true };
+        }
+    }
+
+    public static void MarkConversationRead(string conversationId, string? reader = "seller")
+    {
+        var targetSender = string.Equals(reader, "buyer", StringComparison.OrdinalIgnoreCase)
+            ? "seller"
+            : "buyer";
+
+        foreach (var msg in _messages.Where(m => m.ConversationId == conversationId && m.Sender == targetSender))
+        {
+            _readMessageIds[msg.Id] = true;
         }
     }
 }
