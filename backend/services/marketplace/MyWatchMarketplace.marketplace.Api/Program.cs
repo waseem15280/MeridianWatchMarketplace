@@ -231,7 +231,9 @@ listingsApi.MapGet("/", async (
         w.ViewsCount,
         w.WishlistCount,
         w.IsFeatured,
-        w.FromPersonalCollectionId
+        w.FromPersonalCollectionId,
+        w.SellerKycDone,
+        w.SellerPhone
     )).ToListAsync();
 
     return Results.Ok(results);
@@ -280,7 +282,9 @@ listingsApi.MapGet("/{id:int}", async (int id, MarketplaceDbContext db) =>
         listing.ViewsCount,
         listing.WishlistCount,
         listing.IsFeatured,
-        listing.FromPersonalCollectionId
+        listing.FromPersonalCollectionId,
+        listing.SellerKycDone,
+        listing.SellerPhone
     ));
 });
 
@@ -324,6 +328,8 @@ listingsApi.MapPost("/", async (CreateWatchListingRequest request, MarketplaceDb
             SellerRating = request.SellerRating ?? 0.0,
             SellerReviewCount = request.SellerReviewCount ?? 0,
             SellerVerified = request.SellerVerified ?? false,
+            SellerKycDone = request.SellerKycDone ?? false,
+            SellerPhone = request.SellerPhone,
             SellerLocation = !string.IsNullOrWhiteSpace(request.SellerLocation) ? request.SellerLocation : "Global",
             Brand = !string.IsNullOrWhiteSpace(request.Brand) ? request.Brand : "Other",
             Model = !string.IsNullOrWhiteSpace(request.Model) ? request.Model : "Timepiece",
@@ -404,7 +410,9 @@ listingsApi.MapPost("/", async (CreateWatchListingRequest request, MarketplaceDb
             listing.ViewsCount,
             listing.WishlistCount,
             listing.IsFeatured,
-            listing.FromPersonalCollectionId
+            listing.FromPersonalCollectionId,
+            listing.SellerKycDone,
+            listing.SellerPhone
         ));
     }
     catch (Exception ex)
@@ -503,7 +511,9 @@ listingsApi.MapPut("/{id:int}", async (int id, UpdateWatchListingRequest request
         listing.ViewsCount,
         listing.WishlistCount,
         listing.IsFeatured,
-        listing.FromPersonalCollectionId
+        listing.FromPersonalCollectionId,
+        listing.SellerKycDone,
+        listing.SellerPhone
     ));
 });
 

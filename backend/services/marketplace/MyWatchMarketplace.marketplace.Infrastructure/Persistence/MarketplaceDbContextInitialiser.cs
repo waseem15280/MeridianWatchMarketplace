@@ -28,6 +28,11 @@ public class MarketplaceDbContextInitialiser
                 {
                     await _context.Database.MigrateAsync();
                 }
+
+                await _context.Database.ExecuteSqlRawAsync(
+                    @"ALTER TABLE ""WatchListings"" ADD COLUMN IF NOT EXISTS ""SellerKycDone"" boolean NOT NULL DEFAULT false;
+                      ALTER TABLE ""WatchListings"" ADD COLUMN IF NOT EXISTS ""SellerPhone"" character varying(50) NULL;"
+                );
             }
 
             await SeedAsync();

@@ -23,6 +23,8 @@ public class UserAccount : BaseAuditableEntity<int>
 
     public bool VerifiedDealer { get; set; }
 
+    public bool IsKycDone { get; set; }
+
     public string Bio { get; set; } = string.Empty;
 
     public double Rating { get; set; }

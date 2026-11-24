@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Truck,
   MessageSquare,
+  MessageCircle,
   Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -40,7 +41,8 @@ export const WatchDetailModal: React.FC = () => {
     setIsOfferOpen,
     compareList,
     toggleCompare,
-    showToast
+    showToast,
+    openSellerChat
   } = useMarketplace();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -62,6 +64,7 @@ export const WatchDetailModal: React.FC = () => {
   const isWishlisted = isInWishlist(selectedWatch.id);
   const isCompared = compareList.includes(selectedWatch.id);
   const seller = getSellerById(selectedWatch.sellerId);
+  const isSellerKycDone = Boolean(seller?.isKycDone ?? selectedWatch.sellerKycDone);
 
   const handleBuyNow = () => {
     setCheckoutWatch(selectedWatch);
@@ -270,14 +273,25 @@ export const WatchDetailModal: React.FC = () => {
                 {isFeatureEnabled('ordersAndOffers') && (
                   <div className="space-y-2.5">
                     <div className="grid grid-cols-2 gap-3">
-                      <button
-                        id="detail-buy-now-btn"
-                        onClick={handleBuyNow}
-                        className="w-full bg-[#1C1917] hover:bg-[#2D2A26] text-[#FAF8F5] font-bold py-3 px-4 rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2"
-                      >
-                        <Lock className="w-4 h-4 text-[#C5A880]" />
-                        <span>Buy</span>
-                      </button>
+                      {isSellerKycDone ? (
+                        <button
+                          id="detail-buy-now-btn"
+                          onClick={handleBuyNow}
+                          className="w-full bg-[#1C1917] hover:bg-[#2D2A26] text-[#FAF8F5] font-bold py-3 px-4 rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                        >
+                          <Lock className="w-4 h-4 text-[#C5A880]" />
+                          <span>Buy</span>
+                        </button>
+                      ) : (
+                        <button
+                          id="detail-chat-seller-btn"
+                          onClick={() => openSellerChat(selectedWatch)}
+                          className="w-full bg-[#967139] hover:bg-[#7D5D2E] text-[#FAF8F5] font-bold py-3 px-4 rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                        >
+                          <MessageCircle className="w-4 h-4 text-[#FAF8F5]" />
+                          <span>Chat with seller</span>
+                        </button>
+                      )}
 
                       <button
                         id="detail-make-offer-btn"

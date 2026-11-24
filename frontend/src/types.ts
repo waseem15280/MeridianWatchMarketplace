@@ -309,6 +309,7 @@ export interface UserAccount {
   responseRate: string; // e.g. "99%"
   avgShipTime: string; // e.g. "Within 24 hours"
   phone?: string;
+  isKycDone?: boolean;
   isDefault?: boolean;
   permissions?: Permission[];
 }
@@ -320,6 +321,8 @@ export interface WatchListing {
   sellerRating: number;
   sellerReviewCount: number;
   sellerVerified: boolean;
+  sellerKycDone?: boolean;
+  sellerPhone?: string;
   sellerLocation: string;
   
   // Watch Details
@@ -517,4 +520,53 @@ export interface SellerDecisionNotification {
   rejectionReason?: string;
   timestamp: string;
   acknowledged: boolean;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  listingId: string | number;
+  buyerId: string | number;
+  buyerName: string;
+  sellerId: string | number;
+  sellerName: string;
+  sender: 'buyer' | 'seller';
+  text: string;
+  imageUrl?: string;
+  watchBrand?: string;
+  watchModel?: string;
+  price?: number;
+  createdAt: string;
+  isRead?: boolean;
+}
+
+export interface ChatConversation {
+  id: string;
+  listingId: string | number;
+  watchModel: string;
+  watchBrand: string;
+  watchImage: string;
+  price: number;
+  buyerId: string | number;
+  buyerName: string;
+  sellerId: string | number;
+  sellerName: string;
+  lastMessage: string;
+  lastMessageAt: string;
+  unreadCountSeller: number;
+  unreadCountBuyer: number;
+}
+
+export interface MobileInquiryNotification {
+  id: string;
+  conversationId: string;
+  listingId: string | number;
+  watchModel: string;
+  watchBrand: string;
+  watchImage: string;
+  price: number;
+  buyerName: string;
+  messageText: string;
+  timestamp: string;
+  isRead: boolean;
 }

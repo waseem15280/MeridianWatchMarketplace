@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Seller Connect",
+    "slug": "seller-connect",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.thc.sellerconnect"
+    },
+    "android": {
+      "package": "com.thc.sellerconnect",
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

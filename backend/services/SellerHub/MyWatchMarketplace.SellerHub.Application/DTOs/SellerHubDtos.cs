@@ -16,7 +16,8 @@ public record SellerProfileDto(
     int TotalSalesCount,
     string ResponseRate,
     string AvgShipTime,
-    string? Phone
+    string? Phone,
+    bool IsKycDone = false
 );
 
 public record UpdateSellerProfileRequest(
@@ -27,7 +28,8 @@ public record UpdateSellerProfileRequest(
     string? Bio,
     string? Phone,
     string? ResponseRate,
-    string? AvgShipTime
+    string? AvgShipTime,
+    bool? IsKycDone = null
 );
 
 public record SellerReviewDto(

@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
 using MyWatchMarketplace.Contracts.DTOs;
+using MyWatchMarketplace.SellerHub.Api.Hubs;
+using MyWatchMarketplace.SellerHub.Api.Services;
 using MyWatchMarketplace.SellerHub.Application.DTOs;
 using MyWatchMarketplace.SellerHub.Domain.Common;
 using MyWatchMarketplace.SellerHub.Domain.Entities;
@@ -9,6 +12,7 @@ using MyWatchMarketplace.SellerHub.Infrastructure.Persistence;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddSignalR();
 builder.Services.AddSellerHubInfrastructureServices(builder.Configuration);
 
 builder.Services.AddCors(options =>
@@ -70,7 +74,8 @@ sellerApi.MapGet("/profiles", async (SellerHubDbContext db) =>
             p.TotalSalesCount,
             p.ResponseRate,
             p.AvgShipTime,
-            p.Phone
+            p.Phone,
+            p.IsKycDone
         )).ToListAsync();
 
     return Results.Ok(profiles);
@@ -96,7 +101,8 @@ sellerApi.MapGet("/profiles/{userId:int}", async (int userId, SellerHubDbContext
         p.TotalSalesCount,
         p.ResponseRate,
         p.AvgShipTime,
-        p.Phone
+        p.Phone,
+        p.IsKycDone
     ));
 });
 
@@ -112,6 +118,7 @@ sellerApi.MapPut("/profiles/{userId:int}", async (int userId, UpdateSellerProfil
     if (!string.IsNullOrWhiteSpace(request.Location)) p.Location = request.Location;
     if (!string.IsNullOrWhiteSpace(request.Bio)) p.Bio = request.Bio;
     if (request.Phone is not null) p.Phone = request.Phone;
+    if (request.IsKycDone.HasValue) p.IsKycDone = request.IsKycDone.Value;
     if (!string.IsNullOrWhiteSpace(request.ResponseRate)) p.ResponseRate = request.ResponseRate;
     if (!string.IsNullOrWhiteSpace(request.AvgShipTime)) p.AvgShipTime = request.AvgShipTime;
 
@@ -282,6 +289,61 @@ sellerApi.MapPost("/offers/sync", async (SyncOfferToSellerRequest request, Selle
     }
 
     await db.SaveChangesAsync();
+    return Results.Ok(new { success = true });
+});
+
+app.MapHub<ChatHub>("/hubs/chat");
+
+var chatApi = app.MapGroup("/api/chat");
+
+chatApi.MapPost("/messages", async (ChatMessageDto message, IHubContext<ChatHub> hubContext) =>
+{
+    ChatStore.AddMessage(message);
+
+    await hubContext.Clients.Group(message.ConversationId).SendAsync("ReceiveMessage", message);
+
+    if (string.Equals(message.Sender, "buyer", StringComparison.OrdinalIgnoreCase))
+    {
+        var notif = new MobileNotificationDto(
+            Id: "notif-" + Guid.NewGuid().ToString("N")[..8],
+            ConversationId: message.ConversationId,
+            ListingId: message.ListingId,
+            WatchModel: message.WatchModel ?? "Luxury Watch",
+            WatchBrand: message.WatchBrand ?? "THC",
+            WatchImage: message.ImageUrl ?? "",
+            Price: message.Price ?? 0m,
+            BuyerName: message.BuyerName,
+            MessageText: message.Text,
+            Timestamp: DateTimeOffset.UtcNow,
+            IsRead: false
+        );
+        await hubContext.Clients.Group($"seller-{message.SellerId}").SendAsync("NewInquiryAlert", notif);
+    }
+
+    return Results.Ok(message);
+});
+
+chatApi.MapGet("/messages", (string? conversationId, string? listingId, string? buyerId) =>
+{
+    var messages = ChatStore.GetMessages(conversationId, listingId, buyerId);
+    return Results.Ok(messages);
+});
+
+chatApi.MapGet("/conversations", (string sellerId) =>
+{
+    var conversations = ChatStore.GetConversationsForSeller(sellerId);
+    return Results.Ok(conversations);
+});
+
+chatApi.MapGet("/notifications", (string sellerId) =>
+{
+    var notifications = ChatStore.GetNotificationsForSeller(sellerId);
+    return Results.Ok(notifications);
+});
+
+chatApi.MapPost("/notifications/{id}/read", (string id) =>
+{
+    ChatStore.MarkNotificationRead(id);
     return Results.Ok(new { success = true });
 });
 

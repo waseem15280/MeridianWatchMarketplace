@@ -303,7 +303,17 @@ interface MarketplaceContextType {
     orderId?: string;
   } | null;
   setReviewTarget: (target: { sellerId: string; sellerName: string; watchModel: string; watchReference?: string; orderId?: string } | null) => void;
-  
+
+  // Seller KYC Management
+  toggleSellerKyc: (sellerId: string | number, isKycDone: boolean) => Promise<boolean>;
+
+  // Seller Connect Live Chat
+  isSellerChatOpen: boolean;
+  setIsSellerChatOpen: (open: boolean) => void;
+  chatWatch: WatchListing | null;
+  setChatWatch: (watch: WatchListing | null) => void;
+  openSellerChat: (watch: WatchListing) => void;
+
   // Toasts
   toasts: ToastMessage[];
   showToast: (title: string, message: string, type?: ToastMessage['type']) => void;
@@ -697,6 +707,54 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     watchReference?: string;
     orderId?: string;
   } | null>(null);
+
+  // Seller Connect Live Chat
+  const [isSellerChatOpen, setIsSellerChatOpen] = useState<boolean>(false);
+  const [chatWatch, setChatWatch] = useState<WatchListing | null>(null);
+
+  const openSellerChat = (watch: WatchListing) => {
+    setChatWatch(watch);
+    setIsSellerChatOpen(true);
+  };
+
+  const toggleSellerKyc = async (sellerId: string | number, isKycDone: boolean): Promise<boolean> => {
+    try {
+      setAccounts((prev) =>
+        prev.map((acc) => (String(acc.id) === String(sellerId) ? { ...acc, isKycDone } : acc))
+      );
+
+      setAllLogins((prev) =>
+        prev.map((login) => ({
+          ...login,
+          accounts: login.accounts.map((acc) =>
+            String(acc.id) === String(sellerId) ? { ...acc, isKycDone } : acc
+          )
+        }))
+      );
+
+      setListings((prev) =>
+        prev.map((watch) =>
+          String(watch.sellerId) === String(sellerId) ? { ...watch, sellerKycDone: isKycDone } : watch
+        )
+      );
+
+      if (isGatewayConnected && !isNaN(Number(sellerId))) {
+        userManagementApi.updateAccount(Number(sellerId), { isKycDone }).catch((e) =>
+          console.warn('Failed to update seller KYC on backend:', e)
+        );
+      }
+
+      showToast(
+        isKycDone ? 'KYC Verified' : 'KYC Revoked',
+        `Seller KYC status is now ${isKycDone ? 'Verified' : 'Pending'}.`,
+        'success'
+      );
+      return true;
+    } catch (err: any) {
+      showToast('Error', err?.message || 'Failed to update KYC status', 'error');
+      return false;
+    }
+  };
 
   // Toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -3309,6 +3367,12 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
         setIsReviewOpen,
         reviewTarget,
         setReviewTarget,
+        toggleSellerKyc,
+        isSellerChatOpen,
+        setIsSellerChatOpen,
+        chatWatch,
+        setChatWatch,
+        openSellerChat,
         toasts,
         showToast,
         removeToast

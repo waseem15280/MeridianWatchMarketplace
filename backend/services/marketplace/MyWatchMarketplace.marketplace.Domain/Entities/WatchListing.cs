@@ -14,6 +14,10 @@ public class WatchListing : BaseAuditableEntity<int>
 
     public bool SellerVerified { get; set; }
 
+    public bool SellerKycDone { get; set; }
+
+    public string? SellerPhone { get; set; }
+
     public string SellerLocation { get; set; } = string.Empty;
 
     // Watch Details

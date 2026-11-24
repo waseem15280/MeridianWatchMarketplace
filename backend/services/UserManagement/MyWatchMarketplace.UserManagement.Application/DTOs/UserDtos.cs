@@ -30,7 +30,8 @@ public record UserAccountDto(
     string AvgShipTime,
     string? Phone,
     bool IsDefault,
-    List<string>? Permissions = null
+    List<string>? Permissions = null,
+    bool IsKycDone = false
 );
 
 public record LoginRequest(
@@ -85,7 +86,8 @@ public record UpdateUserAccountRequest(
     string? Location,
     string? Avatar,
     string? Phone,
-    bool? VerifiedDealer
+    bool? VerifiedDealer,
+    bool? IsKycDone = null
 );
 
 public record UpdateUserStatusRequest(

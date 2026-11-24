@@ -49,7 +49,8 @@ export const UserManagementView: React.FC = () => {
     setActiveTab,
     isGatewayConnected,
     roles,
-    hasPermission
+    hasPermission,
+    toggleSellerKyc
   } = useMarketplace();
 
   // Search & Filter State
@@ -764,7 +765,36 @@ export const UserManagementView: React.FC = () => {
                                 <div className="text-[10px] text-[#78716C] truncate">{account.email}</div>
                               </div>
                             </div>
-                            <div>{getRoleBadge(account.role)}</div>
+                            <div className="flex items-center gap-1.5">
+                              {getRoleBadge(account.role)}
+                              {account.role === 'seller' && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleSellerKyc(account.id, !account.isKycDone);
+                                  }}
+                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase transition-colors ${
+                                    account.isKycDone
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                      : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
+                                  }`}
+                                  title={account.isKycDone ? 'Click to Revoke KYC' : 'Click to Verify KYC'}
+                                >
+                                  {account.isKycDone ? (
+                                    <>
+                                      <ShieldCheck className="w-2.5 h-2.5 text-emerald-600" />
+                                      <span>KYC Done</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Clock className="w-2.5 h-2.5 text-amber-600" />
+                                      <span>KYC Pending</span>
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex items-center justify-between pt-2 border-t border-[#F0EBE1] text-[11px] text-[#78716C]">
@@ -1024,7 +1054,33 @@ export const UserManagementView: React.FC = () => {
                           </div>
                         ) : (
                           <>
-                            {getRoleBadge(acc.role)}
+                            <div className="flex items-center gap-1.5">
+                              {getRoleBadge(acc.role)}
+                              {acc.role === 'seller' && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleSellerKyc(acc.id, !acc.isKycDone)}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase transition-colors ${
+                                    acc.isKycDone
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                                      : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
+                                  }`}
+                                  title={acc.isKycDone ? 'Click to Revoke KYC' : 'Click to Verify KYC'}
+                                >
+                                  {acc.isKycDone ? (
+                                    <>
+                                      <ShieldCheck className="w-2.5 h-2.5 text-emerald-600" />
+                                      <span>KYC Done</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Clock className="w-2.5 h-2.5 text-amber-600" />
+                                      <span>KYC Pending</span>
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
                             <button
                               onClick={() => {
                                 setEditingPersonaId(acc.id);

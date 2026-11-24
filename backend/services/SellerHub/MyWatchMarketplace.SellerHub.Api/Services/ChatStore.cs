@@ -1,0 +1,103 @@
+using System.Collections.Concurrent;
+using MyWatchMarketplace.SellerHub.Application.DTOs;
+
+namespace MyWatchMarketplace.SellerHub.Api.Services;
+
+public static class ChatStore
+{
+    private static readonly ConcurrentBag<ChatMessageDto> _messages = new();
+    private static readonly ConcurrentDictionary<string, MobileNotificationDto> _notifications = new();
+
+    public static void AddMessage(ChatMessageDto message)
+    {
+        _messages.Add(message);
+
+        if (string.Equals(message.Sender, "buyer", StringComparison.OrdinalIgnoreCase))
+        {
+            var notif = new MobileNotificationDto(
+                Id: "notif-" + Guid.NewGuid().ToString("N")[..8],
+                ConversationId: message.ConversationId,
+                ListingId: message.ListingId,
+                WatchModel: message.WatchModel ?? "Luxury Watch",
+                WatchBrand: message.WatchBrand ?? "THC",
+                WatchImage: message.ImageUrl ?? "",
+                Price: message.Price ?? 0m,
+                BuyerName: message.BuyerName,
+                MessageText: message.Text,
+                Timestamp: DateTimeOffset.UtcNow,
+                IsRead: false
+            );
+            _notifications.TryAdd(notif.Id, notif);
+        }
+    }
+
+    public static List<ChatMessageDto> GetMessages(string? conversationId, string? listingId, string? buyerId)
+    {
+        var query = _messages.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(conversationId))
+        {
+            query = query.Where(m => m.ConversationId == conversationId);
+        }
+        else
+        {
+            if (!string.IsNullOrWhiteSpace(listingId))
+                query = query.Where(m => m.ListingId == listingId);
+            if (!string.IsNullOrWhiteSpace(buyerId))
+                query = query.Where(m => m.BuyerId == buyerId);
+        }
+
+        return query.OrderBy(m => m.CreatedAt).ToList();
+    }
+
+    public static List<ChatConversationDto> GetConversationsForSeller(string sellerId)
+    {
+        var sellerMessages = _messages.Where(m => m.SellerId == sellerId).ToList();
+        var groups = sellerMessages.GroupBy(m => m.ConversationId);
+
+        var list = new List<ChatConversationDto>();
+        foreach (var g in groups)
+        {
+            var latest = g.OrderByDescending(m => m.CreatedAt).First();
+            var unreadSeller = g.Count(m => m.Sender == "buyer" && !m.IsRead);
+            var unreadBuyer = g.Count(m => m.Sender == "seller" && !m.IsRead);
+
+            list.Add(new ChatConversationDto(
+                Id: g.Key,
+                ListingId: latest.ListingId,
+                WatchModel: latest.WatchModel ?? "Luxury Watch",
+                WatchBrand: latest.WatchBrand ?? "Timepiece",
+                WatchImage: latest.ImageUrl ?? "",
+                Price: latest.Price ?? 0m,
+                BuyerId: latest.BuyerId,
+                BuyerName: latest.BuyerName,
+                SellerId: latest.SellerId,
+                SellerName: latest.SellerName,
+                LastMessage: latest.Text,
+                LastMessageAt: latest.CreatedAt,
+                UnreadCountSeller: unreadSeller,
+                UnreadCountBuyer: unreadBuyer
+            ));
+        }
+
+        return list.OrderByDescending(c => c.LastMessageAt).ToList();
+    }
+
+    public static List<MobileNotificationDto> GetNotificationsForSeller(string sellerId)
+    {
+        // Find all notifications corresponding to conversations owned by this seller
+        var sellerConvIds = _messages.Where(m => m.SellerId == sellerId).Select(m => m.ConversationId).ToHashSet();
+        return _notifications.Values
+            .Where(n => sellerConvIds.Contains(n.ConversationId))
+            .OrderByDescending(n => n.Timestamp)
+            .ToList();
+    }
+
+    public static void MarkNotificationRead(string notificationId)
+    {
+        if (_notifications.TryGetValue(notificationId, out var notif))
+        {
+            _notifications[notificationId] = notif with { IsRead = true };
+        }
+    }
+}

@@ -37,7 +37,9 @@ public record WatchListingDto(
     int ViewsCount,
     int WishlistCount,
     bool? IsFeatured,
-    int? FromPersonalCollectionId
+    int? FromPersonalCollectionId,
+    bool SellerKycDone = false,
+    string? SellerPhone = null
 );
 
 public record CreateWatchListingRequest(
@@ -72,7 +74,9 @@ public record CreateWatchListingRequest(
     string? ProvenanceNotes,
     bool? AuthenticityVerified,
     bool? IsFeatured,
-    int? FromPersonalCollectionId
+    int? FromPersonalCollectionId,
+    bool? SellerKycDone = null,
+    string? SellerPhone = null
 );
 
 public record UpdateWatchListingRequest(

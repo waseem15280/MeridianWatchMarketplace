@@ -411,6 +411,7 @@ userApi.MapPut("/accounts/{id:int}", async (int id, UpdateUserAccountRequest req
     if (request.Avatar is not null) account.Avatar = request.Avatar.Trim();
     if (request.Phone is not null) account.Phone = request.Phone.Trim();
     if (request.VerifiedDealer.HasValue) account.VerifiedDealer = request.VerifiedDealer.Value;
+    if (request.IsKycDone.HasValue) account.IsKycDone = request.IsKycDone.Value;
 
     await db.SaveChangesAsync();
     return Results.Ok(ToAccountDto(account));
@@ -832,7 +833,8 @@ static UserAccountDto ToAccountDto(UserAccount a) => new(
     a.AvgShipTime,
     a.Phone,
     a.IsDefault,
-    RolePermissionHelper.GetPermissions(a.Role)
+    RolePermissionHelper.GetPermissions(a.Role),
+    a.IsKycDone
 );
 
 static UserLoginDto ToLoginDto(UserLogin l) => new(

@@ -28,6 +28,10 @@ public class SellerHubDbContextInitialiser
                 {
                     await _context.Database.MigrateAsync();
                 }
+
+                await _context.Database.ExecuteSqlRawAsync(
+                    @"ALTER TABLE ""SellerProfiles"" ADD COLUMN IF NOT EXISTS ""IsKycDone"" boolean NOT NULL DEFAULT false;"
+                );
             }
 
             await SeedAsync();
