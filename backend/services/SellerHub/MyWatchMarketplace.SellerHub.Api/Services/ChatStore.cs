@@ -113,4 +113,16 @@ public static class ChatStore
             _readMessageIds[msg.Id] = true;
         }
     }
+
+    public static void SyncMessages(IEnumerable<ChatMessageDto> messages)
+    {
+        var existingIds = _messages.Select(m => m.Id).ToHashSet();
+        foreach (var msg in messages)
+        {
+            if (existingIds.Add(msg.Id))
+            {
+                _messages.Add(msg);
+            }
+        }
+    }
 }

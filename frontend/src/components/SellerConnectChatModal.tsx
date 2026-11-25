@@ -89,6 +89,17 @@ export const SellerConnectChatModal: React.FC = () => {
         try {
           localStorage.setItem(`chat_${conversationId}`, JSON.stringify(merged));
         } catch {}
+
+        // Quietly sync any locally cached messages missing from backend (e.g. after backend restart)
+        const backendIds = new Set(backendMessages.map((m) => m.id));
+        const missingOnBackend = localMessages.filter((m) => !backendIds.has(m.id));
+        if (missingOnBackend.length > 0) {
+          fetch('/api/chat/messages/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(missingOnBackend)
+          }).catch(() => {});
+        }
       } else {
         // New chat for this watch: send watch image & price one time only
         const initialBuyerMessage: ChatMessage = {

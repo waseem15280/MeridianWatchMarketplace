@@ -1,10 +1,41 @@
 import * as signalR from '@microsoft/signalr';
+import Constants from 'expo-constants';
+import { NativeModules } from 'react-native';
 import {
   ChatMessage,
   ChatConversation,
   MobileInquiryNotification,
   LoginResponse
 } from '../types';
+
+function resolveDevHostUrl(): string {
+  // 1. Extract current PC LAN IP dynamically from Expo Metro hostUri (e.g. "192.168.1.37:8081")
+  const hostUri =
+    Constants.expoConfig?.hostUri ||
+    (Constants as any).manifest2?.extra?.expoGo?.debuggerHost ||
+    (Constants as any).manifest?.debuggerHost;
+
+  if (typeof hostUri === 'string' && hostUri.length > 0) {
+    const host = hostUri.split(':')[0];
+    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+      return `http://${host}:3000`;
+    }
+  }
+
+  // 2. Fallback: extract host from React Native bundle scriptURL
+  const scriptURL: string | undefined = NativeModules?.SourceCode?.scriptURL;
+  if (typeof scriptURL === 'string' && scriptURL.startsWith('http')) {
+    const match = scriptURL.match(/^https?:\/\/([^/:]+)/);
+    if (match && match[1] && match[1] !== 'localhost' && match[1] !== '127.0.0.1') {
+      return `http://${match[1]}:3000`;
+    }
+  }
+
+  // 3. Final fallback
+  return typeof __DEV__ !== 'undefined' && __DEV__
+    ? 'http://192.168.1.37:3000'
+    : 'https://thcwatches.com';
+}
 
 export class SignalRService {
   private hubConnection: signalR.HubConnection | null = null;
@@ -24,11 +55,11 @@ export class SignalRService {
       window.location.origin
     ) {
       this.serverUrl = window.location.origin.includes('localhost')
-        ? 'http://192.168.1.33:3000'
+        ? resolveDevHostUrl()
         : window.location.origin;
     } else {
-      // In React Native mobile environment: default to current dev machine LAN IP
-      this.serverUrl = 'http://192.168.1.33:3000';
+      // In React Native mobile environment: resolve current dev machine LAN IP dynamically
+      this.serverUrl = resolveDevHostUrl();
     }
   }
 

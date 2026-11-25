@@ -353,4 +353,10 @@ chatApi.MapPost("/conversations/{conversationId}/read", (string conversationId, 
     return Results.Ok(new { success = true });
 });
 
+chatApi.MapPost("/messages/sync", (List<ChatMessageDto> messages) =>
+{
+    ChatStore.SyncMessages(messages);
+    return Results.Ok(new { synced = messages.Count });
+});
+
 app.Run();

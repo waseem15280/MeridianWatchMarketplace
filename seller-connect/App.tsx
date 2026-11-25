@@ -14,6 +14,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { registerRootComponent } from 'expo';
 import * as Notifications from 'expo-notifications';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ChatMessage,
@@ -63,6 +64,7 @@ export default function App() {
   const recentNotifKeysRef = useRef<Map<string, number>>(new Map());
   const conversationsRef = useRef<ChatConversation[]>([]);
   const readTimestampsRef = useRef<Record<string, number>>({});
+  const historyLoadedForSellerRef = useRef<string | null>(null);
 
   const markConversationAsRead = async (
     sellerId: string,
@@ -103,13 +105,16 @@ export default function App() {
   useEffect(() => {
     if (Platform.OS === 'web') return;
 
+    const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
     (async () => {
       try {
         const { status } = await Notifications.getPermissionsAsync();
         if (status !== 'granted') {
           await Notifications.requestPermissionsAsync();
         }
-        if (Platform.OS === 'android') {
+        // Custom notification channels are only needed in standalone/dev-client builds (Expo Go throws NPE on SDK 58 Android)
+        if (Platform.OS === 'android' && !isExpoGo) {
           await Notifications.setNotificationChannelAsync('seller-inquiries', {
             name: 'Buyer Inquiries',
             importance: Notifications.AndroidImportance.MAX,
@@ -117,8 +122,8 @@ export default function App() {
             lightColor: '#C5A880'
           });
         }
-      } catch (e) {
-        console.warn('Notification permission setup note:', e);
+      } catch {
+        // Ignore in restricted Expo Go environments
       }
     })();
 
@@ -241,6 +246,7 @@ export default function App() {
   // Handle Logout
   const handleLogout = () => {
     signalRService.stopConnection();
+    historyLoadedForSellerRef.current = null;
     setLoggedInUser(null);
     setSellerAccounts([]);
     setActiveSeller(null);
@@ -255,11 +261,29 @@ export default function App() {
 
   // Switch persona (for sellers with multiple seller roles)
   const handleSelectPersona = (seller: UserAccount) => {
+    historyLoadedForSellerRef.current = null;
     setActiveSeller(seller);
     setIsSelectingPersona(false);
     setActiveConversation(null);
     activeConversationRef.current = null;
   };
+
+  // Persist conversations & messages locally so seller history survives restarts/logouts
+  useEffect(() => {
+    if (!activeSeller) return;
+    const sellerId = String(activeSeller.id);
+    if (historyLoadedForSellerRef.current !== sellerId) return;
+    AsyncStorage.setItem(`seller_conversations_${sellerId}`, JSON.stringify(conversations)).catch(
+      () => {}
+    );
+  }, [conversations, activeSeller?.id]);
+
+  useEffect(() => {
+    if (!activeSeller) return;
+    const sellerId = String(activeSeller.id);
+    if (historyLoadedForSellerRef.current !== sellerId) return;
+    AsyncStorage.setItem(`seller_messages_${sellerId}`, JSON.stringify(messages)).catch(() => {});
+  }, [messages, activeSeller?.id]);
 
   // Load seller-specific data and connect to SignalR whenever activeSeller changes
   useEffect(() => {
@@ -267,23 +291,63 @@ export default function App() {
 
     let mounted = true;
     const sellerId = String(activeSeller.id);
+    historyLoadedForSellerRef.current = null;
 
-    // 1. Load persisted read timestamps, then fetch seller-specific conversations
+    // 1. Load persisted read timestamps, cached history & backend conversations
     (async () => {
+      let cachedConvs: ChatConversation[] = [];
+      let cachedMsgs: Record<string, ChatMessage[]> = {};
+
       try {
-        const stored = await AsyncStorage.getItem(`seller_read_timestamps_${sellerId}`);
-        readTimestampsRef.current = stored ? JSON.parse(stored) : {};
+        const [storedReads, storedConvs, storedMsgs] = await Promise.all([
+          AsyncStorage.getItem(`seller_read_timestamps_${sellerId}`),
+          AsyncStorage.getItem(`seller_conversations_${sellerId}`),
+          AsyncStorage.getItem(`seller_messages_${sellerId}`)
+        ]);
+        readTimestampsRef.current = storedReads ? JSON.parse(storedReads) : {};
+        cachedConvs = storedConvs ? JSON.parse(storedConvs) : [];
+        cachedMsgs = storedMsgs ? JSON.parse(storedMsgs) : {};
       } catch {
         readTimestampsRef.current = {};
+      }
+
+      if (!mounted) return;
+      if (Object.keys(cachedMsgs).length > 0) {
+        setMessages(cachedMsgs);
+      }
+      if (cachedConvs.length > 0) {
+        setConversations(cachedConvs);
       }
 
       const serverConvs = await signalRService.fetchConversations(sellerId);
       if (!mounted) return;
 
-      const baseConvs =
-        serverConvs && serverConvs.length > 0
-          ? serverConvs
-          : INITIAL_CONVERSATIONS.filter((c) => String(c.sellerId) === sellerId);
+      // Merge cached conversations with live backend conversations
+      const mergedMap = new Map<string, ChatConversation>();
+      for (const c of cachedConvs) {
+        mergedMap.set(c.id, c);
+      }
+      for (const sc of serverConvs || []) {
+        const existing = mergedMap.get(sc.id);
+        if (!existing) {
+          mergedMap.set(sc.id, sc);
+        } else {
+          const existingTs = new Date(existing.lastMessageAt).getTime();
+          const serverTs = new Date(sc.lastMessageAt).getTime();
+          mergedMap.set(sc.id, {
+            ...(serverTs >= existingTs ? sc : existing),
+            watchImage: sc.watchImage || existing.watchImage,
+            unreadCountSeller: Math.max(sc.unreadCountSeller, existing.unreadCountSeller)
+          });
+        }
+      }
+
+      let baseConvs = Array.from(mergedMap.values()).sort(
+        (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
+      );
+      if (baseConvs.length === 0) {
+        baseConvs = INITIAL_CONVERSATIONS.filter((c) => String(c.sellerId) === sellerId);
+      }
 
       // Recompute unreadCountSeller so already-read messages never show on the badge after login
       const adjustedConvs = await Promise.all(
@@ -310,6 +374,7 @@ export default function App() {
       );
 
       if (mounted) {
+        historyLoadedForSellerRef.current = sellerId;
         setConversations(adjustedConvs);
       }
     })();
@@ -436,36 +501,47 @@ export default function App() {
     }
     signalRService.joinConversation(conv.id);
 
-    // Fetch message history from backend if not already loaded
-    if (!messages[conv.id] || messages[conv.id].length === 0) {
+    // Fetch message history from backend and merge with locally cached messages
+    const hasLocal = Boolean(messages[conv.id] && messages[conv.id].length > 0);
+    if (!hasLocal) {
       setIsLoadingMessages(true);
-      signalRService.fetchMessages(conv.id).then((serverMsgs) => {
-        setIsLoadingMessages(false);
-        if (serverMsgs && serverMsgs.length > 0) {
-          setMessages((prev) => ({ ...prev, [conv.id]: serverMsgs }));
-        } else {
-          // Default seed message for demo
-          const seed: ChatMessage = {
-            id: `msg-${conv.id}-init`,
-            conversationId: conv.id,
-            listingId: conv.listingId,
-            buyerId: conv.buyerId,
-            buyerName: conv.buyerName,
-            sellerId: activeSeller ? activeSeller.id : conv.sellerId,
-            sellerName: activeSeller ? activeSeller.name : conv.sellerName,
-            sender: 'buyer',
-            text: conv.lastMessage || `Hello, is the ${conv.watchBrand} ${conv.watchModel} available?`,
-            imageUrl: conv.watchImage,
-            watchBrand: conv.watchBrand,
-            watchModel: conv.watchModel,
-            price: conv.price,
-            createdAt: conv.lastMessageAt || new Date().toISOString(),
-            isRead: true
-          };
-          setMessages((prev) => ({ ...prev, [conv.id]: [seed] }));
-        }
-      });
     }
+    signalRService.fetchMessages(conv.id).then((serverMsgs) => {
+      setIsLoadingMessages(false);
+      setMessages((prev) => {
+        const existing = prev[conv.id] || [];
+        const mergedMap = new Map<string, ChatMessage>();
+        for (const m of existing) mergedMap.set(m.id, m);
+        for (const m of serverMsgs || []) mergedMap.set(m.id, m);
+
+        if (mergedMap.size > 0) {
+          const merged = Array.from(mergedMap.values()).sort(
+            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+          return { ...prev, [conv.id]: merged };
+        }
+
+        // Default seed message only if neither cache nor backend has any history
+        const seed: ChatMessage = {
+          id: `msg-${conv.id}-init`,
+          conversationId: conv.id,
+          listingId: conv.listingId,
+          buyerId: conv.buyerId,
+          buyerName: conv.buyerName,
+          sellerId: activeSeller ? activeSeller.id : conv.sellerId,
+          sellerName: activeSeller ? activeSeller.name : conv.sellerName,
+          sender: 'buyer',
+          text: conv.lastMessage || `Hello, is the ${conv.watchBrand} ${conv.watchModel} available?`,
+          imageUrl: conv.watchImage,
+          watchBrand: conv.watchBrand,
+          watchModel: conv.watchModel,
+          price: conv.price,
+          createdAt: conv.lastMessageAt || new Date().toISOString(),
+          isRead: true
+        };
+        return { ...prev, [conv.id]: [seed] };
+      });
+    });
 
     // Clear unread indicator
     setConversations((prev) =>
