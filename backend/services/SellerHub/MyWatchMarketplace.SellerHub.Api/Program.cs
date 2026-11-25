@@ -359,4 +359,16 @@ chatApi.MapPost("/messages/sync", (List<ChatMessageDto> messages) =>
     return Results.Ok(new { synced = messages.Count });
 });
 
+chatApi.MapDelete("/conversations/{conversationId}", (string conversationId) =>
+{
+    ChatStore.DeleteConversations(new[] { conversationId });
+    return Results.Ok(new { deleted = 1 });
+});
+
+chatApi.MapPost("/conversations/delete", (List<string> conversationIds) =>
+{
+    ChatStore.DeleteConversations(conversationIds);
+    return Results.Ok(new { deleted = conversationIds.Count });
+});
+
 app.Run();

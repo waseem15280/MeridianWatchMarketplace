@@ -133,6 +133,18 @@ export class SignalRService {
     } catch {}
   }
 
+  // Delete one or more conversations and their chat history on the backend
+  public async deleteConversations(conversationIds: string[]): Promise<void> {
+    if (!conversationIds || conversationIds.length === 0) return;
+    try {
+      await fetch(`${this.serverUrl}/api/chat/conversations/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(conversationIds)
+      });
+    } catch {}
+  }
+
   public async startConnection(
     sellerId: string | number,
     onNewInquiry: (notification: MobileInquiryNotification) => void,

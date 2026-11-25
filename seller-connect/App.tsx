@@ -9,7 +9,8 @@ import {
   ScrollView,
   StyleSheet,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { registerRootComponent } from 'expo';
@@ -64,7 +65,9 @@ export default function App() {
   const recentNotifKeysRef = useRef<Map<string, number>>(new Map());
   const conversationsRef = useRef<ChatConversation[]>([]);
   const readTimestampsRef = useRef<Record<string, number>>({});
+  const deletedConvsRef = useRef<Record<string, number>>({});
   const historyLoadedForSellerRef = useRef<string | null>(null);
+  const [selectedInquiryIds, setSelectedInquiryIds] = useState<string[]>([]);
 
   const markConversationAsRead = async (
     sellerId: string,
@@ -255,6 +258,7 @@ export default function App() {
     setConversations([]);
     setMessages({});
     setActivePushBanner(null);
+    setSelectedInquiryIds([]);
     setIsSignalRConnected(false);
     setIsSelectingPersona(false);
   };
@@ -262,6 +266,7 @@ export default function App() {
   // Switch persona (for sellers with multiple seller roles)
   const handleSelectPersona = (seller: UserAccount) => {
     historyLoadedForSellerRef.current = null;
+    setSelectedInquiryIds([]);
     setActiveSeller(seller);
     setIsSelectingPersona(false);
     setActiveConversation(null);
@@ -299,16 +304,19 @@ export default function App() {
       let cachedMsgs: Record<string, ChatMessage[]> = {};
 
       try {
-        const [storedReads, storedConvs, storedMsgs] = await Promise.all([
+        const [storedReads, storedConvs, storedMsgs, storedDeleted] = await Promise.all([
           AsyncStorage.getItem(`seller_read_timestamps_${sellerId}`),
           AsyncStorage.getItem(`seller_conversations_${sellerId}`),
-          AsyncStorage.getItem(`seller_messages_${sellerId}`)
+          AsyncStorage.getItem(`seller_messages_${sellerId}`),
+          AsyncStorage.getItem(`seller_deleted_convs_${sellerId}`)
         ]);
         readTimestampsRef.current = storedReads ? JSON.parse(storedReads) : {};
         cachedConvs = storedConvs ? JSON.parse(storedConvs) : [];
         cachedMsgs = storedMsgs ? JSON.parse(storedMsgs) : {};
+        deletedConvsRef.current = storedDeleted ? JSON.parse(storedDeleted) : {};
       } catch {
         readTimestampsRef.current = {};
+        deletedConvsRef.current = {};
       }
 
       if (!mounted) return;
@@ -342,11 +350,20 @@ export default function App() {
         }
       }
 
-      let baseConvs = Array.from(mergedMap.values()).sort(
-        (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
-      );
+      let baseConvs = Array.from(mergedMap.values())
+        .filter((c) => {
+          const deletedTs = deletedConvsRef.current[c.id] || 0;
+          return new Date(c.lastMessageAt).getTime() > deletedTs;
+        })
+        .sort(
+          (a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
+        );
       if (baseConvs.length === 0) {
-        baseConvs = INITIAL_CONVERSATIONS.filter((c) => String(c.sellerId) === sellerId);
+        baseConvs = INITIAL_CONVERSATIONS.filter((c) => {
+          if (String(c.sellerId) !== sellerId) return false;
+          const deletedTs = deletedConvsRef.current[c.id] || 0;
+          return new Date(c.lastMessageAt).getTime() > deletedTs;
+        });
       }
 
       // Recompute unreadCountSeller so already-read messages never show on the badge after login
@@ -587,6 +604,90 @@ export default function App() {
     signalRService.sendMessage(sellerReply);
 
     setReplyText('');
+  };
+
+  // WhatsApp-style Inquiry Multi-Selection & Deletion
+  const toggleInquirySelection = (convId: string) => {
+    setSelectedInquiryIds((prev) =>
+      prev.includes(convId) ? prev.filter((id) => id !== convId) : [...prev, convId]
+    );
+  };
+
+  const selectAllInquiries = () => {
+    if (selectedInquiryIds.length === conversations.length) {
+      setSelectedInquiryIds([]);
+    } else {
+      setSelectedInquiryIds(conversations.map((c) => c.id));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedInquiryIds([]);
+  };
+
+  const performDeleteSelected = async (idsToDelete: string[]) => {
+    if (!activeSeller || idsToDelete.length === 0) return;
+    const sellerId = String(activeSeller.id);
+    const idSet = new Set(idsToDelete);
+    const now = Date.now();
+
+    // Record deletion timestamps so deleted inquiries don't reappear from cache/backend
+    for (const id of idsToDelete) {
+      deletedConvsRef.current[id] = now;
+      delete readTimestampsRef.current[id];
+    }
+
+    setConversations((prev) => prev.filter((c) => !idSet.has(c.id)));
+    setMessages((prev) => {
+      const next = { ...prev };
+      for (const id of idsToDelete) {
+        delete next[id];
+      }
+      return next;
+    });
+    setSelectedInquiryIds([]);
+
+    try {
+      await Promise.all([
+        AsyncStorage.setItem(
+          `seller_deleted_convs_${sellerId}`,
+          JSON.stringify(deletedConvsRef.current)
+        ),
+        AsyncStorage.setItem(
+          `seller_read_timestamps_${sellerId}`,
+          JSON.stringify(readTimestampsRef.current)
+        )
+      ]);
+    } catch {}
+
+    signalRService.deleteConversations(idsToDelete);
+  };
+
+  const confirmDeleteSelected = () => {
+    const count = selectedInquiryIds.length;
+    if (count === 0) return;
+    const ids = [...selectedInquiryIds];
+    const title = count === 1 ? 'Delete Inquiry?' : `Delete ${count} Inquiries?`;
+    const body =
+      count === 1
+        ? 'This will delete the selected inquiry and all of its chat history.'
+        : `This will delete the ${count} selected inquiries and all of their chat history.`;
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(`${title}\n\n${body}`)) {
+        performDeleteSelected(ids);
+      }
+      return;
+    }
+
+    Alert.alert(title, body, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => performDeleteSelected(ids)
+      }
+    ]);
   };
 
   // ==========================================
@@ -959,37 +1060,59 @@ export default function App() {
       ) : (
         /* Main Tabs View */
         <View style={{ flex: 1 }}>
-          {/* App Header */}
-          <View style={styles.appHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.appTitle}>Seller Connect</Text>
-              <Text style={styles.appSubtitle} numberOfLines={1}>
-                {activeSeller.name} • ID: #{activeSeller.id}
-              </Text>
-            </View>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              {sellerAccounts.length > 1 && (
-                <TouchableOpacity
-                  style={styles.switchPersonaBtn}
-                  onPress={() => setIsSelectingPersona(true)}
-                >
-                  <Text style={styles.switchPersonaBtnText}>Switch Store</Text>
+          {/* App Header or WhatsApp-style Selection Action Bar */}
+          {selectedInquiryIds.length > 0 && activeTab === 'inquiries' ? (
+            <View style={styles.selectionHeaderBar}>
+              <View style={styles.selectionHeaderLeft}>
+                <TouchableOpacity onPress={clearSelection} style={styles.selectionBackBtn}>
+                  <Text style={styles.selectionBackText}>←</Text>
                 </TouchableOpacity>
-              )}
-              <View style={styles.signalRBadge}>
-                <View
-                  style={[
-                    styles.statusDot,
-                    { backgroundColor: isSignalRConnected ? '#10B981' : '#F59E0B' }
-                  ]}
-                />
-                <Text style={styles.signalRBadgeText}>
-                  {isSignalRConnected ? 'Live' : 'Connecting'}
-                </Text>
+                <Text style={styles.selectionCountText}>{selectedInquiryIds.length}</Text>
+              </View>
+
+              <View style={styles.selectionHeaderRight}>
+                <TouchableOpacity onPress={selectAllInquiries} style={styles.selectionActionBtn}>
+                  <Text style={styles.selectionAllText}>
+                    {selectedInquiryIds.length === conversations.length ? 'Deselect All' : 'Select All'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={confirmDeleteSelected} style={styles.selectionActionBtn}>
+                  <Text style={styles.selectionDeleteIcon}>🗑️</Text>
+                </TouchableOpacity>
               </View>
             </View>
-          </View>
+          ) : (
+            <View style={styles.appHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.appTitle}>Seller Connect</Text>
+                <Text style={styles.appSubtitle} numberOfLines={1}>
+                  {activeSeller.name} • ID: #{activeSeller.id}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {sellerAccounts.length > 1 && (
+                  <TouchableOpacity
+                    style={styles.switchPersonaBtn}
+                    onPress={() => setIsSelectingPersona(true)}
+                  >
+                    <Text style={styles.switchPersonaBtnText}>Switch Store</Text>
+                  </TouchableOpacity>
+                )}
+                <View style={styles.signalRBadge}>
+                  <View
+                    style={[
+                      styles.statusDot,
+                      { backgroundColor: isSignalRConnected ? '#10B981' : '#F59E0B' }
+                    ]}
+                  />
+                  <Text style={styles.signalRBadgeText}>
+                    {isSignalRConnected ? 'Live' : 'Connecting'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
 
           {/* Tab 1: Inquiries Tab (Filtered specifically for this logged in seller) */}
           {activeTab === 'inquiries' && (
@@ -1012,40 +1135,64 @@ export default function App() {
                   </Text>
                 </View>
               ) : (
-                conversations.map((conv) => (
-                  <TouchableOpacity
-                    key={conv.id}
-                    style={styles.conversationCard}
-                    activeOpacity={0.8}
-                    onPress={() => handleOpenConversation(conv)}
-                  >
-                    {conv.watchImage ? (
-                      <Image source={{ uri: conv.watchImage }} style={styles.convThumb} />
-                    ) : null}
-                    <View style={{ flex: 1 }}>
-                      <View style={styles.convHeaderRow}>
-                        <Text style={styles.convBuyerName}>{conv.buyerName}</Text>
-                        <Text style={styles.convTime}>
-                          {new Date(conv.lastMessageAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                conversations.map((conv) => {
+                  const isSelected = selectedInquiryIds.includes(conv.id);
+                  const isSelectionMode = selectedInquiryIds.length > 0;
+                  return (
+                    <TouchableOpacity
+                      key={conv.id}
+                      style={[
+                        styles.conversationCard,
+                        isSelected && styles.conversationCardSelected
+                      ]}
+                      activeOpacity={0.8}
+                      delayLongPress={250}
+                      onLongPress={() => toggleInquirySelection(conv.id)}
+                      onPress={() =>
+                        isSelectionMode
+                          ? toggleInquirySelection(conv.id)
+                          : handleOpenConversation(conv)
+                      }
+                    >
+                      <View style={styles.convThumbWrapper}>
+                        {conv.watchImage ? (
+                          <Image source={{ uri: conv.watchImage }} style={styles.convThumb} />
+                        ) : (
+                          <View style={[styles.convThumb, styles.convThumbPlaceholder]}>
+                            <Text style={styles.convThumbPlaceholderText}>⌚</Text>
+                          </View>
+                        )}
+                        {isSelected && (
+                          <View style={styles.selectedCheckBadge}>
+                            <Text style={styles.selectedCheckText}>✓</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.convHeaderRow}>
+                          <Text style={styles.convBuyerName}>{conv.buyerName}</Text>
+                          <Text style={styles.convTime}>
+                            {new Date(conv.lastMessageAt).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </Text>
+                        </View>
+                        <Text style={styles.convWatchTitle}>
+                          {conv.watchBrand} {conv.watchModel}
+                        </Text>
+                        <Text style={styles.convLastMessage} numberOfLines={1}>
+                          {conv.lastMessage}
                         </Text>
                       </View>
-                      <Text style={styles.convWatchTitle}>
-                        {conv.watchBrand} {conv.watchModel}
-                      </Text>
-                      <Text style={styles.convLastMessage} numberOfLines={1}>
-                        {conv.lastMessage}
-                      </Text>
-                    </View>
-                    {conv.unreadCountSeller > 0 && (
-                      <View style={styles.unreadBadge}>
-                        <Text style={styles.unreadBadgeText}>{conv.unreadCountSeller}</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))
+                      {conv.unreadCountSeller > 0 && (
+                        <View style={styles.unreadBadge}>
+                          <Text style={styles.unreadBadgeText}>{conv.unreadCountSeller}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })
               )}
             </ScrollView>
           )}
@@ -1536,11 +1683,91 @@ const styles = StyleSheet.create({
     borderColor: '#E5DFD5',
     gap: 12
   },
+  conversationCardSelected: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#86EFAC'
+  },
+  convThumbWrapper: {
+    position: 'relative',
+    width: 52,
+    height: 52
+  },
   convThumb: {
     width: 52,
     height: 52,
-    borderRadius: 10,
+    borderRadius: 26,
     backgroundColor: '#F5F5F4'
+  },
+  convThumbPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  convThumbPlaceholderText: {
+    fontSize: 20
+  },
+  selectedCheckBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#16A34A',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  selectedCheckText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold'
+  },
+  selectionHeaderBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5DFD5'
+  },
+  selectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16
+  },
+  selectionBackBtn: {
+    paddingHorizontal: 4,
+    paddingVertical: 2
+  },
+  selectionBackText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1C1917'
+  },
+  selectionCountText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1C1917'
+  },
+  selectionHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14
+  },
+  selectionActionBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4
+  },
+  selectionAllText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#16A34A'
+  },
+  selectionDeleteIcon: {
+    fontSize: 20
   },
   convHeaderRow: {
     flexDirection: 'row',

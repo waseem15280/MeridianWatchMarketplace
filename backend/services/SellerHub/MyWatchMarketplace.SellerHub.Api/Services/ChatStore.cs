@@ -8,6 +8,7 @@ public static class ChatStore
     private static readonly ConcurrentBag<ChatMessageDto> _messages = new();
     private static readonly ConcurrentDictionary<string, MobileNotificationDto> _notifications = new();
     private static readonly ConcurrentDictionary<string, bool> _readMessageIds = new();
+    private static readonly ConcurrentDictionary<string, bool> _deletedMessageIds = new();
 
     public static void AddMessage(ChatMessageDto message)
     {
@@ -34,7 +35,7 @@ public static class ChatStore
 
     public static List<ChatMessageDto> GetMessages(string? conversationId, string? listingId, string? buyerId)
     {
-        var query = _messages.AsEnumerable();
+        var query = _messages.Where(m => !_deletedMessageIds.ContainsKey(m.Id));
 
         if (!string.IsNullOrWhiteSpace(conversationId))
         {
@@ -53,7 +54,9 @@ public static class ChatStore
 
     public static List<ChatConversationDto> GetConversationsForSeller(string sellerId)
     {
-        var sellerMessages = _messages.Where(m => m.SellerId == sellerId).ToList();
+        var sellerMessages = _messages
+            .Where(m => m.SellerId == sellerId && !_deletedMessageIds.ContainsKey(m.Id))
+            .ToList();
         var groups = sellerMessages.GroupBy(m => m.ConversationId);
 
         var list = new List<ChatConversationDto>();
@@ -123,6 +126,19 @@ public static class ChatStore
             {
                 _messages.Add(msg);
             }
+        }
+    }
+
+    public static void DeleteConversations(IEnumerable<string> conversationIds)
+    {
+        var idSet = conversationIds.ToHashSet();
+        foreach (var msg in _messages.Where(m => idSet.Contains(m.ConversationId)))
+        {
+            _deletedMessageIds[msg.Id] = true;
+        }
+        foreach (var kvp in _notifications.Where(n => idSet.Contains(n.Value.ConversationId)).ToList())
+        {
+            _notifications.TryRemove(kvp.Key, out _);
         }
     }
 }
