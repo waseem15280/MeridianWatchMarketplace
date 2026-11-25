@@ -10,13 +10,15 @@ import {
   StyleSheet,
   Platform,
   ActivityIndicator,
-  Alert
+  Alert,
+  Modal
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { registerRootComponent } from 'expo';
 import * as Notifications from 'expo-notifications';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 import {
   ChatMessage,
   ChatConversation,
@@ -68,6 +70,16 @@ export default function App() {
   const deletedConvsRef = useRef<Record<string, number>>({});
   const historyLoadedForSellerRef = useRef<string | null>(null);
   const [selectedInquiryIds, setSelectedInquiryIds] = useState<string[]>([]);
+
+  // UPI QR Code State
+  interface SavedQrItem {
+    id: string;
+    label: string;
+    imageUri: string;
+    createdAt: string;
+  }
+  const [savedQrs, setSavedQrs] = useState<SavedQrItem[]>([]);
+  const [isQrMenuOpen, setIsQrMenuOpen] = useState(false);
 
   const markConversationAsRead = async (
     sellerId: string,
@@ -259,6 +271,8 @@ export default function App() {
     setMessages({});
     setActivePushBanner(null);
     setSelectedInquiryIds([]);
+    setSavedQrs([]);
+    setIsQrMenuOpen(false);
     setIsSignalRConnected(false);
     setIsSelectingPersona(false);
   };
@@ -304,16 +318,22 @@ export default function App() {
       let cachedMsgs: Record<string, ChatMessage[]> = {};
 
       try {
-        const [storedReads, storedConvs, storedMsgs, storedDeleted] = await Promise.all([
+        const [storedReads, storedConvs, storedMsgs, storedDeleted, storedQrs] = await Promise.all([
           AsyncStorage.getItem(`seller_read_timestamps_${sellerId}`),
           AsyncStorage.getItem(`seller_conversations_${sellerId}`),
           AsyncStorage.getItem(`seller_messages_${sellerId}`),
-          AsyncStorage.getItem(`seller_deleted_convs_${sellerId}`)
+          AsyncStorage.getItem(`seller_deleted_convs_${sellerId}`),
+          AsyncStorage.getItem(`seller_upi_qrs_${sellerId}`)
         ]);
         readTimestampsRef.current = storedReads ? JSON.parse(storedReads) : {};
         cachedConvs = storedConvs ? JSON.parse(storedConvs) : [];
         cachedMsgs = storedMsgs ? JSON.parse(storedMsgs) : {};
         deletedConvsRef.current = storedDeleted ? JSON.parse(storedDeleted) : {};
+        if (mounted && storedQrs) {
+          setSavedQrs(JSON.parse(storedQrs));
+        } else if (mounted) {
+          setSavedQrs([]);
+        }
       } catch {
         readTimestampsRef.current = {};
         deletedConvsRef.current = {};
@@ -604,6 +624,92 @@ export default function App() {
     signalRService.sendMessage(sellerReply);
 
     setReplyText('');
+  };
+
+  // UPI QR Code: Add from mobile gallery
+  const handleAddNewQr = async () => {
+    setIsQrMenuOpen(false);
+    if (!activeSeller) return;
+    const sellerId = String(activeSeller.id);
+
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please allow gallery access so you can select a UPI QR code image.'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.7,
+        base64: true
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      const mime = asset.mimeType || 'image/jpeg';
+      const imageUri = asset.base64 ? `data:${mime};base64,${asset.base64}` : asset.uri;
+
+      const newQr: SavedQrItem = {
+        id: `qr-${Date.now()}`,
+        label: asset.fileName
+          ? asset.fileName.replace(/\.[^/.]+$/, '')
+          : `UPI QR #${savedQrs.length + 1}`,
+        imageUri,
+        createdAt: new Date().toISOString()
+      };
+
+      const updated = [newQr, ...savedQrs];
+      setSavedQrs(updated);
+      await AsyncStorage.setItem(`seller_upi_qrs_${sellerId}`, JSON.stringify(updated));
+      setIsQrMenuOpen(true);
+    } catch (e) {
+      console.warn('Add QR error:', e);
+      Alert.alert('Error', 'Could not load image from gallery.');
+    }
+  };
+
+  // UPI QR Code: Send selected QR image to buyer chat
+  const handleSendQrToBuyer = (qr: SavedQrItem) => {
+    setIsQrMenuOpen(false);
+    if (!activeConversation || !activeSeller) return;
+
+    const qrMsg: ChatMessage = {
+      id: `msg-seller-qr-${Date.now()}`,
+      conversationId: activeConversation.id,
+      listingId: String(activeConversation.listingId),
+      buyerId: String(activeConversation.buyerId),
+      buyerName: activeConversation.buyerName,
+      sellerId: String(activeSeller.id),
+      sellerName: activeSeller.name,
+      sender: 'seller',
+      text: `UPI Payment QR (${qr.label}) — Tap image to view & save.`,
+      imageUrl: qr.imageUri,
+      createdAt: new Date().toISOString(),
+      isRead: true
+    };
+
+    setMessages((prev) => ({
+      ...prev,
+      [activeConversation.id]: [...(prev[activeConversation.id] || []), qrMsg]
+    }));
+
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === activeConversation.id
+          ? { ...c, lastMessage: '📷 UPI Payment QR Code', lastMessageAt: qrMsg.createdAt }
+          : c
+      )
+    );
+
+    signalRService.sendMessage(qrMsg);
   };
 
   // WhatsApp-style Inquiry Multi-Selection & Deletion
@@ -935,7 +1041,67 @@ export default function App() {
                 </Text>
               </View>
             </View>
+            <TouchableOpacity
+              style={styles.qrsHeaderBtn}
+              onPress={() => setIsQrMenuOpen(true)}
+            >
+              <Text style={styles.qrsHeaderBtnIcon}>▦</Text>
+              <Text style={styles.qrsHeaderBtnText}>QRs</Text>
+            </TouchableOpacity>
           </View>
+
+          {/* QRs Context Menu Modal */}
+          <Modal
+            visible={isQrMenuOpen}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setIsQrMenuOpen(false)}
+          >
+            <TouchableOpacity
+              style={styles.qrMenuBackdrop}
+              activeOpacity={1}
+              onPress={() => setIsQrMenuOpen(false)}
+            >
+              <View
+                style={styles.qrMenuContainer}
+                onStartShouldSetResponder={() => true}
+              >
+                {/* First Option: Add new QR */}
+                <TouchableOpacity
+                  style={styles.qrAddOption}
+                  onPress={handleAddNewQr}
+                >
+                  <Text style={styles.qrAddOptionIcon}>＋</Text>
+                  <Text style={styles.qrAddOptionText}>Add new QR</Text>
+                </TouchableOpacity>
+
+                <View style={styles.qrMenuDivider} />
+
+                {/* Previously Added QRs */}
+                {savedQrs.length === 0 ? (
+                  <View style={styles.qrEmptyBox}>
+                    <Text style={styles.qrEmptyText}>No saved UPI QRs yet</Text>
+                  </View>
+                ) : (
+                  <ScrollView style={{ maxHeight: 240 }}>
+                    {savedQrs.map((qr) => (
+                      <TouchableOpacity
+                        key={qr.id}
+                        style={styles.qrListItem}
+                        onPress={() => handleSendQrToBuyer(qr)}
+                      >
+                        <Image source={{ uri: qr.imageUri }} style={styles.qrListThumb} />
+                        <Text style={styles.qrListLabel} numberOfLines={1}>
+                          {qr.label}
+                        </Text>
+                        <Text style={styles.qrSendIcon}>➤</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+            </TouchableOpacity>
+          </Modal>
 
           {/* Timepiece Context Banner */}
           <View style={styles.watchContextBanner}>
@@ -987,8 +1153,12 @@ export default function App() {
                         isSeller ? styles.messageBubbleSeller : styles.messageBubbleBuyer
                       ]}
                     >
-                      {msg.imageUrl && !isSeller ? (
-                        <Image source={{ uri: msg.imageUrl }} style={styles.messageImage} />
+                      {msg.imageUrl ? (
+                        <Image
+                          source={{ uri: msg.imageUrl }}
+                          style={[styles.messageImage, isSeller && { backgroundColor: '#FFFFFF' }]}
+                          resizeMode={isSeller ? 'contain' : 'cover'}
+                        />
                       ) : null}
                       <Text
                         style={[
@@ -2140,6 +2310,105 @@ const styles = StyleSheet.create({
   tabBadgeText: {
     color: '#FFFFFF',
     fontSize: 9,
+    fontWeight: 'bold'
+  },
+
+  // QRs Header Button & Context Menu
+  qrsHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#1C1917',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10
+  },
+  qrsHeaderBtnIcon: {
+    color: '#C5A880',
+    fontSize: 13,
+    fontWeight: 'bold'
+  },
+  qrsHeaderBtnText: {
+    color: '#FAF8F5',
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  qrMenuBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    alignItems: 'flex-end',
+    paddingTop: Platform.OS === 'android' ? 74 : 96,
+    paddingRight: 14
+  },
+  qrMenuContainer: {
+    width: 245,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E5DFD5',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 10,
+    overflow: 'hidden'
+  },
+  qrAddOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    backgroundColor: '#FAF8F5'
+  },
+  qrAddOptionIcon: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#C5A880'
+  },
+  qrAddOptionText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1C1917'
+  },
+  qrMenuDivider: {
+    height: 1,
+    backgroundColor: '#E5DFD5'
+  },
+  qrEmptyBox: {
+    padding: 16,
+    alignItems: 'center'
+  },
+  qrEmptyText: {
+    fontSize: 12,
+    color: '#A8A29E'
+  },
+  qrListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F5F5F4'
+  },
+  qrListThumb: {
+    width: 34,
+    height: 34,
+    borderRadius: 6,
+    backgroundColor: '#FAF8F5',
+    borderWidth: 1,
+    borderColor: '#E5DFD5'
+  },
+  qrListLabel: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1C1917'
+  },
+  qrSendIcon: {
+    fontSize: 16,
+    color: '#16A34A',
     fontWeight: 'bold'
   }
 });

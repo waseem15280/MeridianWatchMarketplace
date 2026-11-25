@@ -10,7 +10,9 @@ import {
   AlertCircle,
   IndianRupee,
   MessageCircle,
-  Bot
+  Bot,
+  ArrowLeft,
+  Download
 } from 'lucide-react';
 import * as signalR from '@microsoft/signalr';
 import { ChatMessage } from '../types';
@@ -29,6 +31,7 @@ export const SellerConnectChatModal: React.FC = () => {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
+  const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const hubConnectionRef = useRef<signalR.HubConnection | null>(null);
@@ -201,8 +204,36 @@ export const SellerConnectChatModal: React.FC = () => {
   if (!isSellerChatOpen || !chatWatch) return null;
 
   const handleClose = () => {
+    setFullScreenImage(null);
     setIsSellerChatOpen(false);
     setChatWatch(null);
+  };
+
+  const handleSaveImage = async (imageUrl: string) => {
+    try {
+      const link = document.createElement('a');
+      if (imageUrl.startsWith('data:')) {
+        link.href = imageUrl;
+        link.download = `thc-upi-qr-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        const res = await fetch(imageUrl);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        link.href = blobUrl;
+        link.download = `thc-image-${Date.now()}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      }
+      showToast('Image saved to your device', 'success');
+    } catch {
+      // Fallback: open in new tab if CORS prevents blob download
+      window.open(imageUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -380,14 +411,35 @@ export const SellerConnectChatModal: React.FC = () => {
                       : 'bg-[#FFFFFF] text-[#1C1917] border border-[#E5DFD5] rounded-bl-none'
                   }`}
                 >
-                  {/* Photo thumbnail in message if attached */}
+                  {/* Photo thumbnail in message if attached (clickable to view full screen) */}
                   {msg.imageUrl && (
-                    <div className="rounded-xl overflow-hidden border border-white/20 mb-1 max-w-[200px]">
-                      <img src={msg.imageUrl} alt="Watch" className="w-full h-24 object-cover" />
-                      <div className="bg-black/60 p-1 px-2 text-[10px] font-mono font-bold text-[#FAF8F5]">
-                        ₹{msg.price?.toLocaleString()}
-                      </div>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFullScreenImage(msg.imageUrl!)}
+                      className={`block rounded-xl overflow-hidden border mb-1 text-left cursor-pointer hover:opacity-95 transition-opacity ${
+                        isBuyer ? 'border-white/20 max-w-[200px]' : 'border-[#E5DFD5] bg-white max-w-[210px]'
+                      }`}
+                      title="Click to view full screen"
+                    >
+                      <img
+                        src={msg.imageUrl}
+                        alt={isBuyer ? 'Watch' : 'UPI QR Code'}
+                        className={
+                          isBuyer
+                            ? 'w-full h-24 object-cover'
+                            : 'w-44 h-44 object-contain bg-white p-1.5'
+                        }
+                      />
+                      {msg.price != null && msg.price > 0 ? (
+                        <div className="bg-black/60 p-1 px-2 text-[10px] font-mono font-bold text-[#FAF8F5]">
+                          ₹{msg.price.toLocaleString()}
+                        </div>
+                      ) : (
+                        <div className="bg-[#FAF8F5] border-t border-[#E5DFD5] px-2 py-1 text-[10px] font-medium text-[#78716C] text-center">
+                          Tap to view full screen
+                        </div>
+                      )}
+                    </button>
                   )}
 
                   <p className="leading-relaxed">{msg.text}</p>
@@ -470,6 +522,49 @@ export const SellerConnectChatModal: React.FC = () => {
             Close Chat
           </button>
         </div>
+        {/* Full-screen Image Viewer Overlay (for viewing & saving UPI QR / images) */}
+        {fullScreenImage && (
+          <div
+            className="fixed inset-0 z-[70] bg-black/95 flex flex-col animate-in fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Bar with <- Back and Save buttons */}
+            <div className="px-4 py-3 bg-[#1C1917] border-b border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  id="fullscreen-image-back-btn"
+                  onClick={() => setFullScreenImage(null)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[#FAF8F5] text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </button>
+                <button
+                  type="button"
+                  id="fullscreen-image-save-btn"
+                  onClick={() => handleSaveImage(fullScreenImage)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#C5A880] hover:bg-[#b5966c] text-[#1C1917] text-xs font-bold transition-colors cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Save</span>
+                </button>
+              </div>
+              <span className="text-[11px] font-mono text-[#A8A29E] hidden sm:inline">
+                {chatWatch.sellerName}
+              </span>
+            </div>
+
+            {/* Centered Full-Screen Image */}
+            <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
+              <img
+                src={fullScreenImage}
+                alt="Full screen preview"
+                className="max-w-full max-h-full object-contain rounded-xl bg-white p-2 shadow-2xl"
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
