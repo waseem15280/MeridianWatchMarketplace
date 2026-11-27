@@ -19,9 +19,11 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+        ?? ["http://localhost:3000"];
+    options.AddPolicy("FrontendOnly", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins(origins)
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
@@ -29,7 +31,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-app.UseCors("AllowAll");
+app.UseCors("FrontendOnly");
 
 if (app.Environment.IsDevelopment())
 {
@@ -418,7 +420,7 @@ listingsApi.MapPost("/", async (CreateWatchListingRequest request, MarketplaceDb
     catch (Exception ex)
     {
         logger.LogError(ex, "Failed to create watch listing");
-        return Results.Problem(detail: ex.Message, statusCode: 500, title: "Failed to create watch listing");
+        return Results.Problem(statusCode: 500, title: "Failed to create watch listing");
     }
 });
 

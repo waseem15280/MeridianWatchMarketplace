@@ -26,9 +26,15 @@ public class CloudinaryService : ICloudinaryService
         }
         else
         {
-            var cloudName = configuration["Cloudinary:CloudName"] ?? "jwrzshry";
-            var apiKey = configuration["Cloudinary:ApiKey"] ?? "936341539214393";
-            var apiSecret = configuration["Cloudinary:ApiSecret"] ?? "B7pys9i22GLSBRgnd8BcmH1Mdjo";
+            var cloudName = configuration["Cloudinary:CloudName"];
+            var apiKey = configuration["Cloudinary:ApiKey"];
+            var apiSecret = configuration["Cloudinary:ApiSecret"];
+            if (string.IsNullOrWhiteSpace(cloudName) ||
+                string.IsNullOrWhiteSpace(apiKey) ||
+                string.IsNullOrWhiteSpace(apiSecret))
+            {
+                throw new InvalidOperationException("Cloudinary configuration is missing.");
+            }
             var account = new Account(cloudName, apiKey, apiSecret);
             _cloudinary = new Cloudinary(account);
         }

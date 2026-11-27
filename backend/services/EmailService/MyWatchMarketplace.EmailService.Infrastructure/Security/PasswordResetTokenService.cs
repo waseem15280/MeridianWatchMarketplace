@@ -13,7 +13,7 @@ public class PasswordResetTokenService : IPasswordResetTokenService
     {
         _secretKey = configuration["Security:ResetTokenSecret"]
             ?? configuration["Jwt:Key"]
-            ?? "thc_luxury_timepiece_super_secure_reset_key_2026";
+            ?? throw new InvalidOperationException("A password reset token secret is required.");
     }
 
     public string GenerateToken(int userId, string passwordHash, DateTimeOffset expiresAt)

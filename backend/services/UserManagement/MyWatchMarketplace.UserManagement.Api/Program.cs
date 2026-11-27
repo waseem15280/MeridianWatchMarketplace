@@ -5,25 +5,56 @@ using MyWatchMarketplace.UserManagement.Domain.Enums;
 using MyWatchMarketplace.UserManagement.Infrastructure;
 using MyWatchMarketplace.UserManagement.Infrastructure.Security;
 using MyWatchMarketplace.UserManagement.Infrastructure.Persistence;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddUserManagementInfrastructureServices(builder.Configuration);
 
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
+{
+    throw new InvalidOperationException("Jwt:Key must be configured with at least 32 characters.");
+}
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtKey))
+        };
+    });
+builder.Services.AddAuthorization();
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+        ?? ["http://localhost:3000"];
+    options.AddPolicy("FrontendOnly", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 
 var app = builder.Build();
 
-app.UseCors("AllowAll");
+app.UseCors("FrontendOnly");
+app.UseAuthentication();
+app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {
@@ -70,7 +101,7 @@ userApi.MapPost("/login", async (LoginRequest request, UserManagementDbContext d
 
     if (login is null || !PasswordHasher.VerifyPassword(request.Password, login.PasswordHash))
     {
-        return Results.Unauthorized();
+        return Results.Json(new { message = "Invalid username or password." }, statusCode: StatusCodes.Status401Unauthorized);
     }
 
     if (!login.IsActive)
@@ -79,6 +110,10 @@ userApi.MapPost("/login", async (LoginRequest request, UserManagementDbContext d
     }
 
     login.LastLoginAt = DateTimeOffset.UtcNow;
+    if (PasswordHasher.NeedsUpgrade(login.PasswordHash))
+    {
+        login.PasswordHash = PasswordHasher.HashPassword(request.Password);
+    }
     await db.SaveChangesAsync();
 
     var accountDtos = login.Accounts.Select(ToAccountDto).ToList();
@@ -86,7 +121,7 @@ userApi.MapPost("/login", async (LoginRequest request, UserManagementDbContext d
     var activeAccountId = activeAccount?.Id ?? 0;
 
     var response = new LoginResponse(
-        Token: "mock-jwt-" + Guid.NewGuid().ToString("N"),
+        Token: GenerateJwtToken(login, activeAccountId, builder.Configuration),
         Login: ToLoginDto(login),
         Accounts: accountDtos,
         ActiveAccountId: activeAccountId
@@ -120,6 +155,10 @@ userApi.MapPost("/validate", async (LoginRequest request, UserManagementDbContex
     }
 
     login.LastLoginAt = DateTimeOffset.UtcNow;
+    if (PasswordHasher.NeedsUpgrade(login.PasswordHash))
+    {
+        login.PasswordHash = PasswordHasher.HashPassword(request.Password);
+    }
     await db.SaveChangesAsync();
 
     var accountDtos = login.Accounts.Select(ToAccountDto).ToList();
@@ -127,7 +166,7 @@ userApi.MapPost("/validate", async (LoginRequest request, UserManagementDbContex
     var activeAccountId = activeAccount?.Id ?? 0;
 
     var response = new LoginResponse(
-        Token: "mock-jwt-" + Guid.NewGuid().ToString("N"),
+        Token: GenerateJwtToken(login, activeAccountId, builder.Configuration),
         Login: ToLoginDto(login),
         Accounts: accountDtos,
         ActiveAccountId: activeAccountId
@@ -193,7 +232,7 @@ userApi.MapPost("/register", async (RegisterRequest request, UserManagementDbCon
     await db.SaveChangesAsync();
 
     var response = new LoginResponse(
-        Token: "mock-jwt-" + Guid.NewGuid().ToString("N"),
+        Token: GenerateJwtToken(login, account.Id, builder.Configuration),
         Login: ToLoginDto(login),
         Accounts: new List<UserAccountDto> { ToAccountDto(account) },
         ActiveAccountId: account.Id
@@ -283,7 +322,7 @@ userApi.MapPost("/admin/create-user", async (AdminCreateUserRequest request, Use
     var defaultAcc = createdAccounts.FirstOrDefault(a => a.IsDefault) ?? createdAccounts.First();
 
     var response = new LoginResponse(
-        Token: "mock-jwt-" + Guid.NewGuid().ToString("N"),
+        Token: GenerateJwtToken(login, defaultAcc.Id, builder.Configuration),
         Login: ToLoginDto(login),
         Accounts: accountDtos,
         ActiveAccountId: defaultAcc.Id
@@ -846,5 +885,59 @@ static UserLoginDto ToLoginDto(UserLogin l) => new(
     l.LastLoginAt,
     l.Accounts?.Select(ToAccountDto).ToList()
 );
+
+static string GenerateJwtToken(UserLogin login, int activeAccountId, IConfiguration configuration)
+{
+    var key = configuration["Jwt:Key"];
+    var issuer = configuration["Jwt:Issuer"];
+    var audience = configuration["Jwt:Audience"];
+    if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(issuer) || string.IsNullOrWhiteSpace(audience))
+    {
+        throw new InvalidOperationException("JWT configuration is incomplete.");
+    }
+
+    var activeAccount = login.Accounts?.FirstOrDefault(a => a.Id == activeAccountId)
+        ?? login.Accounts?.FirstOrDefault();
+    var claims = new List<Claim>
+    {
+        new(JwtRegisteredClaimNames.Sub, login.Id.ToString()),
+        new(JwtRegisteredClaimNames.UniqueName, login.Username),
+        new(ClaimTypes.NameIdentifier, login.Id.ToString()),
+        new("login_id", login.Id.ToString()),
+        new("account_id", (activeAccount?.Id ?? activeAccountId).ToString()),
+        new(ClaimTypes.Role, activeAccount?.Role.ToString() ?? "Buyer")
+    };
+
+    var credentials = new SigningCredentials(
+        new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(key)),
+        SecurityAlgorithms.HmacSha256);
+
+    var token = new JwtSecurityToken(
+        issuer,
+        audience,
+        claims,
+        notBefore: DateTime.UtcNow,
+        expires: DateTime.UtcNow.AddHours(8),
+        signingCredentials: credentials);
+
+    return new JwtSecurityTokenHandler().WriteToken(token);
+}
+
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value ?? "";
+    var isPublicUserMethod = path.Equals("/api/users/login", StringComparison.OrdinalIgnoreCase)
+        || path.Equals("/api/users/validate", StringComparison.OrdinalIgnoreCase)
+        || path.Equals("/api/users/register", StringComparison.OrdinalIgnoreCase);
+    if (!isPublicUserMethod &&
+        !HttpMethods.IsGet(context.Request.Method) &&
+        !(context.User.Identity?.IsAuthenticated ?? false))
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return;
+    }
+
+    await next();
+});
 
 app.Run();

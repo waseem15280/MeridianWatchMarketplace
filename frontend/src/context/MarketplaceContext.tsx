@@ -1374,6 +1374,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
           localStorage.setItem('chronos_current_user_id', String(activeAccId));
           localStorage.setItem('chronos_accounts', JSON.stringify(res.accounts));
           localStorage.setItem('chronos_available_logins', JSON.stringify([res.login]));
+          if (res.token) localStorage.setItem('chronos_auth_token', res.token);
 
           // If there was a pending watch to add to wishlist before logging in, add it now
           if (pendingWishlistId) {
@@ -1441,6 +1442,7 @@ export const MarketplaceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     localStorage.removeItem('chronos_current_user_id');
     localStorage.removeItem('chronos_accounts');
     localStorage.removeItem('chronos_available_logins');
+    localStorage.removeItem('chronos_auth_token');
 
     // Reset context state to guest
     setCurrentLoginId(GUEST_LOGIN.id);

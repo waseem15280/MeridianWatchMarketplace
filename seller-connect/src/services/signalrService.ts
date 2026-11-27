@@ -40,6 +40,11 @@ function resolveDevHostUrl(): string {
 export class SignalRService {
   private hubConnection: signalR.HubConnection | null = null;
   private serverUrl: string;
+  private accessToken: string | null = null;
+
+  private getAuthHeaders(): Record<string, string> {
+    return this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : {};
+  }
 
   constructor(serverUrl?: string) {
     if (serverUrl) {
@@ -73,6 +78,7 @@ export class SignalRService {
 
   // Authenticate seller user against backend UserManagement API
   public async login(usernameOrEmail: string, password: string): Promise<LoginResponse> {
+    this.accessToken = null;
     const res = await fetch(`${this.serverUrl}/api/users/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -84,13 +90,17 @@ export class SignalRService {
       throw new Error(errData.message || `Login failed with status ${res.status}`);
     }
 
-    return await res.json();
+    const response: LoginResponse = await res.json();
+    this.accessToken = response.token;
+    return response;
   }
 
   // Load conversations specifically for this logged-in seller
   public async fetchConversations(sellerId: string | number): Promise<ChatConversation[]> {
     try {
-      const res = await fetch(`${this.serverUrl}/api/chat/conversations?sellerId=${sellerId}`);
+      const res = await fetch(`${this.serverUrl}/api/chat/conversations?sellerId=${sellerId}`, {
+        headers: this.getAuthHeaders()
+      });
       if (!res.ok) return [];
       return await res.json();
     } catch (e) {
@@ -102,7 +112,9 @@ export class SignalRService {
   // Load mobile push notifications specifically for this logged-in seller
   public async fetchNotifications(sellerId: string | number): Promise<MobileInquiryNotification[]> {
     try {
-      const res = await fetch(`${this.serverUrl}/api/chat/notifications?sellerId=${sellerId}`);
+      const res = await fetch(`${this.serverUrl}/api/chat/notifications?sellerId=${sellerId}`, {
+        headers: this.getAuthHeaders()
+      });
       if (!res.ok) return [];
       return await res.json();
     } catch (e) {
@@ -114,7 +126,9 @@ export class SignalRService {
   // Load messages for a given conversation
   public async fetchMessages(conversationId: string): Promise<ChatMessage[]> {
     try {
-      const res = await fetch(`${this.serverUrl}/api/chat/messages?conversationId=${encodeURIComponent(conversationId)}`);
+      const res = await fetch(`${this.serverUrl}/api/chat/messages?conversationId=${encodeURIComponent(conversationId)}`, {
+        headers: this.getAuthHeaders()
+      });
       if (!res.ok) return [];
       return await res.json();
     } catch (e) {
@@ -128,7 +142,7 @@ export class SignalRService {
     try {
       await fetch(
         `${this.serverUrl}/api/chat/conversations/${encodeURIComponent(conversationId)}/read?reader=seller`,
-        { method: 'POST' }
+        { method: 'POST', headers: this.getAuthHeaders() }
       );
     } catch {}
   }
@@ -139,7 +153,7 @@ export class SignalRService {
     try {
       await fetch(`${this.serverUrl}/api/chat/conversations/delete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
         body: JSON.stringify(conversationIds)
       });
     } catch {}
@@ -151,6 +165,8 @@ export class SignalRService {
     onReceiveMessage: (message: ChatMessage) => void
   ): Promise<boolean> {
     try {
+      if (!this.accessToken) return false;
+
       if (this.hubConnection) {
         try {
           await this.hubConnection.stop();
@@ -161,7 +177,8 @@ export class SignalRService {
       this.hubConnection = new signalR.HubConnectionBuilder()
         .withUrl(hubUrl, {
           skipNegotiation: false,
-          transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling
+          transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling,
+          accessTokenFactory: () => this.accessToken ?? ''
         })
         .withAutomaticReconnect([0, 2000, 5000, 10000])
         .build();
@@ -207,7 +224,7 @@ export class SignalRService {
     try {
       await fetch(`${this.serverUrl}/api/chat/messages`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
         body: JSON.stringify(message)
       });
     } catch {}
@@ -218,6 +235,10 @@ export class SignalRService {
       this.hubConnection.stop().catch(() => {});
       this.hubConnection = null;
     }
+  }
+
+  public clearAccessToken(): void {
+    this.accessToken = null;
   }
 }
 

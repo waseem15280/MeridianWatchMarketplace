@@ -35,6 +35,9 @@ export async function request<T>(endpoint: string, options: RequestInit = {}): P
 
   const headers: Record<string, string> = {
     ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+    ...(typeof localStorage !== 'undefined' && localStorage.getItem('chronos_auth_token')
+      ? { Authorization: `Bearer ${localStorage.getItem('chronos_auth_token')}` }
+      : {}),
     ...(options.headers as Record<string, string> || {})
   };
 

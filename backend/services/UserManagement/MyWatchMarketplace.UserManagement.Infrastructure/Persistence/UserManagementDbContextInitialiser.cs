@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MyWatchMarketplace.UserManagement.Domain.Entities;
 using MyWatchMarketplace.UserManagement.Domain.Enums;
-using System.Security.Cryptography;
-using System.Text;
+using MyWatchMarketplace.UserManagement.Infrastructure.Security;
 
 namespace MyWatchMarketplace.UserManagement.Infrastructure.Persistence;
 
@@ -11,13 +11,16 @@ public class UserManagementDbContextInitialiser
 {
     private readonly ILogger<UserManagementDbContextInitialiser> _logger;
     private readonly UserManagementDbContext _context;
+    private readonly IConfiguration _configuration;
 
     public UserManagementDbContextInitialiser(
         ILogger<UserManagementDbContextInitialiser> logger,
-        UserManagementDbContext context)
+        UserManagementDbContext context,
+        IConfiguration configuration)
     {
         _logger = logger;
         _context = context;
+        _configuration = configuration;
     }
 
     public async Task InitialiseAsync()
@@ -59,15 +62,15 @@ public class UserManagementDbContextInitialiser
             return;
         }
 
-        string HashPassword(string password)
+        var defaultPassword = _configuration["Seed:DefaultPassword"];
+        var adminPassword = _configuration["Seed:AdminPassword"];
+        if (string.IsNullOrWhiteSpace(defaultPassword) || string.IsNullOrWhiteSpace(adminPassword))
         {
-            using var sha256 = SHA256.Create();
-            var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-            return Convert.ToHexString(bytes).ToLowerInvariant();
+            throw new InvalidOperationException("Seed:DefaultPassword and Seed:AdminPassword must be configured.");
         }
 
-        var defaultPasswordHash = HashPassword("password123");
-        var adminPasswordHash = HashPassword("admin123");
+        var defaultPasswordHash = PasswordHasher.HashPassword(defaultPassword);
+        var adminPasswordHash = PasswordHasher.HashPassword(adminPassword);
 
         var logins = new List<UserLogin>
         {

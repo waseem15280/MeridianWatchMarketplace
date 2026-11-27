@@ -44,8 +44,6 @@ services:
       - Cloudinary__ApiKey=${CLOUDINARY_API_KEY}
       - Cloudinary__ApiSecret=${CLOUDINARY_API_SECRET}
       - Cloudinary__Url=${CLOUDINARY_URL}
-    ports:
-      - "5101:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,8 +64,6 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       - ConnectionStrings__CollectorVaultDbConnection=${CONNECTION_STRINGS_COLLECTOR_VAULT:-Host=postgres;Port=5432;Database=CollectorVaultDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD}}
       - Services__MarketplaceUrl=http://marketplace-api:8080
-    ports:
-      - "5102:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -90,8 +86,6 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       - ConnectionStrings__BuyerWishlistDbConnection=${CONNECTION_STRINGS_BUYER_WISHLIST:-Host=postgres;Port=5432;Database=BuyerWishlistDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD}}
       - Services__MarketplaceUrl=http://marketplace-api:8080
-    ports:
-      - "5103:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -113,8 +107,6 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ConnectionStrings__SellerHubDbConnection=${CONNECTION_STRINGS_SELLER_HUB:-Host=postgres;Port=5432;Database=SellerHubDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD}}
-    ports:
-      - "5104:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -136,8 +128,6 @@ services:
       - ConnectionStrings__CustomerOrdersDbConnection=${CONNECTION_STRINGS_CUSTOMER_ORDERS:-Host=postgres;Port=5432;Database=CustomerOrdersDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD}}
       - Services__MarketplaceUrl=http://marketplace-api:8080
       - Services__SellerHubUrl=http://seller-hub-api:8080
-    ports:
-      - "5105:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -161,8 +151,11 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ConnectionStrings__UserAccountDbConnection=${CONNECTION_STRINGS_USER_ACCOUNT:-Host=postgres;Port=5432;Database=UserAccountDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD}}
-    ports:
-      - "5106:8080"
+      - Jwt__Key=${JWT_SIGNING_KEY}
+      - Jwt__Issuer=MeridianWatchMarketplace
+      - Jwt__Audience=MeridianWatchMarketplace
+      - Seed__DefaultPassword=${SEED_DEFAULT_PASSWORD}
+      - Seed__AdminPassword=${SEED_ADMIN_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
@@ -192,8 +185,7 @@ services:
       - EmailSettings__Password=${SMTP_PASSWORD:-}
       - EmailSettings__EnableSsl=${SMTP_ENABLE_SSL:-true}
       - EmailSettings__TokenExpirationMinutes=${TOKEN_EXPIRATION_MINUTES:-60}
-    ports:
-      - "5107:8080"
+      - Jwt__Key=${JWT_SIGNING_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -213,8 +205,6 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ConnectionStrings__ServiceCenterDbConnection=${CONNECTION_STRINGS_SERVICE_CENTER:-Host=postgres;Port=5432;Database=ServiceCenterDb;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD}}
-    ports:
-      - "5108:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -234,6 +224,9 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ReverseProxy__Clusters__marketplace-cluster__Destinations__marketplace-destination__Address=http://marketplace-api:8080
+      - Jwt__Key=${JWT_SIGNING_KEY}
+      - Jwt__Issuer=MeridianWatchMarketplace
+      - Jwt__Audience=MeridianWatchMarketplace
       - ReverseProxy__Clusters__collector-vault-cluster__Destinations__collector-vault-destination__Address=http://collector-vault-api:8080
       - ReverseProxy__Clusters__buyer-wishlist-cluster__Destinations__buyer-wishlist-destination__Address=http://buyer-wishlist-api:8080
       - ReverseProxy__Clusters__seller-hub-cluster__Destinations__seller-hub-destination__Address=http://seller-hub-api:8080

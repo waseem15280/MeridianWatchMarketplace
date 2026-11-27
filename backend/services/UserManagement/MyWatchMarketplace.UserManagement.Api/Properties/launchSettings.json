@@ -7,7 +7,10 @@
       "launchBrowser": false,
       "applicationUrl": "http://localhost:5106",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Jwt__Key": "local-only-development-signing-key-change-before-deployment",
+        "Jwt__Issuer": "MeridianWatchMarketplace",
+        "Jwt__Audience": "MeridianWatchMarketplace"
       }
     },
     "MyWatchMarketplace.UserManagement.Api": {
@@ -16,7 +19,10 @@
       "launchBrowser": false,
       "applicationUrl": "http://localhost:5106",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Jwt__Key": "local-only-development-signing-key-change-before-deployment",
+        "Jwt__Issuer": "MeridianWatchMarketplace",
+        "Jwt__Audience": "MeridianWatchMarketplace"
       }
     }
   }

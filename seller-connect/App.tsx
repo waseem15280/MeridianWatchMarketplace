@@ -49,7 +49,7 @@ export default function App() {
 
   // Login Form State
   const [usernameInput, setUsernameInput] = useState('geneva_dealer');
-  const [passwordInput, setPasswordInput] = useState('password123');
+  const [passwordInput, setPasswordInput] = useState('');
   const [serverUrlInput, setServerUrlInput] = useState(signalRService.getServerUrl());
   const [showServerConfig, setShowServerConfig] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -261,6 +261,7 @@ export default function App() {
   // Handle Logout
   const handleLogout = () => {
     signalRService.stopConnection();
+    signalRService.clearAccessToken();
     historyLoadedForSellerRef.current = null;
     setLoggedInUser(null);
     setSellerAccounts([]);
@@ -895,10 +896,10 @@ export default function App() {
             <Text style={styles.quickLoginHeading}>Quick Dealer Logins (One-Tap)</Text>
             <View style={styles.quickChipsWrapper}>
               {[
-                { label: 'Geneva Horology (#7)', user: 'geneva_dealer', pass: 'password123' },
-                { label: 'Alexander Vance Studio (#1)', user: 'alexander', pass: 'password123' },
-                { label: 'Crown & Caliber Atelier (#8)', user: 'crown_atelier', pass: 'password123' },
-                { label: 'Ginza Chrono Vault (#9)', user: 'ginza_vault', pass: 'password123' }
+                { label: 'Geneva Horology (#7)', user: 'geneva_dealer', pass: '' },
+                { label: 'Alexander Vance Studio (#1)', user: 'alexander', pass: '' },
+                { label: 'Crown & Caliber Atelier (#8)', user: 'crown_atelier', pass: '' },
+                { label: 'Ginza Chrono Vault (#9)', user: 'ginza_vault', pass: '' }
               ].map((item, idx) => (
                 <TouchableOpacity
                   key={idx}
